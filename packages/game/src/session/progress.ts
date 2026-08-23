@@ -24,8 +24,6 @@ export const PROFILE_VERSION = 2;
 
 export interface LevelProgress {
   readonly seal: Seal;
-  /** Melhor número de jogadas. Informativo — o mérito está no selo. */
-  readonly bestMoves: number;
 }
 
 export interface Profile {
@@ -98,23 +96,29 @@ const SEAL_RANK: Readonly<Record<Seal, number>> = {
  *
  * Repetir um nível já resolvido é uma razão legítima para voltar atrás
  * (plano §6.2), e se uma tentativa pior apagasse o selo conquistado, ninguém
- * arriscaria repetir. O `bestMoves` segue a mesma regra.
+ * arriscaria repetir.
+ *
+ * ── Porque não se guarda o número de jogadas ──
+ *
+ * Guardava-se, e não queria dizer nada: cada jogada tira **exatamente** 7 à soma
+ * do tabuleiro, portanto limpar um tabuleiro custa sempre `somaTotal / 7`
+ * jogadas. Não há jogo melhor nem pior em número de jogadas — há só o jogo que
+ * acaba e o que fica preso. Verificado nos 240 níveis publicados: em todos,
+ * `solutionLength === somaTotal / 7`.
+ *
+ * Um recorde que ninguém pode bater não é um recorde. O mérito está no selo.
  */
 export function recordLevel(
   profile: Profile,
   levelId: string,
   seal: Seal,
-  moves: number,
 ): Profile {
   const previous = profile.levels[levelId];
 
   const best: LevelProgress =
     previous === undefined
-      ? { seal, bestMoves: moves }
-      : {
-          seal: SEAL_RANK[seal] > SEAL_RANK[previous.seal] ? seal : previous.seal,
-          bestMoves: Math.min(previous.bestMoves, moves),
-        };
+      ? { seal }
+      : { seal: SEAL_RANK[seal] > SEAL_RANK[previous.seal] ? seal : previous.seal };
 
   return { ...profile, levels: { ...profile.levels, [levelId]: best } };
 }
@@ -200,7 +204,8 @@ function sanitizeLevels(value: unknown): Record<string, LevelProgress> {
     const e = entry as Partial<LevelProgress>;
     if (e.seal === undefined || SEAL_RANK[e.seal] === undefined) continue;
 
-    out[id] = { seal: e.seal, bestMoves: finiteOrZero(e.bestMoves) };
+    // Perfis antigos trazem `bestMoves`; ignora-se, e some na próxima gravação.
+    out[id] = { seal: e.seal };
   }
 
   return out;

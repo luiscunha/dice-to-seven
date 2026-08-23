@@ -630,7 +630,7 @@ describe("TimeAttackSession (plano §6.3)", () => {
 describe("progresso", () => {
   it("um perfil novo vai e volta do armazenamento", () => {
     const storage = memoryStorage();
-    const p = recordLevel(emptyProfile(), "meio-000015", "clean", 10);
+    const p = recordLevel(emptyProfile(), "meio-000015", "clean");
 
     save(storage, p);
     expect(load(storage)).toEqual(p);
@@ -641,16 +641,15 @@ describe("progresso", () => {
   });
 
   it("o selo nunca regride", () => {
-    let p = recordLevel(emptyProfile(), "x", "perfect", 8);
-    p = recordLevel(p, "x", "completed", 12);
+    let p = recordLevel(emptyProfile(), "x", "perfect");
+    p = recordLevel(p, "x", "completed");
 
     expect(p.levels["x"]?.seal).toBe("perfect");
-    expect(p.levels["x"]?.bestMoves).toBe(8);
   });
 
   it("um selo melhor substitui o anterior", () => {
-    let p = recordLevel(emptyProfile(), "x", "completed", 12);
-    p = recordLevel(p, "x", "perfect", 12);
+    let p = recordLevel(emptyProfile(), "x", "completed");
+    p = recordLevel(p, "x", "perfect");
 
     expect(p.levels["x"]?.seal).toBe("perfect");
   });
@@ -702,6 +701,8 @@ describe("progresso", () => {
       const p = load(comRaw(raw));
 
       expect(Object.keys(p.levels)).toEqual(["bom"]);
+      // O `bestMoves` dos perfis antigos entra no JSON e não sai do outro lado.
+      expect(p.levels["bom"]).toEqual({ seal: "clean" });
       expect(p.bestTimeAttackScore).toBe(0);
       expect(p.bestBoardsCleared).toBe(3);
     });

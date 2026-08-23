@@ -261,8 +261,8 @@ async function mostrarJogo(id: string, indice: number): Promise<void> {
       : { ecra: "niveis", capitulo: capitulo.id };
 
   atual = new PuzzleScreen(app as HTMLElement, nivel, {
-    aoTerminar: ({ level, selo, pontos }) => {
-      perfil = recordLevel(perfil, level.id, selo as Seal, pontos);
+    aoTerminar: ({ level, selo }) => {
+      perfil = recordLevel(perfil, level.id, selo as Seal);
       guardarPerfil();
     },
     aoPedirSeguinte: () => {
