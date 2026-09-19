@@ -11,6 +11,7 @@
 
 import type { Board, Group } from "./types";
 import type { GeneratedLevel } from "./generator";
+import type { Soldas } from "./soldas";
 
 export interface LevelMetrics {
   readonly pieces: number;
@@ -38,6 +39,16 @@ export interface Level {
     readonly trueValue: number;
   };
 
+  /**
+   * Pares soldados: a coordenada empacotada da célula **de baixo** de cada par.
+   * Ausente quando o nível não tem soldas, que é o caso da esmagadora maioria.
+   *
+   * Não precisa de mais nada. A solda é sempre vertical — a de cima é a célula
+   * imediatamente acima — e nunca se parte, portanto uma coordenada por par
+   * chega e sobra. Ver `soldas.ts`.
+   */
+  readonly soldas?: Soldas;
+
   readonly solution: readonly Group[];
 
   /** Preenchidas pelo pipeline de medição (fase 5). */
@@ -53,6 +64,7 @@ export function toLevel(
   id: string,
   seed: number,
   gerado: GeneratedLevel,
+  soldas?: Soldas,
 ): Level {
   const base = {
     id,
@@ -61,5 +73,11 @@ export function toLevel(
     solution: gerado.solution,
   };
 
-  return gerado.joker === undefined ? base : { ...base, joker: gerado.joker };
+  const comJoker =
+    gerado.joker === undefined ? base : { ...base, joker: gerado.joker };
+
+  // `exactOptionalPropertyTypes`: omite-se a chave, não se atribui `undefined`.
+  return soldas === undefined || soldas.length === 0
+    ? comJoker
+    : { ...comJoker, soldas };
 }

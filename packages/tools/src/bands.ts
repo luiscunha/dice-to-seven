@@ -93,6 +93,20 @@ export interface BandSpec {
   readonly params: Omit<GeneratorParams, "targetPieceCount">;
   readonly pieces: readonly [number, number];
 
+  /**
+   * Soldas a pedir por nível. Zero — por omissão — é o jogo de sempre.
+   *
+   * Não entra no `accept` de propósito. As soldas escolhem-se **depois** de o
+   * nível ser aceite, sobre a solução que ele já traz, e por construção não
+   * podem torná-lo impossível (ver `soldarNivel`). Pô-las no critério de
+   * aceitação daria a entender que há candidatos a perder por causa delas, e não
+   * há: o rendimento do funil não se mexe um milímetro.
+   *
+   * Um nível pode devolver menos soldas do que as pedidas quando a solução não
+   * tem pares verticais que cheguem. Publica-se na mesma.
+   */
+  readonly soldas?: number;
+
   readonly accept: {
     /** Intervalo fechado de taxa de sobrevivência. */
     readonly survival: readonly [number, number];
@@ -223,6 +237,12 @@ export const BANDS: readonly BandSpec[] = [
       [5, 6],
       [6, 6],
     ],
+    /*
+     * Duas, contra as quatro do perito: o avançado é onde a regra se aprende.
+     * Medido nos tabuleiros publicados, duas soldas tiram cerca de um quarto das
+     * jogadas disponíveis — chega para se notar, não chega para travar.
+     */
+    soldas: 2,
     accept: { survival: [0.2, 0.45], fairnessDepth: 2 },
   },
   /*
@@ -254,6 +274,7 @@ export const BANDS: readonly BandSpec[] = [
     },
     pieces: [45, 49],
     formas: [[7, 7]],
+    soldas: 4,
     accept: { survival: [0.03, 0.22], fairnessDepth: 2 },
   },
   /*
