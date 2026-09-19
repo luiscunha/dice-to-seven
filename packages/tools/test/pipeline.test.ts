@@ -286,7 +286,7 @@ describe("formas cheias", () => {
     expect(passagens[0]?.band.formas).toBeUndefined();
   });
 
-  it("as quotas somam o alvo, e metade é cheia", () => {
+  it("as quotas somam o alvo, e a parte cheia é a que a banda pediu", () => {
     for (const band of BANDS) {
       const passagens = passagensDe(band, 30);
       const soma = passagens.reduce((n, p) => n + p.alvo, 0);
@@ -298,8 +298,16 @@ describe("formas cheias", () => {
       const cheias = passagens.filter((p) => p.band.formas !== undefined);
       const pedidosCheios = cheias.reduce((n, p) => n + p.alvo, 0);
 
-      expect(pedidosCheios).toBe(15);
+      // Metade por omissão; tudo quando a banda pede `soFormas` — o `perito` é
+      // a banda do tabuleiro cheio, e um nível com recortes no topo teria menos
+      // peças do que o máximo.
+      expect(pedidosCheios).toBe(band.soFormas === true ? 30 : 15);
       expect(cheias).toHaveLength(band.formas.length);
+
+      // Com `soFormas`, a passagem livre nem chega a existir.
+      expect(passagens.some((p) => p.band.formas === undefined)).toBe(
+        band.soFormas !== true,
+      );
 
       // Cada forma leva a sua quota, e nenhuma fica de fora — é isto que garante
       // que o 7×7 do `perito` existe mesmo, sendo a forma mais cara do pack.

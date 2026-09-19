@@ -458,8 +458,116 @@ mesmo peso de `[1,6]`. O rótulo "faces altas" não se cumpria no tabuleiro — 
 
 ---
 
+## As soldas — a primeira mecânica nova depois do joker
+
+Vieram de um playtest, e da medição que ele provocou. A queixa era unânime:
+*"no modo Puzzles, a dificuldade não é perceptível com os diferentes graus — o
+que muda são mais colunas e mais peças."*
+
+### A medição deu-lhes razão, e explicou porquê
+
+As métricas de banda separam-se bem — sobrevivência mediana 0,83 no `inicio`,
+0,14 no `perito`. Mas a sobrevivência mede jogo **aleatório**. Medindo o que o
+jogador sente — em cada posição, que fração das jogadas legais é segura:
+
+| banda | peças | jogadas seguras | 1ªs 3 jogadas | pares óbvios/posição |
+|---|---|---|---|---|
+| inicio | 20 | 97,5% | 99,3% | 2,9 |
+| meio | 30 | 96,9% | 100% | 3,6 |
+| avancado | 36 | 93,8% | 99,8% | 4,3 |
+| perito | 43 | 93,3% | **100%** | 5,2 |
+| meio-joker | 25 | 67,4% | 71,4% | 3,3 |
+| denso | 12 | **33,4%** | 33,4% | 2,4 |
+
+Do `inicio` ao `perito` o tabuleiro duplica e a probabilidade de errar passa de
+2,5% para 6,7%. Não se sente uma diferença dessas. E a curva está **invertida**
+no que o jogador realmente faz: procurar uma jogada é *mais fácil* no perito.
+
+O achado que orientou a solução: **no perito há 35 jogadas disponíveis por
+posição mas só 6 combinações diferentes.** As outras 29 são cópias da mesma soma
+noutros sítios. A decisão que interessa é **geométrica** — qual dos seis `5+2`
+se tira — e nada no jogo a tornava visível.
+
+### A regra
+
+> Duas peças soldadas ou entram ambas na jogada, ou não entra nenhuma.
+
+**Só verticais**, e não é âmbito reduzido — é o que a representação permite. Uma
+solda vertical liga `(c, r)` a `(c, r+1)`; depois de uma jogada ambas descem o
+mesmo número de linhas, porque a gravidade é um `filter` que preserva a ordem.
+Uma solda horizontal parte-se assim que uma célula por baixo de uma das duas
+desaparece, e exigiria uma regra de quebra — estado que muda a meio do nível é
+estado que o gerador tem de reconstruir em reverso.
+
+Uma solda **nunca se quebra**: um par soldado é um bloco que desce inteiro até
+sair inteiro. É essa propriedade — fixada por teste de propriedade em 300
+tabuleiros — que permite guardá-la como uma só coordenada empacotada.
+
+### Como a garantia central sobrevive
+
+Não é o solver que a sustenta. É uma observação sobre a construção reversa:
+
+> Se as duas células de uma solda forem eliminadas **pelo mesmo passo da
+> solução**, a solução guardada continua legal, palavra por palavra.
+
+Uma solda só proíbe levar meio par. O passo que leva o par inteiro respeita-a
+por definição, e os passos anteriores nem lhe tocam. A garantia não é
+enfraquecida — é herdada.
+
+Consequência prática: as soldas escolhem-se **depois** de o nível ser aceite, e
+o rendimento do funil não se mexe. Nos 60 níveis de avançado e perito, pedir 2,
+3 ou 4 soldas devolveu sempre o número pedido, com 100% das soluções ainda a
+esvaziar o tabuleiro.
+
+### Dois casos degenerados, e ambos foram defeitos reais
+
+**Um par que já soma 7 não se solda.** A primeira versão soldava qualquer par do
+mesmo passo, e quando esse passo era *o próprio par* as faces somavam 7: a solda
+não proibia nada, porque qualquer grupo que as contivesse já tinha de ser
+exatamente elas. Saíam assim **22% das soldas do avançado e 28% das do perito**.
+Pior do que inútil — era uma ajuda, a apontar uma jogada pronta a fazer.
+
+**O joker nunca entra numa solda.** `joker + v` é sempre grupo legal, porque o
+joker toma `7 - v` e `1 <= v <= 6`. Soldá-lo a um vizinho é oferecer uma jogada.
+
+### O que as soldas dão, e o que não dão
+
+Medido nos tabuleiros de perito, com soldas legítimas:
+
+| soldas | jogadas/posição | jogadas seguras |
+|---|---|---|
+| 0 | 33,3 | 92,7% |
+| 2 | 26,4 | 91,1% |
+| 4 | 21,6 | 91,7% |
+
+**As opções caem um terço. A taxa de erro não se mexe.** As soldas arrumam a
+camada de *plano*, não a de *procura* — mesmo com quatro, continua a haver um
+par livre óbvio em 90% das posições. Não são, sozinhas, a dificuldade do perito.
+
+### Uma regra que se testou e não presta
+
+*"Não podes repetir a mesma combinação duas vezes seguidas."* Medido: as opções
+passam de 35,7 para 33,5 e só 2% das posições ficam bloqueadas. Fica registado
+para não se voltar a ela.
+
+### O perito é grande **e** apertado
+
+A medição apontava para encolher a banda — o `denso` de 12 peças é quatro vezes
+mais exigente. Ficou decidido o contrário, e com razão: um perito pequeno seria
+um `denso` com outro nome. O perito é a banda do tabuleiro cheio — **49 peças,
+7×7, formas cheias apenas** — e a dificuldade vem das regras. Quatro soldas no
+perito, duas no avançado.
+
+---
+
 ## Decisões de arquitetura que não se leem no código
 
+- **O grupo que a jogada eliminou vem da sessão (`GameState.lastMove`), não da
+  interface.** Cada ecrã reconstruía-o como "a seleção de antes mais a peça
+  tocada", e essa conta rebentou no dia em que um toque passou a trazer duas
+  peças: o grupo chegava a meio à animação e o `applyMove` lançava
+  `InvalidMoveError`. O defeito foi duplicar a regra do toque; a correção remove
+  a duplicação em vez de a remendar.
 - **O tabuleiro é uma lista de colunas, de baixo para cima.** A gravidade é um
   `filter` sobre a coluna; o colapso é não empurrar a coluna vazia. As colunas
   intactas são partilhadas por referência. O tabuleiro *é* JSON válido.

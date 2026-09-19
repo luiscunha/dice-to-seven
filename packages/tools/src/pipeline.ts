@@ -84,14 +84,21 @@ export function passagensDe(band: BandSpec, alvo: number): readonly Passagem[] {
     return [{ rotulo: band.id, band, alvo, seedInicial: 0 }];
   }
 
-  const cheios = Math.floor(alvo / 2);
+  const cheios = band.soFormas === true ? alvo : Math.floor(alvo / 2);
   const livres = alvo - cheios;
 
   const { formas: _semFormas, ...semForma } = band;
 
-  const passagens: Passagem[] = [
-    { rotulo: `${band.id} livre`, band: semForma, alvo: livres, seedInicial: 0 },
-  ];
+  const passagens: Passagem[] = [];
+
+  if (livres > 0) {
+    passagens.push({
+      rotulo: `${band.id} livre`,
+      band: semForma,
+      alvo: livres,
+      seedInicial: 0,
+    });
+  }
 
   // A última forma leva o resto da divisão, para a soma fechar em `cheios`.
   const porForma = Math.floor(cheios / formas.length);

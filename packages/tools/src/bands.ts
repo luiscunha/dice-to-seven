@@ -89,6 +89,19 @@ export interface BandSpec {
    */
   readonly formas?: readonly Forma[];
 
+  /**
+   * Todos os níveis saem das `formas`, sem a metade de forma livre.
+   *
+   * Só o `perito` o usa, e é uma decisão de desenho e não de geração: é a banda
+   * do tabuleiro cheio, e um nível de perito com recortes no topo tinha menos
+   * peças do que o máximo.
+   *
+   * **O preço é a variedade de silhueta**: com isto, os 30 níveis da banda são
+   * todos o mesmo quadrado. Tirar esta linha devolve metade deles às formas
+   * irregulares de 45 a 48 peças.
+   */
+  readonly soFormas?: boolean;
+
   /** Parâmetros de geração. `targetPieceCount` varia dentro de `pieces`. */
   readonly params: Omit<GeneratorParams, "targetPieceCount">;
   readonly pieces: readonly [number, number];
@@ -274,6 +287,7 @@ export const BANDS: readonly BandSpec[] = [
     },
     pieces: [45, 49],
     formas: [[7, 7]],
+    soFormas: true,
     soldas: 4,
     accept: { survival: [0.03, 0.22], fairnessDepth: 2 },
   },
