@@ -20,7 +20,7 @@
  */
 
 import type { Board, Cell, Column, Group, Packed } from "./types";
-import { JOKER, MAX_ROWS, colOf, packed, rowOf } from "./types";
+import { JOKER, MAX_ROWS, TARGET, colOf, packed, rowOf } from "./types";
 import { boardKey, jokerAt, pieceCount } from "./board";
 import { isValidGroup } from "./groups";
 import { applyMove, linhasRemovidas } from "./moves";
@@ -676,6 +676,21 @@ export function generate(
  * E não é uma restrição fraca. Ao jogador, a solda fecha **todos** os grupos que
  * partiriam o par — e são muitos — sem fechar o caminho que existe. Poda o erro
  * e deixa a solução de pé.
+ *
+ * ── Um par que já soma 7 não se solda ──
+ *
+ * A primeira versão soldava qualquer par que saísse no mesmo passo, e 22% a 28%
+ * das soldas saíam degeneradas: o passo da solução era **o próprio par**,
+ * portanto as duas faces somavam 7 e a solda não proibia nada. Qualquer grupo
+ * que as contivesse já tinha de ser exatamente elas.
+ *
+ * Pior do que inútil: era uma **ajuda**. O grampo apontava ao jogador uma
+ * jogada pronta a fazer, num sítio onde a mecânica devia estar a tirar-lhe
+ * opções.
+ *
+ * O joker sai pela mesma razão. Um par `joker + v` é sempre grupo legal — o
+ * joker toma `7 - v`, e `1 <= v <= 6` — portanto soldar o joker a um vizinho é
+ * oferecer uma jogada, não fechar nenhuma.
  */
 
 /**
@@ -739,10 +754,18 @@ export function soldarNivel(
   for (let c = 0; c < nivel.board.length; c++) {
     const col = nivel.board[c] as Column;
     for (let r = 0; r + 1 < col.length; r++) {
-      const baixo = passo.get(packed(c, r));
-      if (baixo !== undefined && baixo === passo.get(packed(c, r + 1))) {
-        candidatas.push(packed(c, r));
-      }
+      const passoBaixo = passo.get(packed(c, r));
+      if (passoBaixo === undefined) continue;
+      if (passoBaixo !== passo.get(packed(c, r + 1))) continue;
+
+      const baixo = col[r] as Cell;
+      const cima = col[r + 1] as Cell;
+
+      // Ver a nota acima: um par que já é jogada não restringe nada.
+      if (baixo === JOKER || cima === JOKER) continue;
+      if (baixo + cima === TARGET) continue;
+
+      candidatas.push(packed(c, r));
     }
   }
 

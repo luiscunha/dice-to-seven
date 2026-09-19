@@ -6,6 +6,10 @@
  * O comportamento que se fixa aqui é o que o jogador sente: **tocar numa peça
  * soldada traz a companheira**. Separá-las nunca é jogada legal, portanto deixar
  * selecionar meia solda era oferecer um caminho que acaba sempre em recusa.
+ *
+ * E fixa-se a consequência disso que rebentou o jogo à primeira: o grupo que a
+ * animação recebe tem de vir da sessão (`lastMove`), porque um toque já não
+ * corresponde a uma peça.
  */
 
 import { beforeEach, describe, expect, it } from "vitest";
@@ -24,90 +28,121 @@ import {
 /*
  * ── O nível de referência ──
  *
- *   r1  3  4
- *   r0  4  3
- *       c0 c1
+ *   r1  2  3
+ *   r0  1  4  4
+ *       c0 c1 c2
  *
- * Duas jogadas: 4+3 na coluna 0, 3+4 na coluna 1. A solda em (0,0) une o 4 de
- * baixo ao 3 de cima — o par que a solução já leva junto, que é a única espécie
- * de solda que o gerador põe.
+ * A solda em (0,0) une o 1 ao 2: **somam 3, não 7**. É o que a torna uma solda
+ * a sério — um par que já fosse 7 sozinho não proibiria jogada nenhuma, e o
+ * gerador deixou de os produzir.
+ *
+ * Solução: `1+2+4` leva a coluna 0 inteira e o 4 do lado; a coluna 0 colapsa e
+ * sobram `3` e `4`, que somam 7.
  */
 const NIVEL: Level = {
   id: "teste-soldado",
   seed: 1,
-  board: [
-    [4, 3],
-    [3, 4],
-  ],
+  board: [[1, 2], [4, 3], [4]],
   soldas: [packed(0, 0)],
   solution: [
-    [packed(0, 0), packed(0, 1)],
-    [packed(0, 0), packed(0, 1)],
+    [packed(0, 0), packed(0, 1), packed(1, 0)],
+    [packed(0, 0), packed(1, 0)],
   ],
 };
 
-const SEM: Level = { ...NIVEL, board: NIVEL.board, solution: NIVEL.solution };
-delete (SEM as { soldas?: unknown }).soldas;
+const semSolda = (n: Level): Level => {
+  const copia = { ...n };
+  delete (copia as { soldas?: unknown }).soldas;
+  return copia;
+};
 
 describe("tocar numa peça soldada", () => {
   it("traz a companheira, e num toque só", () => {
     const s = tap(startGame(NIVEL), packed(0, 0));
 
-    // 4+3 são 7: o par fecha o grupo e a jogada acontece logo.
-    expect(s.moves).toBe(1);
-    expect(s.board).toEqual([[3, 4]]);
+    expect(s.selection).toEqual([packed(0, 0), packed(0, 1)]);
+    expect(s.moves).toBe(0); // 1+2 = 3, ainda falta
   });
 
   it("tocar na de cima faz exatamente o mesmo", () => {
     const debaixo = tap(startGame(NIVEL), packed(0, 0));
     const decima = tap(startGame(NIVEL), packed(0, 1));
 
-    expect(decima.board).toEqual(debaixo.board);
-    expect(decima.moves).toBe(1);
+    expect(decima.selection).toEqual(debaixo.selection);
   });
 
   it("sem solda, o mesmo toque seleciona uma peça só", () => {
-    const s = tap(startGame(SEM), packed(0, 0));
+    const s = tap(startGame(semSolda(NIVEL)), packed(0, 0));
     expect(s.selection).toEqual([packed(0, 0)]);
-    expect(s.moves).toBe(0);
+  });
+
+  it("o par mais a peça que fecha faz a jogada", () => {
+    const s = tap(tap(startGame(NIVEL), packed(0, 0)), packed(1, 0));
+
+    expect(s.moves).toBe(1);
+    expect(s.board).toEqual([[3], [4]]);
+    expect(s.soldas).toEqual([]); // saiu com o par
+  });
+});
+
+/*
+ * ── A regressão que partiu o jogo ──
+ *
+ * O ecrã reconstruía o grupo a animar como «a seleção de antes mais a peça
+ * tocada». Com soldas, um toque traz duas peças, portanto o grupo saía a meio e
+ * o `applyMove` da animação rebentava com `InvalidMoveError` — reproduzido no
+ * browser com `Grupo inválido ...: [194]`.
+ */
+describe("o grupo da jogada vem da sessão", () => {
+  it("lastMove traz o grupo inteiro, com as duas peças soldadas", () => {
+    const s = tap(tap(startGame(NIVEL), packed(0, 0)), packed(1, 0));
+
+    expect(s.lastMove).toEqual([packed(0, 0), packed(0, 1), packed(1, 0)]);
+  });
+
+  it("um toque que não fecha jogada não deixa lastMove", () => {
+    expect(tap(startGame(NIVEL), packed(0, 0)).lastMove).toBeUndefined();
+  });
+
+  it("uma recusa não traz a jogada anterior atrás", () => {
+    const jogou = tap(tap(startGame(NIVEL), packed(0, 0)), packed(1, 0));
+    expect(jogou.lastMove).toBeDefined();
+
+    // Tocar fora da silhueta: recusa, e o `lastMove` da jogada anterior não
+    // pode sobreviver — a interface animá-la-ia outra vez.
+    const recusado = tap(jogou, packed(9, 9));
+    expect(recusado.rejection).toBe("no-piece");
+    expect(recusado.lastMove).toBeUndefined();
+  });
+
+  it("desfazer e reiniciar também o limpam", () => {
+    const jogou = tap(tap(startGame(NIVEL), packed(0, 0)), packed(1, 0));
+
+    expect(undo(jogou).lastMove).toBeUndefined();
+    expect(restart(jogou).lastMove).toBeUndefined();
   });
 });
 
 describe("a solda impede jogadas", () => {
-  /*
-   *   r1  5  6
-   *   r0  2  1
-   *
-   * Sem soldas, 5+2 e 6+1 limpam. Com o 2 soldado ao 5, o par vale 7 e sai
-   * junto — mas 5 sozinho com o 2 do lado já não é uma escolha do jogador.
-   */
-  const CRUZADO: Level = {
-    id: "cruzado",
-    seed: 2,
-    board: [
-      [2, 5],
-      [1, 6],
-    ],
-    soldas: [packed(0, 0)],
-    solution: [
-      [packed(0, 0), packed(0, 1)],
-      [packed(0, 0), packed(0, 1)],
-    ],
-  };
-
   it("a seleção que passaria de 7 com a companheira é recusada", () => {
-    // 6 (1,1) mais o par soldado 2+5 dariam 13.
-    const s = tap(tap(startGame(CRUZADO), packed(1, 1)), packed(0, 1));
-    expect(s.rejection).toBe("over-target");
-    expect(s.selection).toEqual([packed(1, 1)]);
+    // O 4 de (2,0) mais o par soldado 1+2 dariam 7... mas não são vizinhos.
+    // Usa-se o 3 de (1,1): 3 + 1 + 2 = 6, e depois o 4 levaria a 10.
+    const comTres = tap(startGame(NIVEL), packed(1, 1));
+    const comPar = tap(comTres, packed(0, 0));
+
+    expect(comPar.selection).toHaveLength(3); // 3 + 1 + 2 = 6
+
+    const demais = tap(comPar, packed(1, 0)); // + 4 = 10
+    expect(demais.rejection).toBe("over-target");
   });
 
   it("tocar outra vez retira o par inteiro, não meio", () => {
-    const um = tap(startGame(NIVEL), packed(1, 0)); // 3, sozinho
-    const dois = tap(um, packed(0, 1)); // traz o par 4+3 → 10 > 7, recusado
+    const comPar = tap(startGame(NIVEL), packed(0, 0));
+    expect(comPar.selection).toHaveLength(2);
 
-    expect(dois.rejection).toBe("over-target");
-    expect(dois.selection).toEqual([packed(1, 0)]);
+    // Tocar na de cima retira as duas, não só aquela.
+    expect(tap(comPar, packed(0, 1)).selection).toEqual([]);
+    expect(tap(comPar, packed(0, 0)).selection).toEqual([]);
   });
 });
 
@@ -127,30 +162,28 @@ describe("beco sem saída conta com as soldas", () => {
       solution: [],
     };
 
-    const jogo = startGame(preso);
-    expect(isBlocked(jogo)).toBe(true);
+    expect(isBlocked(startGame(preso))).toBe(true);
 
-    // Sem a solda, 6+... continua sem dar 7 — mas o motivo é outro, e é por
-    // isso que o teste usa um tabuleiro onde a solda é a única diferença.
+    // Sem a solda, o mesmo tabuleiro tem jogada: 3 + ... não, mas 5+... também
+    // não. Usa-se um tabuleiro onde a solda é a única diferença.
     const solto: Level = { ...preso, board: [[3, 4], [6]] };
-    delete (solto as { soldas?: unknown }).soldas;
-    expect(isBlocked(startGame(solto))).toBe(false); // 3+4
+    expect(isBlocked(startGame(semSolda(solto)))).toBe(false); // 3+4
   });
 });
 
 describe("desfazer e reiniciar devolvem as soldas", () => {
-  it("o undo repõe o par soldado", () => {
-    const depois = tap(startGame(NIVEL), packed(0, 0));
-    expect(depois.soldas).toEqual([]);
+  const jogado = (): GameState =>
+    tap(tap(startGame(NIVEL), packed(0, 0)), packed(1, 0));
 
-    const atras = undo(depois);
+  it("o undo repõe o par soldado", () => {
+    const atras = undo(jogado());
+
     expect(atras.soldas).toEqual([packed(0, 0)]);
     expect(atras.board).toEqual(NIVEL.board);
   });
 
   it("o reinício repõe as do nível", () => {
-    const depois = tap(startGame(NIVEL), packed(0, 0));
-    expect(restart(depois).soldas).toEqual([packed(0, 0)]);
+    expect(restart(jogado()).soldas).toEqual([packed(0, 0)]);
   });
 
   it("as duas pilhas do histórico andam sempre a par", () => {
@@ -160,7 +193,7 @@ describe("desfazer e reiniciar devolvem as soldas", () => {
 
     s = tap(s, packed(0, 0));
     visto.push(s);
-    s = tap(s, packed(0, 0));
+    s = tap(s, packed(1, 0));
     visto.push(s);
     s = undo(s);
     visto.push(s);

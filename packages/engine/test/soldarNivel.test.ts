@@ -10,13 +10,17 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  JOKER,
+  TARGET,
   applyMove,
   aplicarSoldas,
+  cellAt,
   checkSoldas,
   generate,
   isEmpty,
   jogadaLegal,
   mulberry32,
+  parDe,
   soldarNivel,
   type Board,
   type Soldas,
@@ -110,5 +114,60 @@ describe("soldar não estraga a solução", () => {
     // afirma "sempre" porque o acaso pode cair num par legítimo.
     const { ilegais } = jogarComSoldas(nivel!.board, nivel!.solution, soldas);
     expect(ilegais).toBe(0);
+  });
+});
+
+/*
+ * ── Um par que já soma 7 não se solda ──
+ *
+ * A primeira versão soldava qualquer par que saísse no mesmo passo, e 22% a 28%
+ * das soldas saíam assim: o passo da solução era o próprio par. A solda não
+ * proibia nada — e pior, apontava ao jogador uma jogada pronta a fazer.
+ */
+describe("soldas que não restringem nada ficam de fora", () => {
+  it("nenhum par soldado soma 7 sozinho, em 300 níveis", () => {
+    let vistas = 0;
+
+    for (let seed = 1; seed <= 300; seed += 1) {
+      const nivel = nivelDe(seed, 26);
+      if (nivel === undefined) continue;
+
+      for (const p of soldarNivel(nivel, 4, mulberry32(seed * 104_729))) {
+        const [baixo, cima] = parDe(p);
+        const a = cellAt(nivel.board, baixo) as number;
+        const b = cellAt(nivel.board, cima) as number;
+
+        expect(a + b).not.toBe(TARGET);
+        vistas += 1;
+      }
+    }
+
+    expect(vistas).toBeGreaterThan(400);
+  });
+
+  it("o joker nunca entra numa solda", () => {
+    // `joker + v` é sempre grupo legal — o joker toma `7 - v` — portanto soldar
+    // o joker a um vizinho é oferecer uma jogada, não fechar nenhuma.
+    let comJoker = 0;
+    let niveis = 0;
+
+    for (let seed = 1; seed <= 200; seed += 1) {
+      const nivel = generate(seed, {
+        targetPieceCount: 22,
+        includeJoker: true,
+        jokerProgress: 0.3,
+      });
+      if (nivel?.joker === undefined) continue;
+      niveis += 1;
+
+      for (const p of soldarNivel(nivel, 4, mulberry32(seed * 7907))) {
+        for (const q of parDe(p)) {
+          if (cellAt(nivel.board, q) === JOKER) comJoker += 1;
+        }
+      }
+    }
+
+    expect(niveis).toBeGreaterThan(20);
+    expect(comJoker).toBe(0);
   });
 });

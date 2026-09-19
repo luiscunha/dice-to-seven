@@ -16,7 +16,7 @@
  * por parâmetro — é o que a torna testável — e é este ecrã que lho dá.
  */
 
-import type { Group, Level, Packed } from "@dicetoseven/engine";
+import type { Level, Packed } from "@dicetoseven/engine";
 import { colOf, mulberry32, rowOf, shuffled } from "@dicetoseven/engine";
 
 import { selectionTotal } from "../session/GameSession";
@@ -180,17 +180,17 @@ export class TimeAttackScreen {
     if (this.terminado) return;
 
     const antes = this.estado;
-    const selecao = [...antes.game.selection, p];
 
     const r = tapTimeAttack(antes, p, Date.now(), { time: this.config });
     this.estado = r.state;
 
-    if (r.moved) {
+    const grupo = r.state.game.lastMove;
+
+    if (r.moved && grupo !== undefined) {
       // A âncora do anúncio calcula-se **antes** de as peças saírem: depois já
       // não há de onde o `+3s` subir.
-      if (r.gainedMs > 0) this.anunciar(r.gainedMs, selecao);
+      if (r.gainedMs > 0) this.anunciar(r.gainedMs, grupo);
 
-      const grupo = [...selecao].sort((a, b) => a - b) as Group;
       await this.view.aplicarJogada(grupo);
 
       if (r.cleared) this.avancarTabuleiro();

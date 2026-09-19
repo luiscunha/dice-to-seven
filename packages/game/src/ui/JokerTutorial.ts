@@ -18,7 +18,7 @@
  * já percebeu sai daqui em quatro toques.
  */
 
-import type { Group, Packed } from "@dicetoseven/engine";
+import type { Packed } from "@dicetoseven/engine";
 import { JOKER, cellAt, hasAnyGroup, totalSum } from "@dicetoseven/engine";
 
 import type { GameState, JokerValue } from "../session/GameSession";
@@ -175,16 +175,11 @@ export class JokerTutorial {
       return;
     }
 
-    const candidato = antes.selection.includes(p)
-      ? [...antes.selection]
-      : [...antes.selection, p];
-
     this.jogo = tap(antes, p, jokerAs);
 
-    if (this.jogo.history.length > antes.history.length) {
-      await this.view.aplicarJogada(
-        [...candidato].sort((a, b) => a - b) as Group,
-      );
+    // O grupo vem da sessão — ver a nota em `GameState.lastMove`.
+    if (this.jogo.lastMove !== undefined) {
+      await this.view.aplicarJogada(this.jogo.lastMove);
     }
 
     this.pintar();

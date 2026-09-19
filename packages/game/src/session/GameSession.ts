@@ -82,6 +82,19 @@ export interface GameState {
 
   /** `undefined` quando o último toque foi aceite. */
   readonly rejection?: TapRejection;
+
+  /**
+   * O grupo que a última jogada eliminou. `undefined` se o último toque não
+   * fechou jogada nenhuma.
+   *
+   * Existe porque a interface precisa de saber **o que saiu** para o animar, e
+   * a única fonte fiável disso é quem o decidiu. Antes cada ecrã reconstruía o
+   * grupo como "a seleção de antes mais a peça tocada" — e essa conta deixou de
+   * bater no dia em que um toque passou a trazer duas peças: com soldas, o
+   * grupo reconstruído vinha a meio e o `applyMove` da animação rebentava com
+   * `InvalidMoveError`. Duplicar a regra foi o erro; isto remove a duplicação.
+   */
+  readonly lastMove?: Group;
 }
 
 export const startGame = (level: Level): GameState => ({
@@ -185,15 +198,15 @@ export function tap(
   p: Packed,
   jokerAs?: JokerValue,
 ): GameState {
-  if (isFinished(s)) return { ...s, rejection: "board-finished" };
+  if (isFinished(s)) return recusar(s, "board-finished");
 
   const cell = cellAt(s.board, p);
-  if (cell === undefined) return { ...s, rejection: "no-piece" };
+  if (cell === undefined) return recusar(s, "no-piece");
 
   const isJoker = cell === JOKER;
 
   if (isJoker && jokerAs === undefined) {
-    return { ...s, rejection: "joker-needs-value" };
+    return recusar(s, "joker-needs-value");
   }
 
   // As células que este toque mexe: a tocada, e a companheira se for soldada.
@@ -217,7 +230,7 @@ export function tap(
   const total = selectionSum(s.board, selection) + (escolhido ?? 0);
 
   if (total > TARGET) {
-    return { ...s, rejection: "over-target" };
+    return recusar(s, "over-target");
   }
 
   const seguinte = omitJoker({ ...s, selection }, escolhido);
@@ -343,17 +356,20 @@ function onStoredPath(s: GameState): boolean {
 }
 
 function applyGroup(s: GameState, group: Group): GameState {
-  return omitRejection(
-    semJoker({
-      ...s,
-      board: applyMove(s.board, group),
-      soldas: aplicarSoldas(s.board, s.soldas, group),
-      history: [...s.history, s.board],
-      historySoldas: [...s.historySoldas, s.soldas],
-      selection: [],
-      moves: s.moves + 1,
-    }),
-  );
+  return {
+    ...omitRejection(
+      semJoker({
+        ...s,
+        board: applyMove(s.board, group),
+        soldas: aplicarSoldas(s.board, s.soldas, group),
+        history: [...s.history, s.board],
+        historySoldas: [...s.historySoldas, s.soldas],
+        selection: [],
+        moves: s.moves + 1,
+      }),
+    ),
+    lastMove: group,
+  };
 }
 
 /**
@@ -379,9 +395,17 @@ function paresDe(s: GameState, p: Packed): readonly Packed[] {
  * opcional, e espalhar `rejection: undefined` seria isso. Retiram-se as chaves.
  */
 
-function omitRejection(s: GameState & { rejection?: TapRejection }): GameState {
-  const { rejection: _ignored, ...rest } = s;
+function omitRejection(
+  s: GameState & { rejection?: TapRejection },
+): GameState {
+  const { rejection: _r, lastMove: _m, ...rest } = s;
   return rest;
+}
+
+/** Uma recusa nunca traz jogada nenhuma atrás. */
+function recusar(s: GameState, porque: TapRejection): GameState {
+  const { lastMove: _m, ...rest } = s;
+  return { ...rest, rejection: porque };
 }
 
 /** Um joker escolhido só vale para a seleção em curso. */
