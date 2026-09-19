@@ -184,7 +184,7 @@ export class PuzzleScreen {
       aoEscolher: (valor) => void this.escolherJoker(valor),
     });
     this.view.dimensionarPara(level.board);
-    this.view.montar(level.board);
+    this.view.montar(level.board, level.soldas);
 
     this.btDesfazer.addEventListener("click", () => {
       this.desfazer();
@@ -281,7 +281,7 @@ export class PuzzleScreen {
 
   private desfazer(): void {
     this.estado = undoPuzzle(this.estado);
-    this.view.montar(this.estado.game.board);
+    this.view.montar(this.estado.game.board, this.estado.game.soldas);
     this.view.marcarSugestao(undefined);
     this.pintar();
   }
@@ -289,7 +289,7 @@ export class PuzzleScreen {
   private reiniciar(): void {
     this.estado = restartPuzzle(this.estado);
     this.pontos = 0;
-    this.view.montar(this.estado.game.board);
+    this.view.montar(this.estado.game.board, this.estado.game.soldas);
     this.view.marcarSugestao(undefined);
     this.pintar();
   }

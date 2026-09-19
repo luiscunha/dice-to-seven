@@ -10,17 +10,21 @@
  * é o que torna o undo uma pilha de tabuleiros e nada mais (spec §1.1).
  */
 
-import type { Board, Group, Level, Packed } from "@dicetoseven/engine";
+import type { Board, Group, Level, Packed, Soldas } from "@dicetoseven/engine";
 import {
   JOKER,
+  SEM_SOLDAS,
   TARGET,
+  aplicarSoldas,
   applyMove,
   boardKey,
   cellAt,
+  celulasSoldadas,
   findSolution,
-  hasAnyGroup,
   isEmpty,
-  isValidGroup,
+  jogadaLegal,
+  parDe,
+  temGrupoSoldado,
   toGroup,
 } from "@dicetoseven/engine";
 
@@ -39,6 +43,29 @@ export interface GameState {
   readonly board: Board;
   /** Pilha de tabuleiros anteriores. É toda a implementação do undo. */
   readonly history: readonly Board[];
+
+  /**
+   * As soldas ainda por gastar. Vazio na esmagadora maioria dos níveis.
+   *
+   * Uma solda desaparece quando o par sai, portanto isto só encolhe — ver
+   * `aplicarSoldas`.
+   */
+  readonly soldas: Soldas;
+
+  /**
+   * As soldas de cada tabuleiro em `history`, **sempre com o mesmo
+   * comprimento**.
+   *
+   * Duas pilhas paralelas em vez de uma pilha de pares por uma razão concreta:
+   * o `GameState` do Survival vai para o `localStorage` inteiro, e mudar a
+   * forma do `history` obrigaria a deitar fora as corridas a meio de quem já
+   * está a jogar a demo — para nada, porque o Survival não tem soldas nenhumas.
+   *
+   * O risco de as duas pilhas se desencontrarem existe, e está confinado às
+   * duas funções que as mexem (`applyGroup` e `undo`). Há um teste que exige
+   * que os comprimentos coincidam depois de qualquer sequência de jogadas.
+   */
+  readonly historySoldas: readonly Soldas[];
   /** Por ordem de toque, não canónica — normaliza-se com `toGroup` na fronteira. */
   readonly selection: readonly Packed[];
 
@@ -60,7 +87,9 @@ export interface GameState {
 export const startGame = (level: Level): GameState => ({
   level,
   board: level.board,
+  soldas: level.soldas ?? SEM_SOLDAS,
   history: [],
+  historySoldas: [],
   selection: [],
   moves: 0,
   undos: 0,
@@ -83,7 +112,7 @@ export const isFinished = (s: GameState): boolean => isEmpty(s.board);
  * métricas, não à pergunta «ainda há jogada?».
  */
 export const isBlocked = (s: GameState): boolean =>
-  !isEmpty(s.board) && !hasAnyGroup(s.board);
+  !isEmpty(s.board) && !temGrupoSoldado(s.board, s.soldas);
 
 /** Soma das faces fixas da seleção. O joker conta 0 (spec §3.2). */
 export function selectionSum(b: Board, selection: readonly Packed[]): number {
@@ -145,6 +174,11 @@ export const remainingToTarget = (s: GameState): number =>
  * **Uma peça que faça a soma passar de 7 é recusada**, não aceite: as faces são
  * >= 1 e a soma só cresce, portanto uma seleção acima de 7 nunca mais dá grupo
  * válido, e aceitá-la só deixaria o jogador a desfazer à mão.
+ *
+ * **Tocar numa peça soldada traz a companheira.** Separá-las nunca é jogada
+ * legal, portanto deixar selecionar meia solda seria oferecer um caminho que
+ * acaba sempre em recusa — e o jogador teria de descobrir sozinho porquê. Entram
+ * as duas, saem as duas.
  */
 export function tap(
   s: GameState,
@@ -162,18 +196,23 @@ export function tap(
     return { ...s, rejection: "joker-needs-value" };
   }
 
+  // As células que este toque mexe: a tocada, e a companheira se for soldada.
+  const tocadas = paresDe(s, p);
+
   // Tocar outra vez numa peça normal retira-a. No joker, um toque novo troca o
   // valor — retirá-lo faz-se a desfazer.
   if (s.selection.includes(p)) {
     if (isJoker) return omitRejection(omitJoker(s, jokerAs));
 
+    const fora = new Set(tocadas);
     return omitRejection({
       ...s,
-      selection: s.selection.filter((q) => q !== p),
+      selection: s.selection.filter((q) => !fora.has(q)),
     });
   }
 
-  const selection = [...s.selection, p];
+  const novas = tocadas.filter((q) => !s.selection.includes(q));
+  const selection = [...s.selection, ...novas];
   const escolhido = isJoker ? jokerAs : s.jokerAs;
   const total = selectionSum(s.board, selection) + (escolhido ?? 0);
 
@@ -184,7 +223,7 @@ export function tap(
   const seguinte = omitJoker({ ...s, selection }, escolhido);
   const group = toGroup(selection);
 
-  if (total === TARGET && isValidGroup(s.board, group)) {
+  if (total === TARGET && jogadaLegal(s.board, group, s.soldas)) {
     return applyGroup(seguinte, group);
   }
 
@@ -218,7 +257,9 @@ export function undo(s: GameState): GameState {
     semJoker({
       ...s,
       board: previous,
+      soldas: s.historySoldas[s.historySoldas.length - 1] ?? SEM_SOLDAS,
       history: s.history.slice(0, -1),
+      historySoldas: s.historySoldas.slice(0, -1),
       selection: [],
       moves: s.moves - 1,
       undos: s.undos + 1,
@@ -232,7 +273,9 @@ export const restart = (s: GameState): GameState =>
     semJoker({
       ...s,
       board: s.level.board,
+      soldas: s.level.soldas ?? SEM_SOLDAS,
       history: [],
+      historySoldas: [],
       selection: [],
       moves: 0,
       restarts: s.restarts + 1,
@@ -266,7 +309,7 @@ export function hint(s: GameState): HintResult {
     return { state: spent, group: stored, source: "stored" };
   }
 
-  const solution = findSolution(s.board);
+  const solution = findSolution(s.board, undefined, s.soldas);
   const first = solution?.[0];
 
   if (first === undefined) return { state: spent, source: "none" };
@@ -286,11 +329,14 @@ export function hint(s: GameState): HintResult {
  */
 function onStoredPath(s: GameState): boolean {
   let b = s.level.board;
+  let soldas: Soldas = s.level.soldas ?? SEM_SOLDAS;
 
   for (let i = 0; i < s.moves; i++) {
     const g = s.level.solution[i];
-    if (g === undefined || !isValidGroup(b, g)) return false;
+    if (g === undefined || !jogadaLegal(b, g, soldas)) return false;
+    const seguintes = aplicarSoldas(b, soldas, g);
     b = applyMove(b, g);
+    soldas = seguintes;
   }
 
   return boardKey(b) === boardKey(s.board);
@@ -301,11 +347,31 @@ function applyGroup(s: GameState, group: Group): GameState {
     semJoker({
       ...s,
       board: applyMove(s.board, group),
+      soldas: aplicarSoldas(s.board, s.soldas, group),
       history: [...s.history, s.board],
+      historySoldas: [...s.historySoldas, s.soldas],
       selection: [],
       moves: s.moves + 1,
     }),
   );
+}
+
+/**
+ * As células que um toque em `p` mexe: só `p`, ou o par inteiro se for soldada.
+ *
+ * Ordenadas de baixo para cima, para que a seleção apareça na ordem em que o
+ * jogador lê o tabuleiro.
+ */
+function paresDe(s: GameState, p: Packed): readonly Packed[] {
+  if (s.soldas.length === 0) return [p];
+  if (!celulasSoldadas(s.soldas).has(p)) return [p];
+
+  const baixo = s.soldas.find((q) => {
+    const [b, c] = parDe(q);
+    return b === p || c === p;
+  });
+
+  return baixo === undefined ? [p] : parDe(baixo);
 }
 
 /*

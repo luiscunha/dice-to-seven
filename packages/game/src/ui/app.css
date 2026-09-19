@@ -160,6 +160,46 @@
   z-index: 1;
 }
 
+/*
+ * ─── Soldas ───────────────────────────────────────────────────────────────
+ *
+ * Duas peças unidas saem juntas ou não saem. O traço vive na peça **de cima** e
+ * desce por cima da de baixo, e é essa escolha que faz o resto funcionar
+ * sozinho: as peças nascem de baixo para cima, portanto a de cima vem depois no
+ * DOM e o traço cobre as duas sem `z-index` nenhum. E porque é um `::after` da
+ * peça, herda-lhe a transição — cai com a gravidade e desvanece com a saída sem
+ * uma linha de JavaScript por jogada.
+ *
+ * A forma é um grampo: uma barra a atravessar o intervalo, entrando 16% para
+ * dentro de cada peça. Entrar para dentro não é gosto — sem isso, ao lado de um
+ * tabuleiro com `--gap-peca: 4px` no telemóvel, a barra tinha 4 px de altura e
+ * lia-se como uma sombra entre peças, não como uma ligação.
+ */
+.peca.soldada-cima::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: calc(100% - var(--lado-real) * 0.16);
+  translate: -50% 0;
+
+  width: calc(var(--lado-real) * 0.3);
+  height: calc(var(--gap-peca) + var(--lado-real) * 0.32);
+  border-radius: calc(var(--lado-real) * 0.09);
+
+  background: var(--solda);
+  box-shadow: 0 0 0 1px var(--solda-luz);
+  pointer-events: none;
+}
+
+/*
+ * A seleção acende sempre o par inteiro — `tap` trata disso — mas o grampo fica
+ * por baixo do anel branco da peça selecionada e perdia-se. Clareia-se.
+ */
+.peca.soldada-cima.selecionada::after {
+  background: #ffffff;
+  box-shadow: 0 0 0 1px #08221e;
+}
+
 /* Sair é desaparecer, não explodir. */
 .peca.a-sair {
   opacity: 0;
