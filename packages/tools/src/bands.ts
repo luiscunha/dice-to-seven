@@ -89,9 +89,36 @@ export interface BandSpec {
    */
   readonly formas?: readonly Forma[];
 
+  /**
+   * Todos os níveis saem das `formas`, sem a metade de forma livre.
+   *
+   * Só o `perito` o usa, e é uma decisão de desenho e não de geração: é a banda
+   * do tabuleiro cheio, e um nível de perito com recortes no topo tinha menos
+   * peças do que o máximo.
+   *
+   * **O preço é a variedade de silhueta**: com isto, os 30 níveis da banda são
+   * todos o mesmo quadrado. Tirar esta linha devolve metade deles às formas
+   * irregulares de 45 a 48 peças.
+   */
+  readonly soFormas?: boolean;
+
   /** Parâmetros de geração. `targetPieceCount` varia dentro de `pieces`. */
   readonly params: Omit<GeneratorParams, "targetPieceCount">;
   readonly pieces: readonly [number, number];
+
+  /**
+   * Soldas a pedir por nível. Zero — por omissão — é o jogo de sempre.
+   *
+   * Não entra no `accept` de propósito. As soldas escolhem-se **depois** de o
+   * nível ser aceite, sobre a solução que ele já traz, e por construção não
+   * podem torná-lo impossível (ver `soldarNivel`). Pô-las no critério de
+   * aceitação daria a entender que há candidatos a perder por causa delas, e não
+   * há: o rendimento do funil não se mexe um milímetro.
+   *
+   * Um nível pode devolver menos soldas do que as pedidas quando a solução não
+   * tem pares verticais que cheguem. Publica-se na mesma.
+   */
+  readonly soldas?: number;
 
   readonly accept: {
     /** Intervalo fechado de taxa de sobrevivência. */
@@ -223,22 +250,45 @@ export const BANDS: readonly BandSpec[] = [
       [5, 6],
       [6, 6],
     ],
+    /*
+     * Duas, contra as quatro do perito: o avançado é onde a regra se aprende.
+     * Medido nos tabuleiros publicados, duas soldas tiram cerca de um quarto das
+     * jogadas disponíveis — chega para se notar, não chega para travar.
+     */
+    soldas: 2,
     accept: { survival: [0.2, 0.45], fairnessDepth: 2 },
   },
+  /*
+   * ── O perito é grande **e** apertado, não um em vez do outro ──
+   *
+   * A tentação, depois de medir, era encolher a banda: o `denso` tem 12 peças e
+   * duas em cada três jogadas perdem, enquanto o `perito` tem 43 e só 7% das
+   * jogadas perdem. O tabuleiro pequeno é mais exigente.
+   *
+   * Ficou decidido o contrário, e com razão: um perito pequeno seria um denso
+   * com outro nome. O perito é a banda do tabuleiro cheio — **49 peças, 7×7** —
+   * e a dificuldade vem das regras novas, não de tirar peças.
+   *
+   * As formas parciais saíram: com `pieces` colado ao topo, uma silhueta com
+   * recortes deixa de caber. O que mede a dificuldade continua a ser o
+   * `accept`, não estes parâmetros.
+   *
+   * **O pack só se regera quando as soldas entrarem no gerador.** Regerar agora
+   * dava 49 peças sem solda nenhuma — maior e igualmente fácil, que é
+   * exatamente a queixa dos jogadores.
+   */
   {
     id: "perito",
-    label: "Perito — faces altas, silhuetas",
+    label: "Perito — tabuleiro cheio, faces altas, com soldas",
     params: {
       compositionWeights: facesAltas(),
       newColumnProbability: 0.25,
       insertionDepthBias: 3,
     },
-    pieces: [35, 50],
-    formas: [
-      [5, 7],
-      [6, 7],
-      [7, 7],
-    ],
+    pieces: [45, 49],
+    formas: [[7, 7]],
+    soFormas: true,
+    soldas: 4,
     accept: { survival: [0.03, 0.22], fairnessDepth: 2 },
   },
   /*

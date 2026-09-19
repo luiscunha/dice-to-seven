@@ -931,184 +931,184 @@
  },
  {
   "id": "perito",
-  "label": "Perito — faces altas, silhuetas",
+  "label": "Perito — tabuleiro cheio, faces altas, com soldas",
   "niveis": [
    {
-    "id": "perito-000003",
-    "pieces": 48,
-    "colunas": 7,
-    "joker": false
-   },
-   {
-    "id": "perito-000017",
-    "pieces": 50,
-    "colunas": 7,
-    "joker": false
-   },
-   {
-    "id": "perito-000018",
-    "pieces": 37,
-    "colunas": 6,
-    "joker": false
-   },
-   {
-    "id": "perito-000021",
-    "pieces": 46,
-    "colunas": 8,
-    "joker": false
-   },
-   {
-    "id": "perito-000022",
-    "pieces": 45,
-    "colunas": 8,
-    "joker": false
-   },
-   {
-    "id": "perito-000025",
-    "pieces": 44,
-    "colunas": 8,
-    "joker": false
-   },
-   {
-    "id": "perito-000028",
-    "pieces": 47,
-    "colunas": 8,
-    "joker": false
-   },
-   {
-    "id": "perito-000034",
-    "pieces": 37,
-    "colunas": 6,
-    "joker": false
-   },
-   {
-    "id": "perito-000045",
-    "pieces": 38,
-    "colunas": 6,
-    "joker": false
-   },
-   {
-    "id": "perito-000054",
-    "pieces": 41,
-    "colunas": 7,
-    "joker": false
-   },
-   {
-    "id": "perito-000055",
-    "pieces": 44,
-    "colunas": 8,
-    "joker": false
-   },
-   {
-    "id": "perito-000056",
-    "pieces": 43,
-    "colunas": 9,
-    "joker": false
-   },
-   {
-    "id": "perito-000068",
-    "pieces": 39,
-    "colunas": 7,
-    "joker": false
-   },
-   {
-    "id": "perito-000069",
-    "pieces": 46,
-    "colunas": 8,
-    "joker": false
-   },
-   {
-    "id": "perito-000073",
-    "pieces": 44,
-    "colunas": 6,
-    "joker": false
-   },
-   {
-    "id": "perito-1000010",
-    "pieces": 35,
-    "colunas": 5,
-    "joker": false
-   },
-   {
-    "id": "perito-1000036",
-    "pieces": 35,
-    "colunas": 5,
-    "joker": false
-   },
-   {
-    "id": "perito-1000053",
-    "pieces": 35,
-    "colunas": 5,
-    "joker": false
-   },
-   {
-    "id": "perito-1000068",
-    "pieces": 35,
-    "colunas": 5,
-    "joker": false
-   },
-   {
-    "id": "perito-1000227",
-    "pieces": 35,
-    "colunas": 5,
-    "joker": false
-   },
-   {
-    "id": "perito-2000010",
-    "pieces": 42,
-    "colunas": 6,
-    "joker": false
-   },
-   {
-    "id": "perito-2000059",
-    "pieces": 42,
-    "colunas": 6,
-    "joker": false
-   },
-   {
-    "id": "perito-2000088",
-    "pieces": 42,
-    "colunas": 6,
-    "joker": false
-   },
-   {
-    "id": "perito-2000134",
-    "pieces": 42,
-    "colunas": 6,
-    "joker": false
-   },
-   {
-    "id": "perito-2000140",
-    "pieces": 42,
-    "colunas": 6,
-    "joker": false
-   },
-   {
-    "id": "perito-3000051",
+    "id": "perito-1000052",
     "pieces": 49,
     "colunas": 7,
     "joker": false
    },
    {
-    "id": "perito-3000204",
+    "id": "perito-1000129",
     "pieces": 49,
     "colunas": 7,
     "joker": false
    },
    {
-    "id": "perito-3000300",
+    "id": "perito-1000143",
     "pieces": 49,
     "colunas": 7,
     "joker": false
    },
    {
-    "id": "perito-3000578",
+    "id": "perito-1000174",
     "pieces": 49,
     "colunas": 7,
     "joker": false
    },
    {
-    "id": "perito-3000611",
+    "id": "perito-1000242",
+    "pieces": 49,
+    "colunas": 7,
+    "joker": false
+   },
+   {
+    "id": "perito-1000383",
+    "pieces": 49,
+    "colunas": 7,
+    "joker": false
+   },
+   {
+    "id": "perito-1000476",
+    "pieces": 49,
+    "colunas": 7,
+    "joker": false
+   },
+   {
+    "id": "perito-1000553",
+    "pieces": 49,
+    "colunas": 7,
+    "joker": false
+   },
+   {
+    "id": "perito-1000654",
+    "pieces": 49,
+    "colunas": 7,
+    "joker": false
+   },
+   {
+    "id": "perito-1001114",
+    "pieces": 49,
+    "colunas": 7,
+    "joker": false
+   },
+   {
+    "id": "perito-1001179",
+    "pieces": 49,
+    "colunas": 7,
+    "joker": false
+   },
+   {
+    "id": "perito-1001580",
+    "pieces": 49,
+    "colunas": 7,
+    "joker": false
+   },
+   {
+    "id": "perito-1001727",
+    "pieces": 49,
+    "colunas": 7,
+    "joker": false
+   },
+   {
+    "id": "perito-1001902",
+    "pieces": 49,
+    "colunas": 7,
+    "joker": false
+   },
+   {
+    "id": "perito-1001926",
+    "pieces": 49,
+    "colunas": 7,
+    "joker": false
+   },
+   {
+    "id": "perito-1001968",
+    "pieces": 49,
+    "colunas": 7,
+    "joker": false
+   },
+   {
+    "id": "perito-1002154",
+    "pieces": 49,
+    "colunas": 7,
+    "joker": false
+   },
+   {
+    "id": "perito-1002673",
+    "pieces": 49,
+    "colunas": 7,
+    "joker": false
+   },
+   {
+    "id": "perito-1002780",
+    "pieces": 49,
+    "colunas": 7,
+    "joker": false
+   },
+   {
+    "id": "perito-1003034",
+    "pieces": 49,
+    "colunas": 7,
+    "joker": false
+   },
+   {
+    "id": "perito-1003900",
+    "pieces": 49,
+    "colunas": 7,
+    "joker": false
+   },
+   {
+    "id": "perito-1004242",
+    "pieces": 49,
+    "colunas": 7,
+    "joker": false
+   },
+   {
+    "id": "perito-1004390",
+    "pieces": 49,
+    "colunas": 7,
+    "joker": false
+   },
+   {
+    "id": "perito-1004570",
+    "pieces": 49,
+    "colunas": 7,
+    "joker": false
+   },
+   {
+    "id": "perito-1004763",
+    "pieces": 49,
+    "colunas": 7,
+    "joker": false
+   },
+   {
+    "id": "perito-1004924",
+    "pieces": 49,
+    "colunas": 7,
+    "joker": false
+   },
+   {
+    "id": "perito-1004977",
+    "pieces": 49,
+    "colunas": 7,
+    "joker": false
+   },
+   {
+    "id": "perito-1005022",
+    "pieces": 49,
+    "colunas": 7,
+    "joker": false
+   },
+   {
+    "id": "perito-1005163",
+    "pieces": 49,
+    "colunas": 7,
+    "joker": false
+   },
+   {
+    "id": "perito-1005226",
     "pieces": 49,
     "colunas": 7,
     "joker": false

@@ -184,7 +184,7 @@ export class PuzzleScreen {
       aoEscolher: (valor) => void this.escolherJoker(valor),
     });
     this.view.dimensionarPara(level.board);
-    this.view.montar(level.board);
+    this.view.montar(level.board, level.soldas);
 
     this.btDesfazer.addEventListener("click", () => {
       this.desfazer();
@@ -248,18 +248,16 @@ export class PuzzleScreen {
       return;
     }
 
-    // O grupo é a seleção mais a peça tocada — capturado antes, porque a sessão
-    // limpa a seleção assim que a jogada acontece.
-    const candidato = antes.selection.includes(p)
-      ? [...antes.selection]
-      : [...antes.selection, p];
     const jogo = tap(antes, p, jokerAs);
 
     this.estado = { ...this.estado, game: jogo };
     this.view.marcarSugestao(undefined);
 
-    if (jogo.history.length > antes.history.length) {
-      await this.animarJogada(candidato);
+    // O grupo vem da sessão, que é quem o decidiu. Reconstruí-lo aqui como "a
+    // seleção de antes mais a peça tocada" era duplicar a regra do toque — e
+    // deixou de bater assim que um toque passou a trazer duas peças.
+    if (jogo.lastMove !== undefined) {
+      await this.animarJogada(jogo.lastMove);
     }
 
     this.pintar();
@@ -273,15 +271,14 @@ export class PuzzleScreen {
     await this.tocar(p, valor);
   }
 
-  private async animarJogada(candidato: readonly Packed[]): Promise<void> {
-    const grupo = [...candidato].sort((a, b) => a - b) as Group;
+  private async animarJogada(grupo: Group): Promise<void> {
     this.pontos += moveScore(grupo.length, 1);
     await this.view.aplicarJogada(grupo);
   }
 
   private desfazer(): void {
     this.estado = undoPuzzle(this.estado);
-    this.view.montar(this.estado.game.board);
+    this.view.montar(this.estado.game.board, this.estado.game.soldas);
     this.view.marcarSugestao(undefined);
     this.pintar();
   }
@@ -289,7 +286,7 @@ export class PuzzleScreen {
   private reiniciar(): void {
     this.estado = restartPuzzle(this.estado);
     this.pontos = 0;
-    this.view.montar(this.estado.game.board);
+    this.view.montar(this.estado.game.board, this.estado.game.soldas);
     this.view.marcarSugestao(undefined);
     this.pintar();
   }

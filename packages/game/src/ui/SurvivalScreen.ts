@@ -27,7 +27,7 @@
  * O relógio do sistema entra aqui e só aqui. A `SurvivalSession` não o conhece.
  */
 
-import type { Cell, Group, Packed } from "@dicetoseven/engine";
+import type { Cell, Packed } from "@dicetoseven/engine";
 import { JOKER, cellAt, hasAnyGroup, isEmpty } from "@dicetoseven/engine";
 
 import type { JokerValue } from "../session/GameSession";
@@ -281,14 +281,12 @@ export class SurvivalScreen {
       return;
     }
 
-    const selecao = antes.game.selection.includes(p)
-      ? [...antes.game.selection]
-      : [...antes.game.selection, p];
-
     const r = survivalTap(antes, p, this.config, undefined, jokerAs);
     this.estado = r.state;
 
-    if (r.moved) {
+    const grupo = r.state.game.lastMove;
+
+    if (r.moved && grupo !== undefined) {
       this.ocupado = true;
 
       /*
@@ -297,7 +295,6 @@ export class SurvivalScreen {
        * morto sem nada a dizer porquê.
        */
       try {
-        const grupo = [...selecao].sort((a, b) => a - b) as Group;
         await this.view.aplicarJogada(grupo);
 
         // A linha automática cai **depois** da jogada, e cai a sério: peças a

@@ -45,6 +45,20 @@ export { InvalidMoveError, applyMove } from "./moves";
 
 export { InvalidInjectionError, pushRow, tallestColumn } from "./inject";
 
+export type { Soldas } from "./soldas";
+export {
+  SEM_SOLDAS,
+  aplicarSoldas,
+  celulasSoldadas,
+  checkSoldas,
+  gruposSoldados,
+  jogadaLegal,
+  parDe,
+  respeitaSoldas,
+  temGrupoSoldado,
+  temSoldas,
+} from "./soldas";
+
 export type { Limits, Verdict } from "./solver";
 export {
   DEFAULT_LIMITS,
@@ -71,7 +85,7 @@ export type {
   GenerationStats,
   GeneratorParams,
 } from "./generator";
-export { generate, reachablePieceCounts } from "./generator";
+export { generate, reachablePieceCounts, soldarNivel } from "./generator";
 
 export type { Level, LevelMetrics, LevelPack } from "./level";
 export { toLevel } from "./level";

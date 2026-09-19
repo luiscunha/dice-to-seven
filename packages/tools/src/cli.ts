@@ -13,7 +13,16 @@ import { dirname, resolve } from "node:path";
 import { parseArgs } from "node:util";
 
 import type { Level } from "@dicetoseven/engine";
-import { applyMove, isValidGroup, pieceCount, totalSum } from "@dicetoseven/engine";
+import {
+  SEM_SOLDAS,
+  applyMove,
+  aplicarSoldas,
+  checkSoldas,
+  jogadaLegal,
+  pieceCount,
+  totalSum,
+} from "@dicetoseven/engine";
+import type { Soldas } from "@dicetoseven/engine";
 
 import { BANDS, bandById } from "./bands";
 import { comandoPlay } from "./play";
@@ -231,18 +240,33 @@ async function comandoVerify(args: string[]): Promise<number> {
 
   for (const nivel of pack) {
     let b = nivel.board;
+    let soldas: Soldas = nivel.soldas ?? SEM_SOLDAS;
     let ok = true;
 
+    // As soldas fazem parte do tabuleiro para efeitos de verificação: uma
+    // solução que só é legal ignorando-as é uma solução que o jogador não pode
+    // seguir, e o nível é impossível na prática.
+    for (const problema of checkSoldas(b, soldas)) {
+      falhas.push(`${nivel.id}: ${problema}`);
+      ok = false;
+    }
+
     for (const g of nivel.solution) {
-      if (!isValidGroup(b, g)) {
+      if (!ok) break;
+      if (!jogadaLegal(b, g, soldas)) {
         falhas.push(`${nivel.id}: jogada inválida`);
         ok = false;
         break;
       }
+      const seguintes = aplicarSoldas(b, soldas, g);
       b = applyMove(b, g);
+      soldas = seguintes;
     }
 
     if (ok && b.length !== 0) falhas.push(`${nivel.id}: não esvazia`);
+    if (ok && soldas.length !== 0) {
+      falhas.push(`${nivel.id}: sobraram soldas por gastar`);
+    }
 
     const soma = totalSum(nivel.board) + (nivel.joker?.trueValue ?? 0);
     if (soma % 7 !== 0) falhas.push(`${nivel.id}: soma não múltipla de 7`);

@@ -20,8 +20,16 @@
  * saber que isso aconteceu.
  */
 
-import type { Board, Cell, Group, Packed } from "@dicetoseven/engine";
-import { applyMove, colOf, packed, rowOf, width } from "@dicetoseven/engine";
+import type { Board, Cell, Group, Packed, Soldas } from "@dicetoseven/engine";
+import {
+  SEM_SOLDAS,
+  applyMove,
+  colOf,
+  packed,
+  parDe,
+  rowOf,
+  width,
+} from "@dicetoseven/engine";
 
 import type { PieceMove } from "../session/transition";
 import { midpointOf, transition } from "../session/transition";
@@ -102,8 +110,21 @@ export class BoardView {
     this.observador?.observe(this.host);
   }
 
-  /** Monta um tabuleiro de raiz. Usa-se por nível, no reinício e no undo. */
-  montar(board: Board): void {
+  /**
+   * Monta um tabuleiro de raiz. Usa-se por nível, no reinício e no undo.
+   *
+   * ── As soldas não precisam de manutenção ──
+   *
+   * O traço da solda é um `::after` da peça **de cima**, portanto viaja com ela:
+   * cai com a gravidade, desliza no colapso e desaparece quando o par sai, tudo
+   * sem uma linha de código por jogada. Por isso `aplicarJogada` não sabe que as
+   * soldas existem.
+   *
+   * De cima e não de baixo por uma razão de pintura: as peças são criadas de
+   * baixo para cima, portanto a de cima vem depois no DOM e o traço cobre as
+   * duas sem precisar de `z-index`.
+   */
+  montar(board: Board, soldas: Soldas = SEM_SOLDAS): void {
     this.fecharAnimacao?.();
     this.geracao++;
 
@@ -133,6 +154,12 @@ export class BoardView {
         this.pecas.set(p, el);
         this.grelha.appendChild(el);
       }
+    }
+
+    for (const baixo of soldas) {
+      const [a, b] = parDe(baixo);
+      this.pecas.get(a)?.classList.add("soldada-baixo");
+      this.pecas.get(b)?.classList.add("soldada-cima");
     }
 
     this.redimensionar();

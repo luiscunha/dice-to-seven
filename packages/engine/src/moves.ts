@@ -10,6 +10,28 @@ import type { Board, Column, Group } from "./types";
 import { colOf, rowOf } from "./types";
 import { isValidGroup } from "./groups";
 
+/**
+ * As linhas removidas, por coluna.
+ *
+ * Exportado porque as **soldas** têm de sofrer exatamente a mesma gravidade e o
+ * mesmo colapso que o tabuleiro. Uma segunda implementação da travessia seria
+ * uma segunda oportunidade de divergir — e uma solda que ficasse a apontar para
+ * a célula errada seria um nível corrompido em silêncio.
+ */
+export function linhasRemovidas(g: Group): Map<number, Set<number>> {
+  const removidas = new Map<number, Set<number>>();
+  for (const p of g) {
+    const c = colOf(p);
+    let linhas = removidas.get(c);
+    if (linhas === undefined) {
+      linhas = new Set<number>();
+      removidas.set(c, linhas);
+    }
+    linhas.add(rowOf(p));
+  }
+  return removidas;
+}
+
 export class InvalidMoveError extends Error {
   constructor(message: string) {
     super(message);
@@ -40,16 +62,7 @@ export function applyMove(b: Board, g: Group): Board {
     );
   }
 
-  const removidas = new Map<number, Set<number>>();
-  for (const p of g) {
-    const c = colOf(p);
-    let linhas = removidas.get(c);
-    if (linhas === undefined) {
-      linhas = new Set<number>();
-      removidas.set(c, linhas);
-    }
-    linhas.add(rowOf(p));
-  }
+  const removidas = linhasRemovidas(g);
 
   const saida: Column[] = [];
 

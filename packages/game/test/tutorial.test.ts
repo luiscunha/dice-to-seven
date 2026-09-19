@@ -130,14 +130,14 @@ describe("o andaime da soma das faces", () => {
     let p = emptyProfile();
     expect(countCompleted(p, ids)).toBe(0);
 
-    p = recordLevel(p, "meio-joker-1", "completed", 4);
-    p = recordLevel(p, "meio-joker-1", "perfect", 4);
+    p = recordLevel(p, "meio-joker-1", "completed");
+    p = recordLevel(p, "meio-joker-1", "perfect");
     expect(countCompleted(p, ids)).toBe(1);
 
-    p = recordLevel(p, "inicio-9", "perfect", 3);
+    p = recordLevel(p, "inicio-9", "perfect");
     expect(countCompleted(p, ids)).toBe(1);
 
-    p = recordLevel(p, "denso-1", "clean", 2);
+    p = recordLevel(p, "denso-1", "clean");
     expect(countCompleted(p, ids)).toBe(2);
   });
 });

@@ -20,10 +20,12 @@
  */
 
 import type { Board, Cell, Column, Group, Packed } from "./types";
-import { JOKER, MAX_ROWS, packed } from "./types";
+import { JOKER, MAX_ROWS, TARGET, colOf, packed, rowOf } from "./types";
 import { boardKey, jokerAt, pieceCount } from "./board";
 import { isValidGroup } from "./groups";
-import { applyMove } from "./moves";
+import { applyMove, linhasRemovidas } from "./moves";
+import type { Soldas } from "./soldas";
+import { SEM_SOLDAS } from "./soldas";
 import type { Composition } from "./compositions";
 import { COMPOSITIONS } from "./compositions";
 import type { Rng } from "./rng";
@@ -650,4 +652,136 @@ export function generate(
     },
     stats,
   };
+}
+
+/* ─── Soldas: escolhidas depois, e de graça ──────────────────────────────────
+ *
+ * A pergunta que isto responde é a única que interessa: **como se garante que um
+ * nível com soldas continua a ter solução?**
+ *
+ * A resposta não passa por pedir ao solver. Passa por uma observação sobre a
+ * construção reversa:
+ *
+ * > Se as duas células de uma solda forem eliminadas **pelo mesmo passo da
+ * > solução**, a solução guardada continua legal — palavra por palavra.
+ *
+ * Porque uma solda só proíbe uma coisa: levar meio par. O passo que leva o par
+ * inteiro respeita-a por definição, e todos os passos anteriores nem lhe tocam.
+ * A garantia central não é enfraquecida; é herdada.
+ *
+ * O preço é zero. Não há candidatos a mais para avaliar, não há rendimento a
+ * perder, não há um segundo critério de aceitação — a solda escolhe-se depois de
+ * o nível já estar aceite, sobre a solução que ele já traz.
+ *
+ * E não é uma restrição fraca. Ao jogador, a solda fecha **todos** os grupos que
+ * partiriam o par — e são muitos — sem fechar o caminho que existe. Poda o erro
+ * e deixa a solução de pé.
+ *
+ * ── Um par que já soma 7 não se solda ──
+ *
+ * A primeira versão soldava qualquer par que saísse no mesmo passo, e 22% a 28%
+ * das soldas saíam degeneradas: o passo da solução era **o próprio par**,
+ * portanto as duas faces somavam 7 e a solda não proibia nada. Qualquer grupo
+ * que as contivesse já tinha de ser exatamente elas.
+ *
+ * Pior do que inútil: era uma **ajuda**. O grampo apontava ao jogador uma
+ * jogada pronta a fazer, num sítio onde a mecânica devia estar a tirar-lhe
+ * opções.
+ *
+ * O joker sai pela mesma razão. Um par `joker + v` é sempre grupo legal — o
+ * joker toma `7 - v`, e `1 <= v <= 6` — portanto soldar o joker a um vizinho é
+ * oferecer uma jogada, não fechar nenhuma.
+ */
+
+/**
+ * Para cada célula do tabuleiro final, o passo da solução que a elimina.
+ *
+ * As etiquetas viajam num array com a forma do tabuleiro e sofrem a mesma
+ * remoção que ele, via `linhasRemovidas` — a coordenada final de uma célula não
+ * se recalcula, acompanha-a.
+ */
+function passoQueElimina(nivel: GeneratedLevel): Map<Packed, number> {
+  let b = nivel.board;
+  let etiquetas: Packed[][] = b.map((col, c) =>
+    col.map((_, r) => packed(c, r)),
+  );
+
+  const out = new Map<Packed, number>();
+
+  for (const [i, g] of nivel.solution.entries()) {
+    for (const p of g) {
+      const final = etiquetas[colOf(p)]?.[rowOf(p)];
+      if (final !== undefined) out.set(final, i);
+    }
+
+    const removidas = linhasRemovidas(g);
+    const seguinte: Packed[][] = [];
+
+    for (let c = 0; c < etiquetas.length; c++) {
+      const col = etiquetas[c] as Packed[];
+      const fora = removidas.get(c);
+      const nova = fora === undefined ? col : col.filter((_, r) => !fora.has(r));
+      if (nova.length > 0) seguinte.push(nova);
+    }
+
+    etiquetas = seguinte;
+    b = applyMove(b, g);
+  }
+
+  return out;
+}
+
+/**
+ * Até `quantas` soldas que não estragam a solução do nível.
+ *
+ * Devolve menos do que se pediu quando o tabuleiro não dá para mais — e isso não
+ * é falha: um nível cuja solução seja feita só de pares horizontais não tem
+ * nenhuma solda possível, e é preferível publicá-lo sem soldas a torcer a
+ * solução para as arranjar.
+ *
+ * Duas soldas nunca partilham uma célula, pela regra de `checkSoldas`.
+ */
+export function soldarNivel(
+  nivel: GeneratedLevel,
+  quantas: number,
+  rng: Rng,
+): Soldas {
+  if (quantas <= 0) return SEM_SOLDAS;
+
+  const passo = passoQueElimina(nivel);
+  const candidatas: Packed[] = [];
+
+  for (let c = 0; c < nivel.board.length; c++) {
+    const col = nivel.board[c] as Column;
+    for (let r = 0; r + 1 < col.length; r++) {
+      const passoBaixo = passo.get(packed(c, r));
+      if (passoBaixo === undefined) continue;
+      if (passoBaixo !== passo.get(packed(c, r + 1))) continue;
+
+      const baixo = col[r] as Cell;
+      const cima = col[r + 1] as Cell;
+
+      // Ver a nota acima: um par que já é jogada não restringe nada.
+      if (baixo === JOKER || cima === JOKER) continue;
+      if (baixo + cima === TARGET) continue;
+
+      candidatas.push(packed(c, r));
+    }
+  }
+
+  const escolhidas: Packed[] = [];
+  const usadas = new Set<Packed>();
+
+  for (const p of shuffled(rng, candidatas)) {
+    if (escolhidas.length >= quantas) break;
+
+    const cima = packed(colOf(p), rowOf(p) + 1);
+    if (usadas.has(p) || usadas.has(cima)) continue;
+
+    usadas.add(p);
+    usadas.add(cima);
+    escolhidas.push(p);
+  }
+
+  return escolhidas.sort((x, y) => x - y);
 }

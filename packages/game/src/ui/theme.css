@@ -49,6 +49,14 @@
   --ink-6: #e8f3f0;
   --ink-joker: #123f3a;
 
+  /*
+   * A solda. Escura sobre qualquer face, porque tem de ler-se por cima das seis
+   * cores da rampa — a mais clara tem luminância 0.746 — e o contorno claro
+   * separa-a das faces escuras do outro extremo.
+   */
+  --solda: #123f3a;
+  --solda-luz: rgb(255 255 255 / 0.55);
+
   /* ─── Forma ───────────────────────────────────────────────────────────── */
   --raio: 10px;
   --raio-peca: 0.21;
@@ -97,6 +105,8 @@
     --ink-muted: #8fa3a0;
     --accent: #3ebb94;
     --on-accent: #0d1917;
+    --solda: #0a1512;
+    --solda-luz: rgb(255 255 255 / 0.32);
     --sombra: 0 1px 2px rgb(0 0 0 / 0.5), 0 8px 22px rgb(0 0 0 / 0.35);
   }
 }
@@ -111,6 +121,8 @@
   --ink-muted: #8fa3a0;
   --accent: #3ebb94;
   --on-accent: #0d1917;
+  --solda: #0a1512;
+  --solda-luz: rgb(255 255 255 / 0.32);
   --sombra: 0 1px 2px rgb(0 0 0 / 0.5), 0 8px 22px rgb(0 0 0 / 0.35);
 }
 
