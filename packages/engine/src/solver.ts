@@ -14,7 +14,21 @@
 
 import type { Board, Group } from "./types";
 import { boardKey } from "./board";
-import { findAllGroups } from "./groups";
+import type { Soldas } from "./soldas";
+import { SEM_SOLDAS, aplicarSoldas, gruposSoldados } from "./soldas";
+
+/**
+ * A chave de memoização com soldas.
+ *
+ * Sem soldas é exatamente a de sempre — `boardKey` — e nem um carácter muda
+ * para os milhares de tabuleiros que não as têm. Com soldas, **o estado não é
+ * só o tabuleiro**: dois tabuleiros com as mesmas peças mas soldas em sítios
+ * diferentes têm jogadas diferentes, e confundi-los daria por falhado um estado
+ * que afinal tem solução. Esse erro sairia como um nível recusado — ou pior,
+ * como um nível aceite que o jogador não consegue acabar.
+ */
+const chaveDe = (b: Board, s: Soldas): string =>
+  s.length === 0 ? boardKey(b) : boardKey(b) + "#" + s.join(",");
 import { applyMove } from "./moves";
 
 /**
@@ -116,17 +130,17 @@ function excedeu(ctx: Contexto): boolean {
  * portanto cerca de 25 num tabuleiro grande, muito abaixo do limite de stack do
  * V8. Recursão direta é segura.
  */
-function resolver(b: Board, ctx: Contexto): boolean {
+function resolver(b: Board, s: Soldas, ctx: Contexto): boolean {
   if (b.length === 0) return true;
   if (excedeu(ctx)) return false;
 
-  const chave = boardKey(b);
+  const chave = chaveDe(b, s);
   if (ctx.memo.has(chave)) return false;
 
   ctx.estados++;
 
-  for (const g of findAllGroups(b)) {
-    if (resolver(applyMove(b, g), ctx)) return true;
+  for (const g of gruposSoldados(b, s)) {
+    if (resolver(applyMove(b, g), aplicarSoldas(b, s, g), ctx)) return true;
 
     // Desistir por limite não é o mesmo que provar que falha, portanto sai-se
     // daqui **sem** memoizar.
@@ -147,10 +161,14 @@ function resolver(b: Board, ctx: Contexto): boolean {
   return false;
 }
 
-export function isSolvable(b: Board, limits: Limits = DEFAULT_LIMITS): Verdict {
+export function isSolvable(
+  b: Board,
+  limits: Limits = DEFAULT_LIMITS,
+  soldas: Soldas = SEM_SOLDAS,
+): Verdict {
   const ctx = criarContexto(limits);
 
-  if (resolver(b, ctx)) return "yes";
+  if (resolver(b, soldas, ctx)) return "yes";
   return ctx.esgotado ? "inconclusive" : "no";
 }
 
@@ -165,20 +183,26 @@ export function isSolvable(b: Board, limits: Limits = DEFAULT_LIMITS): Verdict {
  * O `sort` do JavaScript é estável, portanto empates mantêm a ordem de
  * enumeração e a solução devolvida é determinística.
  */
-function procurarSolucao(b: Board, ctx: Contexto, caminho: Group[]): boolean {
+function procurarSolucao(
+  b: Board,
+  s: Soldas,
+  ctx: Contexto,
+  caminho: Group[],
+): boolean {
   if (b.length === 0) return true;
   if (excedeu(ctx)) return false;
 
-  const chave = boardKey(b);
+  const chave = chaveDe(b, s);
   if (ctx.memo.has(chave)) return false;
 
   ctx.estados++;
 
-  const grupos = [...findAllGroups(b)].sort((x, y) => y.length - x.length);
+  const grupos = [...gruposSoldados(b, s)].sort((x, y) => y.length - x.length);
 
   for (const g of grupos) {
     caminho.push(g);
-    if (procurarSolucao(applyMove(b, g), ctx, caminho)) return true;
+    if (procurarSolucao(applyMove(b, g), aplicarSoldas(b, s, g), ctx, caminho))
+      return true;
     caminho.pop();
 
     if (ctx.esgotado) return false;
@@ -195,11 +219,12 @@ function procurarSolucao(b: Board, ctx: Contexto, caminho: Group[]): boolean {
 export function findSolution(
   b: Board,
   limits: Limits = DEFAULT_LIMITS,
+  soldas: Soldas = SEM_SOLDAS,
 ): Group[] | null {
   const ctx = criarContexto(limits);
   const caminho: Group[] = [];
 
-  return procurarSolucao(b, ctx, caminho) ? caminho : null;
+  return procurarSolucao(b, soldas, ctx, caminho) ? caminho : null;
 }
 
 /**
@@ -217,31 +242,36 @@ export function findSolution(
 export function isGreedySafe(
   b: Board,
   limits: Limits = DEFAULT_LIMITS,
+  soldas: Soldas = SEM_SOLDAS,
 ): Verdict {
   const ctx = criarContexto(limits);
 
-  const visitados = new Set<string>([boardKey(b)]);
-  const pilha: Board[] = [b];
+  /** O estado é o par (tabuleiro, soldas) — ver `chaveDe`. */
+  interface Estado { readonly board: Board; readonly soldas: Soldas }
+
+  const visitados = new Set<string>([chaveDe(b, soldas)]);
+  const pilha: Estado[] = [{ board: b, soldas }];
 
   while (pilha.length > 0) {
     if (excedeu(ctx)) return "inconclusive";
 
-    const atual = pilha.pop() as Board;
+    const { board: atual, soldas: agora } = pilha.pop() as Estado;
     ctx.estados++;
 
     if (atual.length === 0) continue; // tabuleiro limpo: fim legítimo
 
     let temJogada = false;
 
-    for (const g of findAllGroups(atual)) {
+    for (const g of gruposSoldados(atual, agora)) {
       temJogada = true;
 
       const seguinte = applyMove(atual, g);
-      const chave = boardKey(seguinte);
+      const soldasSeguintes = aplicarSoldas(atual, agora, g);
+      const chave = chaveDe(seguinte, soldasSeguintes);
 
       if (!visitados.has(chave)) {
         visitados.add(chave);
-        pilha.push(seguinte);
+        pilha.push({ board: seguinte, soldas: soldasSeguintes });
       }
     }
 
