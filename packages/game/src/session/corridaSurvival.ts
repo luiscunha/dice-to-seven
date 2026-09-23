@@ -11,7 +11,7 @@
  * princípio. Perder uma partida a meio é mau; não abrir o jogo é pior.
  */
 
-import { checkInvariants } from "@dicetoseven/engine";
+import { SEM_MARCAS, checkInvariants } from "@dicetoseven/engine";
 
 import type { SurvivalState } from "./SurvivalSession";
 import type { ProfileStorage } from "./progress";
@@ -57,6 +57,36 @@ export function limparCorrida(storage: ProfileStorage): void {
 }
 
 /**
+ * Corridas gravadas antes de as marcas existirem.
+ *
+ * O `GameState` guardava `soldas`/`historySoldas`; passou a guardar
+ * `marcas`/`historyMarcas`. Uma corrida antiga chega sem elas, e sem isto
+ * rebentava à primeira jogada.
+ *
+ * Preenche-se em vez de se subir a `CORRIDA_VERSION` porque o Survival **não
+ * tem marcas nenhumas**: o valor correto para uma corrida antiga é exatamente o
+ * vazio, e descartar a corrida seria castigar o jogador por uma refatoração.
+ */
+function normalizar(corrida: CorridaGuardada): CorridaGuardada {
+  const game = corrida.estado.game;
+  if (game.marcas !== undefined && game.historyMarcas !== undefined) {
+    return corrida;
+  }
+
+  return {
+    ...corrida,
+    estado: {
+      ...corrida.estado,
+      game: {
+        ...game,
+        marcas: game.marcas ?? SEM_MARCAS,
+        historyMarcas: game.historyMarcas ?? game.history.map(() => SEM_MARCAS),
+      },
+    },
+  };
+}
+
+/**
  * Lê a corrida guardada, ou `undefined`.
  *
  * O tabuleiro passa pelo `checkInvariants` da engine antes de voltar ao jogo.
@@ -98,5 +128,5 @@ export function lerCorrida(
   if (!Array.isArray(board)) return undefined;
   if (checkInvariants(board).length > 0) return undefined;
 
-  return corrida as CorridaGuardada;
+  return normalizar(corrida as CorridaGuardada);
 }

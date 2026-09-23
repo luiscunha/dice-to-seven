@@ -200,6 +200,57 @@
   box-shadow: 0 0 0 1px #08221e;
 }
 
+/*
+ * ─── Gelo ─────────────────────────────────────────────────────────────────
+ *
+ * Uma peça gelada só sai acompanhada por **uma** peça — a que completa 7 com
+ * ela. O desenho tem de dizer duas coisas ao mesmo tempo: *esta peça é
+ * especial* e *a face continua a ser aquela*, porque é da face que se deduz o
+ * parceiro de que ela precisa.
+ *
+ * Daí a casca ser uma moldura e não um véu por cima: um vidro translúcido
+ * baixava o contraste das pintas — a face 1 já só tem 1,17 contra o papel — e
+ * tornava ilegível exatamente a informação de que o jogador precisa.
+ *
+ * A moldura é dupla: anel exterior de gelo, fio interior escuro. Ao contrário
+ * da solda, que se desenha entre duas peças, esta vive toda dentro da sua.
+ */
+.peca.gelada {
+  box-shadow:
+    0 0 0 3px var(--gelo),
+    0 0 0 4px var(--gelo-linha),
+    inset 0 0 0 2px var(--gelo),
+    inset 0 calc(var(--lado-real) * -0.055) 0 rgb(0 0 0 / 0.14);
+}
+
+/*
+ * Os cantos partidos. Quatro triângulos que dão à peça a silhueta de um cubo de
+ * gelo lascado, e que a distinguem de um simples realce mesmo em fotografia a
+ * preto e branco — a cor nunca é o único canal.
+ */
+.peca.gelada::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+
+  background:
+    linear-gradient(135deg, var(--gelo) 0 14%, transparent 14%) top left / 42% 42% no-repeat,
+    linear-gradient(225deg, var(--gelo) 0 14%, transparent 14%) top right / 42% 42% no-repeat,
+    linear-gradient(45deg, var(--gelo) 0 14%, transparent 14%) bottom left / 42% 42% no-repeat,
+    linear-gradient(315deg, var(--gelo) 0 14%, transparent 14%) bottom right / 42% 42% no-repeat;
+}
+
+/* Selecionada, o anel do gelo cede lugar ao da seleção — senão competem. */
+.peca.gelada.selecionada {
+  box-shadow:
+    0 0 0 2px #ffffff,
+    0 0 0 5px #08221e,
+    inset 0 0 0 2px var(--gelo),
+    inset 0 calc(var(--lado-real) * -0.055) 0 rgb(0 0 0 / 0.14);
+}
+
 /* Sair é desaparecer, não explodir. */
 .peca.a-sair {
   opacity: 0;

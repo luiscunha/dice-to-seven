@@ -20,9 +20,9 @@
  * saber que isso aconteceu.
  */
 
-import type { Board, Cell, Group, Packed, Soldas } from "@dicetoseven/engine";
+import type { Board, Cell, Group, Marcas, Packed } from "@dicetoseven/engine";
 import {
-  SEM_SOLDAS,
+  SEM_MARCAS,
   applyMove,
   colOf,
   packed,
@@ -113,18 +113,18 @@ export class BoardView {
   /**
    * Monta um tabuleiro de raiz. Usa-se por nível, no reinício e no undo.
    *
-   * ── As soldas não precisam de manutenção ──
+   * ── As marcas não precisam de manutenção ──
    *
-   * O traço da solda é um `::after` da peça **de cima**, portanto viaja com ela:
-   * cai com a gravidade, desliza no colapso e desaparece quando o par sai, tudo
-   * sem uma linha de código por jogada. Por isso `aplicarJogada` não sabe que as
-   * soldas existem.
+   * O traço da solda e a casca do gelo são pseudo-elementos da própria peça,
+   * portanto viajam com ela: caem com a gravidade, deslizam no colapso e
+   * desaparecem quando a peça sai, tudo sem uma linha de código por jogada. Por
+   * isso `aplicarJogada` não sabe que as marcas existem.
    *
-   * De cima e não de baixo por uma razão de pintura: as peças são criadas de
-   * baixo para cima, portanto a de cima vem depois no DOM e o traço cobre as
-   * duas sem precisar de `z-index`.
+   * A solda desenha-se na peça **de cima** e não na de baixo, por uma razão de
+   * pintura: as peças são criadas de baixo para cima, portanto a de cima vem
+   * depois no DOM e o traço cobre as duas sem precisar de `z-index`.
    */
-  montar(board: Board, soldas: Soldas = SEM_SOLDAS): void {
+  montar(board: Board, marcas: Marcas = SEM_MARCAS): void {
     this.fecharAnimacao?.();
     this.geracao++;
 
@@ -156,11 +156,13 @@ export class BoardView {
       }
     }
 
-    for (const baixo of soldas) {
+    for (const baixo of marcas.soldas) {
       const [a, b] = parDe(baixo);
       this.pecas.get(a)?.classList.add("soldada-baixo");
       this.pecas.get(b)?.classList.add("soldada-cima");
     }
+
+    for (const p of marcas.gelo) this.pecas.get(p)?.classList.add("gelada");
 
     this.redimensionar();
   }

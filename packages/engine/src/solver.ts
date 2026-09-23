@@ -14,21 +14,21 @@
 
 import type { Board, Group } from "./types";
 import { boardKey } from "./board";
-import type { Soldas } from "./soldas";
-import { SEM_SOLDAS, aplicarSoldas, gruposSoldados } from "./soldas";
+import type { Marcas } from "./marcas";
+import {
+  SEM_MARCAS,
+  aplicarMarcas,
+  chaveMarcas,
+  gruposMarcados,
+} from "./marcas";
 
 /**
- * A chave de memoização com soldas.
+ * A chave de memoização com marcas.
  *
- * Sem soldas é exatamente a de sempre — `boardKey` — e nem um carácter muda
- * para os milhares de tabuleiros que não as têm. Com soldas, **o estado não é
- * só o tabuleiro**: dois tabuleiros com as mesmas peças mas soldas em sítios
- * diferentes têm jogadas diferentes, e confundi-los daria por falhado um estado
- * que afinal tem solução. Esse erro sairia como um nível recusado — ou pior,
- * como um nível aceite que o jogador não consegue acabar.
+ * Sem marcas, `chaveMarcas` devolve a string vazia e isto é exatamente a chave
+ * de sempre, byte a byte. Ver a nota em `marcas.ts` para o resto.
  */
-const chaveDe = (b: Board, s: Soldas): string =>
-  s.length === 0 ? boardKey(b) : boardKey(b) + "#" + s.join(",");
+const chaveDe = (b: Board, m: Marcas): string => boardKey(b) + chaveMarcas(m);
 import { applyMove } from "./moves";
 
 /**
@@ -130,17 +130,17 @@ function excedeu(ctx: Contexto): boolean {
  * portanto cerca de 25 num tabuleiro grande, muito abaixo do limite de stack do
  * V8. Recursão direta é segura.
  */
-function resolver(b: Board, s: Soldas, ctx: Contexto): boolean {
+function resolver(b: Board, m: Marcas, ctx: Contexto): boolean {
   if (b.length === 0) return true;
   if (excedeu(ctx)) return false;
 
-  const chave = chaveDe(b, s);
+  const chave = chaveDe(b, m);
   if (ctx.memo.has(chave)) return false;
 
   ctx.estados++;
 
-  for (const g of gruposSoldados(b, s)) {
-    if (resolver(applyMove(b, g), aplicarSoldas(b, s, g), ctx)) return true;
+  for (const g of gruposMarcados(b, m)) {
+    if (resolver(applyMove(b, g), aplicarMarcas(b, m, g), ctx)) return true;
 
     // Desistir por limite não é o mesmo que provar que falha, portanto sai-se
     // daqui **sem** memoizar.
@@ -164,11 +164,11 @@ function resolver(b: Board, s: Soldas, ctx: Contexto): boolean {
 export function isSolvable(
   b: Board,
   limits: Limits = DEFAULT_LIMITS,
-  soldas: Soldas = SEM_SOLDAS,
+  marcas: Marcas = SEM_MARCAS,
 ): Verdict {
   const ctx = criarContexto(limits);
 
-  if (resolver(b, soldas, ctx)) return "yes";
+  if (resolver(b, marcas, ctx)) return "yes";
   return ctx.esgotado ? "inconclusive" : "no";
 }
 
@@ -185,23 +185,23 @@ export function isSolvable(
  */
 function procurarSolucao(
   b: Board,
-  s: Soldas,
+  m: Marcas,
   ctx: Contexto,
   caminho: Group[],
 ): boolean {
   if (b.length === 0) return true;
   if (excedeu(ctx)) return false;
 
-  const chave = chaveDe(b, s);
+  const chave = chaveDe(b, m);
   if (ctx.memo.has(chave)) return false;
 
   ctx.estados++;
 
-  const grupos = [...gruposSoldados(b, s)].sort((x, y) => y.length - x.length);
+  const grupos = [...gruposMarcados(b, m)].sort((x, y) => y.length - x.length);
 
   for (const g of grupos) {
     caminho.push(g);
-    if (procurarSolucao(applyMove(b, g), aplicarSoldas(b, s, g), ctx, caminho))
+    if (procurarSolucao(applyMove(b, g), aplicarMarcas(b, m, g), ctx, caminho))
       return true;
     caminho.pop();
 
@@ -219,12 +219,12 @@ function procurarSolucao(
 export function findSolution(
   b: Board,
   limits: Limits = DEFAULT_LIMITS,
-  soldas: Soldas = SEM_SOLDAS,
+  marcas: Marcas = SEM_MARCAS,
 ): Group[] | null {
   const ctx = criarContexto(limits);
   const caminho: Group[] = [];
 
-  return procurarSolucao(b, soldas, ctx, caminho) ? caminho : null;
+  return procurarSolucao(b, marcas, ctx, caminho) ? caminho : null;
 }
 
 /**
@@ -242,36 +242,36 @@ export function findSolution(
 export function isGreedySafe(
   b: Board,
   limits: Limits = DEFAULT_LIMITS,
-  soldas: Soldas = SEM_SOLDAS,
+  marcas: Marcas = SEM_MARCAS,
 ): Verdict {
   const ctx = criarContexto(limits);
 
-  /** O estado é o par (tabuleiro, soldas) — ver `chaveDe`. */
-  interface Estado { readonly board: Board; readonly soldas: Soldas }
+  /** O estado é o par (tabuleiro, marcas) — ver `chaveDe`. */
+  interface Estado { readonly board: Board; readonly marcas: Marcas }
 
-  const visitados = new Set<string>([chaveDe(b, soldas)]);
-  const pilha: Estado[] = [{ board: b, soldas }];
+  const visitados = new Set<string>([chaveDe(b, marcas)]);
+  const pilha: Estado[] = [{ board: b, marcas }];
 
   while (pilha.length > 0) {
     if (excedeu(ctx)) return "inconclusive";
 
-    const { board: atual, soldas: agora } = pilha.pop() as Estado;
+    const { board: atual, marcas: agora } = pilha.pop() as Estado;
     ctx.estados++;
 
     if (atual.length === 0) continue; // tabuleiro limpo: fim legítimo
 
     let temJogada = false;
 
-    for (const g of gruposSoldados(atual, agora)) {
+    for (const g of gruposMarcados(atual, agora)) {
       temJogada = true;
 
       const seguinte = applyMove(atual, g);
-      const soldasSeguintes = aplicarSoldas(atual, agora, g);
-      const chave = chaveDe(seguinte, soldasSeguintes);
+      const marcasSeguintes = aplicarMarcas(atual, agora, g);
+      const chave = chaveDe(seguinte, marcasSeguintes);
 
       if (!visitados.has(chave)) {
         visitados.add(chave);
-        pilha.push({ board: seguinte, soldas: soldasSeguintes });
+        pilha.push({ board: seguinte, marcas: marcasSeguintes });
       }
     }
 

@@ -19,6 +19,7 @@ import {
   generate,
   isEmpty,
   jogadaLegal,
+  marcasDe,
   mulberry32,
   parDe,
   soldarNivel,
@@ -40,7 +41,7 @@ function jogarComSoldas(
   let ilegais = 0;
 
   for (const g of solucao) {
-    if (!jogadaLegal(b, g, s)) {
+    if (!jogadaLegal(b, g, marcasDe(s))) {
       ilegais += 1;
       break;
     }

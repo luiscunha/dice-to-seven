@@ -13,7 +13,7 @@
  */
 
 import { beforeEach, describe, expect, it } from "vitest";
-import { packed, type Level } from "@dicetoseven/engine";
+import { marcasDe, packed, type Level } from "@dicetoseven/engine";
 
 import { BoardView } from "../src/ui/BoardView";
 import {
@@ -81,7 +81,7 @@ describe("tocar numa peça soldada", () => {
 
     expect(s.moves).toBe(1);
     expect(s.board).toEqual([[3], [4]]);
-    expect(s.soldas).toEqual([]); // saiu com o par
+    expect(s.marcas.soldas).toEqual([]); // saiu com o par
   });
 });
 
@@ -178,12 +178,12 @@ describe("desfazer e reiniciar devolvem as soldas", () => {
   it("o undo repõe o par soldado", () => {
     const atras = undo(jogado());
 
-    expect(atras.soldas).toEqual([packed(0, 0)]);
+    expect(atras.marcas.soldas).toEqual([packed(0, 0)]);
     expect(atras.board).toEqual(NIVEL.board);
   });
 
   it("o reinício repõe as do nível", () => {
-    expect(restart(jogado()).soldas).toEqual([packed(0, 0)]);
+    expect(restart(jogado()).marcas.soldas).toEqual([packed(0, 0)]);
   });
 
   it("as duas pilhas do histórico andam sempre a par", () => {
@@ -199,7 +199,7 @@ describe("desfazer e reiniciar devolvem as soldas", () => {
     visto.push(s);
 
     for (const e of visto) {
-      expect(e.historySoldas.length).toBe(e.history.length);
+      expect(e.historyMarcas.length).toBe(e.history.length);
     }
   });
 });
@@ -220,7 +220,7 @@ describe("o traço no tabuleiro", () => {
 
   it("marca as duas peças do par", () => {
     const view = new BoardView(host, { aoTocar: () => undefined });
-    view.montar(NIVEL.board, NIVEL.soldas);
+    view.montar(NIVEL.board, marcasDe(NIVEL.soldas));
 
     expect(marcas()).toEqual({ cima: 1, baixo: 1 });
     view.destruir();
@@ -236,7 +236,7 @@ describe("o traço no tabuleiro", () => {
 
   it("o traço está na peça de cima — é o que o faz cobrir as duas", () => {
     const view = new BoardView(host, { aoTocar: () => undefined });
-    view.montar(NIVEL.board, NIVEL.soldas);
+    view.montar(NIVEL.board, marcasDe(NIVEL.soldas));
 
     const cima = host.querySelector(".peca.soldada-cima") as HTMLElement;
     expect(cima.dataset["pos"]).toBe(String(packed(0, 1)));

@@ -12,6 +12,7 @@
 import type { Board, Group } from "./types";
 import type { GeneratedLevel } from "./generator";
 import type { Soldas } from "./soldas";
+import type { Gelo } from "./gelo";
 
 export interface LevelMetrics {
   readonly pieces: number;
@@ -48,6 +49,12 @@ export interface Level {
    * chega e sobra. Ver `soldas.ts`.
    */
   readonly soldas?: Soldas;
+
+  /**
+   * Peças geladas: só saem em grupos de exatamente duas peças. Ausente quando o
+   * nível não tem gelo. Ver `gelo.ts`.
+   */
+  readonly gelo?: Gelo;
 
   readonly solution: readonly Group[];
 

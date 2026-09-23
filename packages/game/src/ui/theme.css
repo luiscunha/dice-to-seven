@@ -57,6 +57,14 @@
   --solda: #123f3a;
   --solda-luz: rgb(255 255 255 / 0.55);
 
+  /*
+   * O gelo. Azul frio e dessaturado — o único sítio do jogo que sai do
+   * azul-verde da marca, de propósito: a casca tem de se ler por cima das seis
+   * faces, e uma cor da própria rampa confundia-se com elas.
+   */
+  --gelo: #7fb4d6;
+  --gelo-linha: #2d5f7f;
+
   /* ─── Forma ───────────────────────────────────────────────────────────── */
   --raio: 10px;
   --raio-peca: 0.21;
@@ -107,6 +115,8 @@
     --on-accent: #0d1917;
     --solda: #0a1512;
     --solda-luz: rgb(255 255 255 / 0.32);
+    --gelo: #5d90b4;
+    --gelo-linha: #bcdcf0;
     --sombra: 0 1px 2px rgb(0 0 0 / 0.5), 0 8px 22px rgb(0 0 0 / 0.35);
   }
 }
@@ -123,6 +133,8 @@
   --on-accent: #0d1917;
   --solda: #0a1512;
   --solda-luz: rgb(255 255 255 / 0.32);
+  --gelo: #5d90b4;
+  --gelo-linha: #bcdcf0;
   --sombra: 0 1px 2px rgb(0 0 0 / 0.5), 0 8px 22px rgb(0 0 0 / 0.35);
 }
 

@@ -41,7 +41,7 @@ export {
   isValidGroup,
 } from "./groups";
 
-export { InvalidMoveError, applyMove } from "./moves";
+export { InvalidMoveError, applyMove, remapearCelula } from "./moves";
 
 export { InvalidInjectionError, pushRow, tallestColumn } from "./inject";
 
@@ -51,13 +51,28 @@ export {
   aplicarSoldas,
   celulasSoldadas,
   checkSoldas,
-  gruposSoldados,
-  jogadaLegal,
   parDe,
   respeitaSoldas,
-  temGrupoSoldado,
   temSoldas,
 } from "./soldas";
+
+export type { Gelo } from "./gelo";
+export { SEM_GELO, aplicarGelo, checkGelo, respeitaGelo } from "./gelo";
+
+export type { Marcas } from "./marcas";
+export {
+  SEM_MARCAS,
+  aplicarMarcas,
+  celulasMarcadas,
+  chaveMarcas,
+  checkMarcas,
+  gruposMarcados,
+  jogadaLegal,
+  marcasDe,
+  respeitaMarcas,
+  temGrupoMarcado,
+  temMarcas,
+} from "./marcas";
 
 export type { Limits, Verdict } from "./solver";
 export {
