@@ -11,6 +11,7 @@
 
 import type { Board, Group } from "./types";
 import type { GeneratedLevel } from "./generator";
+import type { Marcas } from "./marcas";
 import type { Soldas } from "./soldas";
 import type { Gelo } from "./gelo";
 
@@ -71,7 +72,7 @@ export function toLevel(
   id: string,
   seed: number,
   gerado: GeneratedLevel,
-  soldas?: Soldas,
+  marcas?: Marcas,
 ): Level {
   const base = {
     id,
@@ -83,8 +84,18 @@ export function toLevel(
   const comJoker =
     gerado.joker === undefined ? base : { ...base, joker: gerado.joker };
 
-  // `exactOptionalPropertyTypes`: omite-se a chave, não se atribui `undefined`.
-  return soldas === undefined || soldas.length === 0
-    ? comJoker
-    : { ...comJoker, soldas };
+  /*
+   * `exactOptionalPropertyTypes`: omitem-se as chaves, não se atribui
+   * `undefined`. E omitem-se também quando a lista está vazia — um
+   * `"soldas": []` em 180 dos 240 níveis só engordava os ficheiros e sugeria
+   * uma mecânica onde ela não existe.
+   */
+  const comSoldas =
+    marcas === undefined || marcas.soldas.length === 0
+      ? comJoker
+      : { ...comJoker, soldas: marcas.soldas };
+
+  return marcas === undefined || marcas.gelo.length === 0
+    ? comSoldas
+    : { ...comSoldas, gelo: marcas.gelo };
 }

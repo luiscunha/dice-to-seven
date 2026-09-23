@@ -25,7 +25,10 @@ import { boardKey, jokerAt, pieceCount } from "./board";
 import { isValidGroup } from "./groups";
 import { applyMove, linhasRemovidas } from "./moves";
 import type { Soldas } from "./soldas";
-import { SEM_SOLDAS } from "./soldas";
+import { SEM_SOLDAS, celulasSoldadas } from "./soldas";
+import type { Gelo } from "./gelo";
+import { SEM_GELO } from "./gelo";
+import type { Marcas } from "./marcas";
 import type { Composition } from "./compositions";
 import { COMPOSITIONS } from "./compositions";
 import type { Rng } from "./rng";
@@ -784,4 +787,106 @@ export function soldarNivel(
   }
 
   return escolhidas.sort((x, y) => x - y);
+}
+
+/* ─── Gelo ───────────────────────────────────────────────────────────────────
+ *
+ * Mesmo argumento das soldas, e por isso mesmo preço — zero:
+ *
+ * > Se a peça gelada for eliminada por um passo da solução que **já é um par**,
+ * > a solução guardada continua legal, palavra por palavra.
+ *
+ * O gelo só proíbe sair em grupo grande. O passo que a leva a par respeita-o por
+ * definição, e os passos anteriores nem lhe tocam.
+ *
+ * ── Três exclusões, e nenhuma é zelo a mais ──
+ *
+ * **A face 6 nunca se gela.** `6+1` é a *única* composição que contém um 6,
+ * portanto qualquer grupo com um 6 já é obrigatoriamente um par. Gelá-lo não
+ * proíbe uma única jogada — é o mesmo defeito que as soldas tiveram, em que 22%
+ * a 28% dos pares somavam 7 e não restringiam nada.
+ *
+ * Medido nas 14 composições, quantas contêm cada face e quantas dessas têm mais
+ * de duas peças — que são precisamente as que o gelo fecha:
+ *
+ * | face | composições | com 3+ peças |
+ * |---|---|---|
+ * | 1 | 11 | 10 |
+ * | 2 |  7 |  6 |
+ * | 3 |  5 |  4 |
+ * | 4 |  3 |  2 |
+ * | 5 |  2 |  1 |
+ * | 6 |  1 |  **0** |
+ *
+ * **O joker nunca se gela.** `joker + v` é sempre grupo legal de duas peças, e
+ * o desenho do joker é ser flexível em posição (spec §2.6) — que é exatamente o
+ * que o gelo tira.
+ *
+ * **Uma peça soldada nunca se gela.** É a invariante de `marcas.ts`: as duas
+ * regras na mesma peça ou se contradizem, ou uma é a outra disfarçada.
+ */
+
+/** Faces que o gelo consegue mesmo restringir. Ver a tabela acima. */
+const GELAVEL: ReadonlySet<Cell> = new Set<Cell>([1, 2, 3, 4, 5]);
+
+/**
+ * Até `quantas` peças geladas que não estragam a solução do nível.
+ *
+ * `jaSoldadas` são as células que já levaram solda; o gelo não lhes toca.
+ *
+ * Devolve menos do que se pediu quando o tabuleiro não dá para mais, e isso não
+ * é falha: é preferível publicar um nível com duas peças geladas a torcer a
+ * solução para arranjar a terceira.
+ */
+export function gelarNivel(
+  nivel: GeneratedLevel,
+  quantas: number,
+  rng: Rng,
+  jaSoldadas: ReadonlySet<Packed> = new Set(),
+): Gelo {
+  if (quantas <= 0) return SEM_GELO;
+
+  const passo = passoQueElimina(nivel);
+
+  // Quantas células leva o passo que elimina cada célula.
+  const tamanhoDoPasso = new Map<number, number>();
+  for (const [i, g] of nivel.solution.entries()) tamanhoDoPasso.set(i, g.length);
+
+  const candidatas: Packed[] = [];
+
+  for (let c = 0; c < nivel.board.length; c++) {
+    const col = nivel.board[c] as Column;
+    for (let r = 0; r < col.length; r++) {
+      const p = packed(c, r);
+
+      if (jaSoldadas.has(p)) continue;
+      if (!GELAVEL.has(col[r] as Cell)) continue; // joker e face 6
+
+      const i = passo.get(p);
+      if (i === undefined) continue;
+      if (tamanhoDoPasso.get(i) !== 2) continue; // já sai a par: o gelo aguenta
+
+      candidatas.push(p);
+    }
+  }
+
+  return shuffled(rng, candidatas).slice(0, quantas).sort((x, y) => x - y);
+}
+
+/**
+ * As marcas todas de um nível, de uma vez.
+ *
+ * É esta que o pipeline chama, e existe para que a ordem — soldas primeiro,
+ * gelo a seguir e a evitá-las — não seja um detalhe que cada chamador tenha de
+ * acertar sozinho.
+ */
+export function marcarNivel(
+  nivel: GeneratedLevel,
+  pedido: { readonly soldas?: number; readonly gelo?: number },
+  rng: Rng,
+): Marcas {
+  const soldas = soldarNivel(nivel, pedido.soldas ?? 0, rng);
+  const gelo = gelarNivel(nivel, pedido.gelo ?? 0, rng, celulasSoldadas(soldas));
+
+  return { soldas, gelo };
 }

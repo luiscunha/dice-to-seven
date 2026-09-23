@@ -100,7 +100,13 @@ export type {
   GenerationStats,
   GeneratorParams,
 } from "./generator";
-export { generate, reachablePieceCounts, soldarNivel } from "./generator";
+export {
+  gelarNivel,
+  generate,
+  marcarNivel,
+  reachablePieceCounts,
+  soldarNivel,
+} from "./generator";
 
 export type { Level, LevelMetrics, LevelPack } from "./level";
 export { toLevel } from "./level";
