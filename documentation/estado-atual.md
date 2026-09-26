@@ -530,19 +530,28 @@ Pior do que inútil — era uma ajuda, a apontar uma jogada pronta a fazer.
 **O joker nunca entra numa solda.** `joker + v` é sempre grupo legal, porque o
 joker toma `7 - v` e `1 <= v <= 6`. Soldá-lo a um vizinho é oferecer uma jogada.
 
-### O que as soldas dão, e o que não dão
+### O que as soldas dão — e a medição que corrigiu a primeira leitura
 
-Medido nos tabuleiros de perito, com soldas legítimas:
+A primeira medição dizia que as soldas cortavam as opções mas não mexiam na taxa
+de erro (92,7% → 91,7%). **Estava medida no sítio errado**: no pack antigo, de 43
+peças e formas mistas, e com as soldas degeneradas lá dentro — as que somavam 7
+e não proibiam nada, que eram 22% a 28%.
 
-| soldas | jogadas/posição | jogadas seguras |
+No pack que foi publicado — 49 peças, 7×7, sem soldas degeneradas:
+
+| marcas | jogadas/posição | jogadas seguras |
 |---|---|---|
-| 0 | 33,3 | 92,7% |
-| 2 | 26,4 | 91,1% |
-| 4 | 21,6 | 91,7% |
+| nenhuma | 48,4 | 97,3% |
+| 4 soldas | 33,1 | **89,5%** |
+| 3 peças geladas | 39,9 | 93,2% |
+| 4 soldas + 3 geladas | 26,5 | **86,8%** |
 
-**As opções caem um terço. A taxa de erro não se mexe.** As soldas arrumam a
-camada de *plano*, não a de *procura* — mesmo com quatro, continua a haver um
-par livre óbvio em 90% das posições. Não são, sozinhas, a dificuldade do perito.
+As soldas **quadruplicam** a taxa de erro, de 2,7% para 10,5%. O gelo leva-a a
+13,2% — cinco vezes o tabuleiro sem marcas.
+
+A lição não é sobre soldas: é que **uma marca degenerada não é neutra, é
+diluidora**. Foi a correção de as excluir que fez a mecânica funcionar, e sem
+ela a medição dava a conclusão errada sobre a mecânica inteira.
 
 ### Uma regra que se testou e não presta
 
@@ -555,8 +564,70 @@ para não se voltar a ela.
 A medição apontava para encolher a banda — o `denso` de 12 peças é quatro vezes
 mais exigente. Ficou decidido o contrário, e com razão: um perito pequeno seria
 um `denso` com outro nome. O perito é a banda do tabuleiro cheio — **49 peças,
-7×7, formas cheias apenas** — e a dificuldade vem das regras. Quatro soldas no
-perito, duas no avançado.
+7×7, formas cheias apenas** — e a dificuldade vem das regras. Quatro soldas e
+três peças geladas no perito, duas soldas no avançado.
+
+---
+
+## O gelo — a segunda marca
+
+> Uma peça gelada só pode ser eliminada num grupo de **exatamente duas peças**:
+> ela e a que completa 7 com ela.
+
+Ataca o que as soldas não atacam. Um 5 gelado só sai com um 2 encostado,
+portanto **o parceiro passa a ser um recurso que se guarda**: gastá-lo noutra
+jogada deixa o 5 preso. É a espécie de erro que faltava ao jogo — um erro que se
+vê *antes* de o cometer, a olhar para o tabuleiro, e não doze jogadas depois,
+quando já se lê como azar.
+
+E é a primeira regra que usa a **queda das peças como ferramenta**: sem nenhum 2
+encostado, é preciso fazer cair um limpando por baixo. Até aqui o colapso de
+colunas era só uma consequência das jogadas, que era a pergunta que o gate da
+Fase 6 deixou em aberto.
+
+### Três exclusões, todas medidas
+
+**A face 6 nunca se gela.** Das 14 composições, quantas contêm cada face e
+quantas dessas têm mais de duas peças — que são precisamente as que o gelo
+fecha:
+
+| face | 1 | 2 | 3 | 4 | 5 | 6 |
+|---|---|---|---|---|---|---|
+| composições com ela | 11 | 7 | 5 | 3 | 2 | 1 |
+| com 3+ peças | 10 | 6 | 4 | 2 | 1 | **0** |
+
+`6+1` é a única composição com um 6, portanto qualquer grupo com um 6 já é
+obrigatoriamente um par: gelá-lo não proíbe uma única jogada. É o mesmo defeito
+das soldas que somavam 7, apanhado desta vez antes de sair.
+
+**O joker nunca se gela** — `joker + v` é sempre par legal, e o desenho do joker
+é ser flexível em posição. **Uma peça soldada nunca se gela** — é a invariante de
+`marcas.ts`.
+
+### Marcas
+
+As duas mecânicas são a mesma espécie de coisa: um conjunto de coordenadas que
+viaja com o tabuleiro e estreita o que é jogada legal. A primeira versão passou
+as soldas ao solver como parâmetro solto; com a segunda ficava
+`isSolvable(b, limits, soldas, gelo)`, e mais um por cada regra futura.
+
+`Marcas` junta-as num objeto. Resolve mais do que a assinatura: a chave de
+memoização compõe-se num sítio só, e **um nível sem marcas continua a dar
+exatamente a chave de sempre, byte a byte**.
+
+### O desenho do gelo não se via, e a razão é medível
+
+A primeira versão era um anel de um azul frio só. Contraste contra as seis
+faces: 1,69 · 1,32 · 1,13 · **1,08** · 1,84 · 2,83. Invisível.
+
+E nenhuma cor única resolve, porque a rampa das faces vai de luminância 0,746 a
+0,116: branco dá 1,32 contra a face 1, escuro dá 2,36 contra a face 6. **Claro
+por fora, escuro por dentro dá 3,93 no pior caso** — que é o mesmo argumento que
+o anel de seleção já usava, escrito no próprio ficheiro.
+
+A moldura do gelo é por dentro e a da seleção é por fora, portanto coexistem sem
+competir — e têm de coexistir, porque uma peça gelada selecionada é o caso
+normal: é assim que ela sai.
 
 ---
 
