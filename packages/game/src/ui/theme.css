@@ -58,12 +58,20 @@
   --solda-luz: rgb(255 255 255 / 0.55);
 
   /*
-   * O gelo. Azul frio e dessaturado — o único sítio do jogo que sai do
-   * azul-verde da marca, de propósito: a casca tem de se ler por cima das seis
-   * faces, e uma cor da própria rampa confundia-se com elas.
+   * O gelo, em **dois tons**, e não num só.
+   *
+   * A primeira versão usava um azul frio único (#7fb4d6) e era invisível: a
+   * rampa das faces vai de luminância 0,746 a 0,116, e qualquer tom a meio
+   * caminho encosta-se a alguma delas. Medido, esse azul dava contraste 1,08
+   * contra a face 4 e 1,13 contra a face 3 — ou seja, nenhum.
+   *
+   * Nenhuma cor única resolve isto: branco dá 1,32 contra a face 1, escuro dá
+   * 2,36 contra a face 6. O par claro+escuro dá **3,93 no pior caso**, e é o
+   * mesmo truque que o anel de seleção já usa por escrito: um dos dois
+   * destaca-se sempre.
    */
-  --gelo: #7fb4d6;
-  --gelo-linha: #2d5f7f;
+  --gelo-claro: #f4fbff;
+  --gelo-escuro: #123f4d;
 
   /* ─── Forma ───────────────────────────────────────────────────────────── */
   --raio: 10px;
@@ -115,8 +123,8 @@
     --on-accent: #0d1917;
     --solda: #0a1512;
     --solda-luz: rgb(255 255 255 / 0.32);
-    --gelo: #5d90b4;
-    --gelo-linha: #bcdcf0;
+    --gelo-claro: #eaf6fc;
+    --gelo-escuro: #07222b;
     --sombra: 0 1px 2px rgb(0 0 0 / 0.5), 0 8px 22px rgb(0 0 0 / 0.35);
   }
 }
@@ -133,8 +141,8 @@
   --on-accent: #0d1917;
   --solda: #0a1512;
   --solda-luz: rgb(255 255 255 / 0.32);
-  --gelo: #5d90b4;
-  --gelo-linha: #bcdcf0;
+  --gelo-claro: #eaf6fc;
+  --gelo-escuro: #07222b;
   --sombra: 0 1px 2px rgb(0 0 0 / 0.5), 0 8px 22px rgb(0 0 0 / 0.35);
 }
 

@@ -422,6 +422,20 @@ export class PuzzleScreen {
       return;
     }
 
+    /*
+     * Diz a regra, não a jogada. "Só sai com uma peça" é o que o jogador
+     * precisa de saber para perceber a recusa; qual é a peça que completa 7 é
+     * aritmética que ele faz, e é o desafio.
+     */
+    if (jogo.rejection === "gelo-so-a-par") {
+      this.elAviso.dataset["tipo"] = "erro";
+      this.elAviso.replaceChildren(
+        marca("❄"),
+        texto("uma peça gelada só sai com uma peça"),
+      );
+      return;
+    }
+
     const falta = remainingToTarget(jogo);
 
     if (falta > 0) {

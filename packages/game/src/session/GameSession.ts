@@ -35,7 +35,8 @@ export type TapRejection =
   | "no-piece"
   | "board-finished"
   | "over-target"
-  | "joker-needs-value";
+  | "joker-needs-value"
+  | "gelo-so-a-par";
 
 export type HintSource = "stored" | "computed" | "none";
 
@@ -193,6 +194,11 @@ export const remainingToTarget = (s: GameState): number =>
  * legal, portanto deixar selecionar meia solda seria oferecer um caminho que
  * acaba sempre em recusa — e o jogador teria de descobrir sozinho porquê. Entram
  * as duas, saem as duas.
+ *
+ * **Uma peça gelada recusa a terceira.** Pela mesma razão, do outro lado: uma
+ * seleção com peça gelada e três células nunca pode fechar jogada, e sem esta
+ * recusa o jogador chegava aos 7 pontos e via o tabuleiro não fazer nada. A
+ * recusa acontece no toque que quebraria a regra, não no fim.
  */
 export function tap(
   s: GameState,
@@ -232,6 +238,12 @@ export function tap(
 
   if (total > TARGET) {
     return recusar(s, "over-target");
+  }
+
+  // Ver a nota acima: uma seleção com peça gelada e mais de duas células nunca
+  // fecha jogada. Recusa-se aqui, e não quando a soma chegar a 7.
+  if (selection.length > 2 && selection.some((q) => s.marcas.gelo.includes(q))) {
+    return recusar(s, "gelo-so-a-par");
   }
 
   const seguinte = omitJoker({ ...s, selection }, escolhido);

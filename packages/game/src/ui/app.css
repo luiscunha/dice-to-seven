@@ -208,25 +208,38 @@
  * especial* e *a face continua a ser aquela*, porque é da face que se deduz o
  * parceiro de que ela precisa.
  *
- * Daí a casca ser uma moldura e não um véu por cima: um vidro translúcido
- * baixava o contraste das pintas — a face 1 já só tem 1,17 contra o papel — e
- * tornava ilegível exatamente a informação de que o jogador precisa.
+ * Daí a casca ser uma moldura por dentro e não um véu por cima: um vidro
+ * translúcido baixava o contraste das pintas — a face 1 já só tem 1,17 contra o
+ * papel — e tornava ilegível exatamente a informação de que o jogador precisa.
  *
- * A moldura é dupla: anel exterior de gelo, fio interior escuro. Ao contrário
- * da solda, que se desenha entre duas peças, esta vive toda dentro da sua.
+ * ── Dois tons, e a razão é medida ──
+ *
+ * A primeira versão tinha um anel de um azul frio só, e não se via. A rampa das
+ * faces vai de luminância 0,746 a 0,116; um tom a meio caminho encosta-se a
+ * alguma delas, e aquele dava **1,08 contra a face 4**. Nenhuma cor única
+ * resolve — branco dá 1,32 contra a face 1, escuro dá 2,36 contra a face 6.
+ *
+ * Claro por fora, escuro por dentro, dá 3,93 no pior caso. É o mesmo argumento
+ * do anel de seleção, e está escrito lá em cima: um dos dois destaca-se sempre.
+ *
+ * A moldura é **por dentro** e a da seleção é por fora, portanto podem coexistir
+ * sem competir — e é preciso que coexistam, porque uma peça gelada
+ * selecionada é o caso normal.
  */
 .peca.gelada {
   box-shadow:
-    0 0 0 3px var(--gelo),
-    0 0 0 4px var(--gelo-linha),
-    inset 0 0 0 2px var(--gelo),
+    inset 0 0 0 2px var(--gelo-claro),
+    inset 0 0 0 4px var(--gelo-escuro),
     inset 0 calc(var(--lado-real) * -0.055) 0 rgb(0 0 0 / 0.14);
 }
 
 /*
- * Os cantos partidos. Quatro triângulos que dão à peça a silhueta de um cubo de
- * gelo lascado, e que a distinguem de um simples realce mesmo em fotografia a
- * preto e branco — a cor nunca é o único canal.
+ * Os cantos lascados. São o **segundo canal**: a cor nunca é o único sinal, e
+ * quatro triângulos dão à peça uma silhueta que se reconhece mesmo a preto e
+ * branco, ou com a peça reduzida a 38 px num telemóvel.
+ *
+ * Ficam por cima do anel escuro, portanto lêem-se também nas faces claras, onde
+ * o claro sozinho não chegaria.
  */
 .peca.gelada::before {
   content: "";
@@ -235,19 +248,24 @@
   border-radius: inherit;
   pointer-events: none;
 
+  --lasca: var(--gelo-claro) 0 calc(var(--lado-real) * 0.2), transparent 0;
   background:
-    linear-gradient(135deg, var(--gelo) 0 14%, transparent 14%) top left / 42% 42% no-repeat,
-    linear-gradient(225deg, var(--gelo) 0 14%, transparent 14%) top right / 42% 42% no-repeat,
-    linear-gradient(45deg, var(--gelo) 0 14%, transparent 14%) bottom left / 42% 42% no-repeat,
-    linear-gradient(315deg, var(--gelo) 0 14%, transparent 14%) bottom right / 42% 42% no-repeat;
+    linear-gradient(135deg, var(--lasca)) top left / 55% 55% no-repeat,
+    linear-gradient(225deg, var(--lasca)) top right / 55% 55% no-repeat,
+    linear-gradient(45deg, var(--lasca)) bottom left / 55% 55% no-repeat,
+    linear-gradient(315deg, var(--lasca)) bottom right / 55% 55% no-repeat;
 }
 
-/* Selecionada, o anel do gelo cede lugar ao da seleção — senão competem. */
+/*
+ * Selecionada: o anel de seleção entra **por fora** e a casca fica onde estava.
+ * A peça gelada selecionada é o caso normal — é assim que ela sai do tabuleiro.
+ */
 .peca.gelada.selecionada {
   box-shadow:
     0 0 0 2px #ffffff,
     0 0 0 5px #08221e,
-    inset 0 0 0 2px var(--gelo),
+    inset 0 0 0 2px var(--gelo-claro),
+    inset 0 0 0 4px var(--gelo-escuro),
     inset 0 calc(var(--lado-real) * -0.055) 0 rgb(0 0 0 / 0.14);
 }
 

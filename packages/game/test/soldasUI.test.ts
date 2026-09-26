@@ -250,3 +250,111 @@ describe("o traço no tabuleiro", () => {
     view.destruir();
   });
 });
+
+/* ─── Gelo ─────────────────────────────────────────────────────────────────── */
+
+/*
+ * ── O nível gelado ──
+ *
+ *   r1  2  3
+ *   r0  5  4  2
+ *       c0 c1 c2
+ *
+ * O 5 de (0,0) está gelado: só sai com um 2 ao lado. Tem o 2 de (0,1) por cima.
+ * Solução: 5+2 na coluna 0, e depois 3+4 no que sobra.
+ */
+const GELADO: Level = {
+  id: "teste-gelado",
+  seed: 9,
+  board: [[5, 2], [4, 3], [2]],
+  gelo: [packed(0, 0)],
+  solution: [
+    [packed(0, 0), packed(0, 1)],
+    [packed(0, 0), packed(0, 1)],
+  ],
+};
+
+describe("a peça gelada", () => {
+  it("sai com a peça que completa 7", () => {
+    const s = tap(tap(startGame(GELADO), packed(0, 0)), packed(0, 1));
+
+    expect(s.moves).toBe(1);
+    expect(s.marcas.gelo).toEqual([]);
+  });
+
+  it("**recusa a terceira peça**, e no toque que a quebraria", () => {
+    // 5 + 2 seriam 7 e a jogada fechava; escolhe-se outro caminho para chegar a
+    // três células com a gelada lá dentro: 5 (gelada) + 4 = 9 passa de 7...
+    // portanto usa-se um tabuleiro onde o trio cabe.
+    const trio: Level = {
+      id: "trio",
+      seed: 10,
+      board: [[4, 2], [1]],
+      gelo: [packed(0, 0)], // o 4
+      solution: [[packed(0, 0), packed(0, 1), packed(1, 0)]],
+    };
+
+    const um = tap(startGame(trio), packed(0, 0)); // 4, gelada
+    expect(um.rejection).toBeUndefined();
+
+    const dois = tap(um, packed(0, 1)); // 4+2 = 6, ainda vai
+    expect(dois.rejection).toBeUndefined();
+    expect(dois.selection).toHaveLength(2);
+
+    // A terceira faria 4+2+1 = 7, mas com a gelada dentro nunca seria legal.
+    const tres = tap(dois, packed(1, 0));
+    expect(tres.rejection).toBe("gelo-so-a-par");
+    expect(tres.selection).toHaveLength(2); // a seleção não mexeu
+    expect(tres.moves).toBe(0);
+  });
+
+  it("sem gelo, o mesmo trio fecha a jogada", () => {
+    const solto: Level = {
+      id: "solto",
+      seed: 10,
+      board: [[4, 2], [1]],
+      solution: [[packed(0, 0), packed(0, 1), packed(1, 0)]],
+    };
+
+    const s = tap(tap(tap(startGame(solto), packed(0, 0)), packed(0, 1)), packed(1, 0));
+    expect(s.moves).toBe(1);
+  });
+
+  it("um tabuleiro onde a gelada não tem saída é um beco", () => {
+    // Um 6 não se gela — não proibiria nada — portanto usa-se um 5 sem 2 à vista.
+    const preso: Level = {
+      id: "preso-gelo",
+      seed: 11,
+      board: [[5, 1], [1]],
+      gelo: [packed(0, 0)],
+      solution: [],
+    };
+
+    expect(isBlocked(startGame(preso))).toBe(true);
+  });
+
+  it("o undo repõe o gelo", () => {
+    const depois = tap(tap(startGame(GELADO), packed(0, 0)), packed(0, 1));
+    expect(undo(depois).marcas.gelo).toEqual([packed(0, 0)]);
+  });
+});
+
+describe("a casca de gelo no tabuleiro", () => {
+  it("marca só as peças geladas", () => {
+    document.body.replaceChildren();
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+
+    const view = new BoardView(host, { aoTocar: () => undefined });
+    view.montar(GELADO.board, marcasDe(undefined, GELADO.gelo));
+
+    const geladas = [...host.querySelectorAll(".peca.gelada")];
+    expect(geladas).toHaveLength(1);
+    expect((geladas[0] as HTMLElement).dataset["pos"]).toBe(String(packed(0, 0)));
+
+    // E não há soldas nenhumas a marcar.
+    expect(host.querySelectorAll(".peca.soldada-cima")).toHaveLength(0);
+
+    view.destruir();
+  });
+});
