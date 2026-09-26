@@ -10,12 +10,12 @@
  * é o que torna o undo uma pilha de tabuleiros e nada mais (spec §1.1).
  */
 
-import type { Board, Group, Level, Packed, Soldas } from "@dicetoseven/engine";
+import type { Board, Group, Level, Marcas, Packed } from "@dicetoseven/engine";
 import {
   JOKER,
-  SEM_SOLDAS,
+  SEM_MARCAS,
   TARGET,
-  aplicarSoldas,
+  aplicarMarcas,
   applyMove,
   boardKey,
   cellAt,
@@ -23,8 +23,9 @@ import {
   findSolution,
   isEmpty,
   jogadaLegal,
+  marcasDe,
   parDe,
-  temGrupoSoldado,
+  temGrupoMarcado,
   toGroup,
 } from "@dicetoseven/engine";
 
@@ -34,7 +35,8 @@ export type TapRejection =
   | "no-piece"
   | "board-finished"
   | "over-target"
-  | "joker-needs-value";
+  | "joker-needs-value"
+  | "gelo-so-a-par";
 
 export type HintSource = "stored" | "computed" | "none";
 
@@ -45,15 +47,15 @@ export interface GameState {
   readonly history: readonly Board[];
 
   /**
-   * As soldas ainda por gastar. Vazio na esmagadora maioria dos níveis.
+   * As marcas ainda por gastar — soldas e gelo. Vazias na esmagadora maioria
+   * dos níveis.
    *
-   * Uma solda desaparece quando o par sai, portanto isto só encolhe — ver
-   * `aplicarSoldas`.
+   * Uma marca desaparece quando a peça sai, portanto isto só encolhe.
    */
-  readonly soldas: Soldas;
+  readonly marcas: Marcas;
 
   /**
-   * As soldas de cada tabuleiro em `history`, **sempre com o mesmo
+   * As marcas de cada tabuleiro em `history`, **sempre com o mesmo
    * comprimento**.
    *
    * Duas pilhas paralelas em vez de uma pilha de pares por uma razão concreta:
@@ -65,7 +67,7 @@ export interface GameState {
    * duas funções que as mexem (`applyGroup` e `undo`). Há um teste que exige
    * que os comprimentos coincidam depois de qualquer sequência de jogadas.
    */
-  readonly historySoldas: readonly Soldas[];
+  readonly historyMarcas: readonly Marcas[];
   /** Por ordem de toque, não canónica — normaliza-se com `toGroup` na fronteira. */
   readonly selection: readonly Packed[];
 
@@ -100,9 +102,9 @@ export interface GameState {
 export const startGame = (level: Level): GameState => ({
   level,
   board: level.board,
-  soldas: level.soldas ?? SEM_SOLDAS,
+  marcas: marcasDe(level.soldas, level.gelo),
   history: [],
-  historySoldas: [],
+  historyMarcas: [],
   selection: [],
   moves: 0,
   undos: 0,
@@ -125,7 +127,7 @@ export const isFinished = (s: GameState): boolean => isEmpty(s.board);
  * métricas, não à pergunta «ainda há jogada?».
  */
 export const isBlocked = (s: GameState): boolean =>
-  !isEmpty(s.board) && !temGrupoSoldado(s.board, s.soldas);
+  !isEmpty(s.board) && !temGrupoMarcado(s.board, s.marcas);
 
 /** Soma das faces fixas da seleção. O joker conta 0 (spec §3.2). */
 export function selectionSum(b: Board, selection: readonly Packed[]): number {
@@ -192,6 +194,11 @@ export const remainingToTarget = (s: GameState): number =>
  * legal, portanto deixar selecionar meia solda seria oferecer um caminho que
  * acaba sempre em recusa — e o jogador teria de descobrir sozinho porquê. Entram
  * as duas, saem as duas.
+ *
+ * **Uma peça gelada recusa a terceira.** Pela mesma razão, do outro lado: uma
+ * seleção com peça gelada e três células nunca pode fechar jogada, e sem esta
+ * recusa o jogador chegava aos 7 pontos e via o tabuleiro não fazer nada. A
+ * recusa acontece no toque que quebraria a regra, não no fim.
  */
 export function tap(
   s: GameState,
@@ -233,10 +240,16 @@ export function tap(
     return recusar(s, "over-target");
   }
 
+  // Ver a nota acima: uma seleção com peça gelada e mais de duas células nunca
+  // fecha jogada. Recusa-se aqui, e não quando a soma chegar a 7.
+  if (selection.length > 2 && selection.some((q) => s.marcas.gelo.includes(q))) {
+    return recusar(s, "gelo-so-a-par");
+  }
+
   const seguinte = omitJoker({ ...s, selection }, escolhido);
   const group = toGroup(selection);
 
-  if (total === TARGET && jogadaLegal(s.board, group, s.soldas)) {
+  if (total === TARGET && jogadaLegal(s.board, group, s.marcas)) {
     return applyGroup(seguinte, group);
   }
 
@@ -270,9 +283,9 @@ export function undo(s: GameState): GameState {
     semJoker({
       ...s,
       board: previous,
-      soldas: s.historySoldas[s.historySoldas.length - 1] ?? SEM_SOLDAS,
+      marcas: s.historyMarcas[s.historyMarcas.length - 1] ?? SEM_MARCAS,
       history: s.history.slice(0, -1),
-      historySoldas: s.historySoldas.slice(0, -1),
+      historyMarcas: s.historyMarcas.slice(0, -1),
       selection: [],
       moves: s.moves - 1,
       undos: s.undos + 1,
@@ -286,9 +299,9 @@ export const restart = (s: GameState): GameState =>
     semJoker({
       ...s,
       board: s.level.board,
-      soldas: s.level.soldas ?? SEM_SOLDAS,
+      marcas: marcasDe(s.level.soldas, s.level.gelo),
       history: [],
-      historySoldas: [],
+      historyMarcas: [],
       selection: [],
       moves: 0,
       restarts: s.restarts + 1,
@@ -322,7 +335,7 @@ export function hint(s: GameState): HintResult {
     return { state: spent, group: stored, source: "stored" };
   }
 
-  const solution = findSolution(s.board, undefined, s.soldas);
+  const solution = findSolution(s.board, undefined, s.marcas);
   const first = solution?.[0];
 
   if (first === undefined) return { state: spent, source: "none" };
@@ -342,14 +355,14 @@ export function hint(s: GameState): HintResult {
  */
 function onStoredPath(s: GameState): boolean {
   let b = s.level.board;
-  let soldas: Soldas = s.level.soldas ?? SEM_SOLDAS;
+  let marcas: Marcas = marcasDe(s.level.soldas, s.level.gelo);
 
   for (let i = 0; i < s.moves; i++) {
     const g = s.level.solution[i];
-    if (g === undefined || !jogadaLegal(b, g, soldas)) return false;
-    const seguintes = aplicarSoldas(b, soldas, g);
+    if (g === undefined || !jogadaLegal(b, g, marcas)) return false;
+    const seguintes = aplicarMarcas(b, marcas, g);
     b = applyMove(b, g);
-    soldas = seguintes;
+    marcas = seguintes;
   }
 
   return boardKey(b) === boardKey(s.board);
@@ -361,9 +374,9 @@ function applyGroup(s: GameState, group: Group): GameState {
       semJoker({
         ...s,
         board: applyMove(s.board, group),
-        soldas: aplicarSoldas(s.board, s.soldas, group),
+        marcas: aplicarMarcas(s.board, s.marcas, group),
         history: [...s.history, s.board],
-        historySoldas: [...s.historySoldas, s.soldas],
+        historyMarcas: [...s.historyMarcas, s.marcas],
         selection: [],
         moves: s.moves + 1,
       }),
@@ -379,10 +392,11 @@ function applyGroup(s: GameState, group: Group): GameState {
  * jogador lê o tabuleiro.
  */
 function paresDe(s: GameState, p: Packed): readonly Packed[] {
-  if (s.soldas.length === 0) return [p];
-  if (!celulasSoldadas(s.soldas).has(p)) return [p];
+  const soldas = s.marcas.soldas;
+  if (soldas.length === 0) return [p];
+  if (!celulasSoldadas(soldas).has(p)) return [p];
 
-  const baixo = s.soldas.find((q) => {
+  const baixo = soldas.find((q) => {
     const [b, c] = parDe(q);
     return b === p || c === p;
   });

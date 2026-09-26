@@ -14,15 +14,16 @@ import { parseArgs } from "node:util";
 
 import type { Level } from "@dicetoseven/engine";
 import {
-  SEM_SOLDAS,
   applyMove,
-  aplicarSoldas,
-  checkSoldas,
+  aplicarMarcas,
+  checkMarcas,
   jogadaLegal,
+  marcasDe,
   pieceCount,
+  temMarcas,
   totalSum,
 } from "@dicetoseven/engine";
-import type { Soldas } from "@dicetoseven/engine";
+import type { Marcas } from "@dicetoseven/engine";
 
 import { BANDS, bandById } from "./bands";
 import { comandoPlay } from "./play";
@@ -240,32 +241,32 @@ async function comandoVerify(args: string[]): Promise<number> {
 
   for (const nivel of pack) {
     let b = nivel.board;
-    let soldas: Soldas = nivel.soldas ?? SEM_SOLDAS;
+    let marcas: Marcas = marcasDe(nivel.soldas, nivel.gelo);
     let ok = true;
 
-    // As soldas fazem parte do tabuleiro para efeitos de verificação: uma
+    // As marcas fazem parte do tabuleiro para efeitos de verificação: uma
     // solução que só é legal ignorando-as é uma solução que o jogador não pode
     // seguir, e o nível é impossível na prática.
-    for (const problema of checkSoldas(b, soldas)) {
+    for (const problema of checkMarcas(b, marcas)) {
       falhas.push(`${nivel.id}: ${problema}`);
       ok = false;
     }
 
     for (const g of nivel.solution) {
       if (!ok) break;
-      if (!jogadaLegal(b, g, soldas)) {
+      if (!jogadaLegal(b, g, marcas)) {
         falhas.push(`${nivel.id}: jogada inválida`);
         ok = false;
         break;
       }
-      const seguintes = aplicarSoldas(b, soldas, g);
+      const seguintes = aplicarMarcas(b, marcas, g);
       b = applyMove(b, g);
-      soldas = seguintes;
+      marcas = seguintes;
     }
 
     if (ok && b.length !== 0) falhas.push(`${nivel.id}: não esvazia`);
-    if (ok && soldas.length !== 0) {
-      falhas.push(`${nivel.id}: sobraram soldas por gastar`);
+    if (ok && temMarcas(marcas)) {
+      falhas.push(`${nivel.id}: sobraram marcas por gastar`);
     }
 
     const soma = totalSum(nivel.board) + (nivel.joker?.trueValue ?? 0);

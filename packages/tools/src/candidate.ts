@@ -15,8 +15,8 @@ import {
   measureSurvival,
   pieceCount,
   reachablePieceCounts,
+  marcarNivel,
   mulberry32,
-  soldarNivel,
   toLevel,
 } from "@dicetoseven/engine";
 
@@ -212,17 +212,21 @@ export function avaliar(
   }
 
   /*
-   * As soldas entram aqui, no fim, e não no gerador: dependem da solução, que só
+   * As marcas entram aqui, no fim, e não no gerador: dependem da solução, que só
    * existe depois de o nível estar construído e aceite. A seed é derivada da do
    * nível para a escolha ser reprodutível sem gastar a sequência do gerador.
    */
-  const soldas = soldarNivel(gerado, band.soldas ?? 0, mulberry32(seed ^ 0x50_1d));
+  const marcas = marcarNivel(
+    gerado,
+    { soldas: band.soldas ?? 0, gelo: band.gelo ?? 0 },
+    mulberry32(seed ^ 0x50_1d),
+  );
 
   const base = toLevel(
     `${band.id}-${String(seed).padStart(6, "0")}`,
     seed,
     gerado,
-    soldas,
+    marcas,
   );
 
   return {

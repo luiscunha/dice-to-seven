@@ -6,8 +6,8 @@
  * remover listas vazias *é* o colapso de colunas.
  */
 
-import type { Board, Column, Group } from "./types";
-import { colOf, rowOf } from "./types";
+import type { Board, Column, Group, Packed } from "./types";
+import { colOf, packed, rowOf } from "./types";
 import { isValidGroup } from "./groups";
 
 /**
@@ -30,6 +30,55 @@ export function linhasRemovidas(g: Group): Map<number, Set<number>> {
     linhas.add(rowOf(p));
   }
   return removidas;
+}
+
+/**
+ * Para onde vai cada célula que sobrevive à jogada. `undefined` = saiu com ela.
+ *
+ * É a gravidade e o colapso expressos em coordenadas em vez de listas, e existe
+ * para as **marcas** — soldas, gelo — acompanharem o tabuleiro sem recalcular
+ * nada. Uma marca é uma coordenada, e uma coordenada que ficasse a apontar para
+ * a célula errada seria um nível corrompido em silêncio.
+ *
+ * Devolve-se um fecho e não um `Map` de todas as células: as marcas são duas ou
+ * três por nível, e o solver chama isto uma vez por estado visitado.
+ */
+export function remapearCelula(
+  b: Board,
+  g: Group,
+): (p: Packed) => Packed | undefined {
+  const removidas = linhasRemovidas(g);
+
+  // Uma coluna some quando a jogada lhe levou todas as células; as que ficam à
+  // direita andam para a esquerda.
+  const destinoDaColuna = new Map<number, number>();
+  let destino = 0;
+  for (let c = 0; c < b.length; c++) {
+    const col = b[c];
+    if (col === undefined) continue;
+
+    const fora = removidas.get(c);
+    if (fora !== undefined && fora.size === col.length) continue;
+
+    destinoDaColuna.set(c, destino);
+    destino += 1;
+  }
+
+  return (p) => {
+    const c = colOf(p);
+    const r = rowOf(p);
+
+    const fora = removidas.get(c);
+    if (fora?.has(r) === true) return undefined; // saiu
+
+    const cNovo = destinoDaColuna.get(c);
+    if (cNovo === undefined) return undefined; // a coluna colapsou
+
+    let abaixo = 0;
+    if (fora !== undefined) for (const linha of fora) if (linha < r) abaixo += 1;
+
+    return packed(cNovo, r - abaixo);
+  };
 }
 
 export class InvalidMoveError extends Error {

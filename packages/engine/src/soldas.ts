@@ -41,8 +41,7 @@
 import type { Board, Group, Packed } from "./types";
 import { MAX_ROWS, colOf, packed, rowOf } from "./types";
 import { cellAt, height, width } from "./board";
-import { findAllGroups, isValidGroup } from "./groups";
-import { linhasRemovidas } from "./moves";
+import { remapearCelula } from "./moves";
 
 /**
  * Células **de baixo** dos pares soldados, por ordem crescente.
@@ -98,50 +97,24 @@ export function respeitaSoldas(g: Group, s: Soldas): boolean {
 /**
  * Para onde vão as soldas depois da jogada.
  *
- * Três casos, e só três:
+ * O par saiu inteiro e a solda desaparece com ele, ou ficou e desce com a
+ * gravidade. Não há terceiro caso: sair meio par é impossível, porque
+ * `respeitaSoldas` já o proibiu.
  *
- * 1. O par saiu inteiro — a solda desaparece com ele. (Sair meio par é
- *    impossível: `respeitaSoldas` já o proibiu.)
- * 2. A coluna colapsou — não acontece a um par que ficou, porque uma coluna com
- *    duas células não fica vazia.
- * 3. O par ficou — desce tantas linhas quantas as removidas por baixo dele, e
- *    anda para a esquerda tantas colunas quantas as que colapsaram à sua
- *    esquerda. Continua um par.
+ * A travessia é a de `remapearCelula`, partilhada com o gelo — duas
+ * implementações da mesma conta seriam duas oportunidades de divergir.
  */
 export function aplicarSoldas(b: Board, s: Soldas, g: Group): Soldas {
   if (s.length === 0) return SEM_SOLDAS;
 
-  const removidas = linhasRemovidas(g);
-
-  // Quantas colunas desapareceram à esquerda de cada uma. Uma coluna some quando
-  // a jogada lhe levou todas as células.
-  const novaColuna = new Map<number, number>();
-  let destino = 0;
-  for (let c = 0; c < b.length; c++) {
-    const col = b[c];
-    if (col === undefined) continue;
-    const fora = removidas.get(c);
-    if (fora !== undefined && fora.size === col.length) continue; // colapsou
-    novaColuna.set(c, destino);
-    destino += 1;
-  }
-
+  const paraOnde = remapearCelula(b, g);
   const out: Packed[] = [];
 
   for (const baixo of s) {
-    const c = colOf(baixo);
-    const r = rowOf(baixo);
-
-    const fora = removidas.get(c);
-    if (fora?.has(r) === true) continue; // o par saiu inteiro
-
-    const cNovo = novaColuna.get(c);
-    if (cNovo === undefined) continue; // coluna colapsada (não deve acontecer)
-
-    let abaixo = 0;
-    if (fora !== undefined) for (const linha of fora) if (linha < r) abaixo += 1;
-
-    out.push(packed(cNovo, r - abaixo));
+    // Sair meio par é impossível — `respeitaSoldas` já o proibiu — portanto se a
+    // de baixo ficou, a de cima ficou com ela, e continuam encostadas.
+    const novo = paraOnde(baixo);
+    if (novo !== undefined) out.push(novo);
   }
 
   return out.sort((x, y) => x - y);
@@ -196,32 +169,3 @@ export function checkSoldas(b: Board, s: Soldas): string[] {
 
   return problemas;
 }
-
-/* ─── Jogadas legais com soldas ──────────────────────────────────────────────
- *
- * O filtro é **posterior** à enumeração, de propósito. A enumeração por célula
- * mínima de `groups.ts` garante que cada grupo sai exatamente uma vez, e essa
- * garantia assenta em duas estruturas (`ext` e `proibidas`) cuja correção é
- * subtil. Tecer as soldas lá para dentro pouparia alguns ramos e arriscaria a
- * propriedade de que dependem o branching factor e a contagem de estados.
- *
- * O custo é desprezável: um nível tem 2 a 4 soldas, e o teste é uma pertença
- * num `Set` por par.
- */
-
-/** Os grupos válidos que também respeitam as soldas. */
-export function* gruposSoldados(b: Board, s: Soldas): Generator<Group> {
-  for (const g of findAllGroups(b)) {
-    if (respeitaSoldas(g, s)) yield g;
-  }
-}
-
-/** Há jogada? Para com o primeiro grupo legal — é o caminho quente do pipeline. */
-export function temGrupoSoldado(b: Board, s: Soldas): boolean {
-  for (const _ of gruposSoldados(b, s)) return true;
-  return false;
-}
-
-/** `isValidGroup` mais a regra das soldas. É o que a UI tem de perguntar. */
-export const jogadaLegal = (b: Board, g: Group, s: Soldas): boolean =>
-  isValidGroup(b, g) && respeitaSoldas(g, s);

@@ -15,10 +15,16 @@ import {
   applyMove,
   aplicarSoldas,
   cellAt,
+  checkGelo,
+  checkMarcas,
   checkSoldas,
+  gelarNivel,
   generate,
+  marcarNivel,
   isEmpty,
   jogadaLegal,
+  aplicarMarcas,
+  marcasDe,
   mulberry32,
   parDe,
   soldarNivel,
@@ -40,7 +46,7 @@ function jogarComSoldas(
   let ilegais = 0;
 
   for (const g of solucao) {
-    if (!jogadaLegal(b, g, s)) {
+    if (!jogadaLegal(b, g, marcasDe(s))) {
       ilegais += 1;
       break;
     }
@@ -169,5 +175,118 @@ describe("soldas que não restringem nada ficam de fora", () => {
 
     expect(niveis).toBeGreaterThan(20);
     expect(comJoker).toBe(0);
+  });
+});
+
+/* ─── Gelo ─────────────────────────────────────────────────────────────────── */
+
+describe("gelar não estraga a solução", () => {
+  it("200 níveis gerados, gelados, e resolvidos pela solução guardada", () => {
+    let comGelo = 0;
+    let total = 0;
+
+    for (let seed = 1; seed <= 200; seed += 1) {
+      const nivel = nivelDe(seed, 28);
+      if (nivel === undefined) continue;
+
+      const gelo = gelarNivel(nivel, 3, mulberry32(seed * 6151));
+
+      expect(checkGelo(nivel.board, gelo)).toEqual([]);
+      if (gelo.length > 0) comGelo += 1;
+      total += gelo.length;
+
+      let b: Board = nivel.board;
+      let marcas = marcasDe(undefined, gelo);
+
+      for (const g of nivel.solution) {
+        expect(jogadaLegal(b, g, marcas)).toBe(true);
+        marcas = aplicarMarcas(b, marcas, g);
+        b = applyMove(b, g);
+      }
+
+      expect(isEmpty(b)).toBe(true);
+    }
+
+    expect(comGelo).toBeGreaterThan(150);
+    expect(total / comGelo).toBeGreaterThan(1.5);
+  });
+
+  it("**a face 6 nunca é gelada** — gelá-la não proibiria nada", () => {
+    // `6+1` é a única composição com um 6, portanto qualquer grupo com um 6 já
+    // é obrigatoriamente um par. É o mesmo defeito que as soldas tiveram.
+    let seises = 0;
+    let vistas = 0;
+
+    for (let seed = 1; seed <= 300; seed += 1) {
+      const nivel = nivelDe(seed, 26);
+      if (nivel === undefined) continue;
+
+      for (const p of gelarNivel(nivel, 4, mulberry32(seed * 3301))) {
+        vistas += 1;
+        if (cellAt(nivel.board, p) === 6) seises += 1;
+      }
+    }
+
+    expect(vistas).toBeGreaterThan(400);
+    expect(seises).toBe(0);
+  });
+
+  it("o joker nunca é gelado", () => {
+    let comJoker = 0;
+    let niveis = 0;
+
+    for (let seed = 1; seed <= 200; seed += 1) {
+      const nivel = generate(seed, {
+        targetPieceCount: 22,
+        includeJoker: true,
+        jokerProgress: 0.3,
+      });
+      if (nivel?.joker === undefined) continue;
+      niveis += 1;
+
+      for (const p of gelarNivel(nivel, 4, mulberry32(seed * 9161))) {
+        if (cellAt(nivel.board, p) === JOKER) comJoker += 1;
+      }
+    }
+
+    expect(niveis).toBeGreaterThan(20);
+    expect(comJoker).toBe(0);
+  });
+});
+
+describe("as duas marcas juntas", () => {
+  it("nunca caem na mesma peça, e o nível continua a resolver-se", () => {
+    let comAs2 = 0;
+
+    for (let seed = 1; seed <= 200; seed += 1) {
+      const nivel = nivelDe(seed, 30);
+      if (nivel === undefined) continue;
+
+      const marcas = marcarNivel(nivel, { soldas: 3, gelo: 2 }, mulberry32(seed));
+
+      // `checkMarcas` inclui a invariante de uma marca por peça.
+      expect(checkMarcas(nivel.board, marcas)).toEqual([]);
+      if (marcas.soldas.length > 0 && marcas.gelo.length > 0) comAs2 += 1;
+
+      let b: Board = nivel.board;
+      let m = marcas;
+
+      for (const g of nivel.solution) {
+        expect(jogadaLegal(b, g, m)).toBe(true);
+        m = aplicarMarcas(b, m, g);
+        b = applyMove(b, g);
+      }
+
+      expect(isEmpty(b)).toBe(true);
+    }
+
+    expect(comAs2).toBeGreaterThan(100);
+  });
+
+  it("é determinístico", () => {
+    const nivel = nivelDe(7, 30);
+    expect(marcarNivel(nivel!, { soldas: 2, gelo: 2 }, mulberry32(11))).toEqual(
+      marcarNivel(nivel!, { soldas: 2, gelo: 2 }, mulberry32(11)),
+    );
   });
 });

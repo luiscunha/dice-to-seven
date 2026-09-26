@@ -11,6 +11,7 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
 import {
+  SEM_MARCAS,
   SEM_SOLDAS,
   aplicarSoldas,
   applyMove,
@@ -19,14 +20,15 @@ import {
   checkSoldas,
   findAllGroups,
   findSolution,
-  gruposSoldados,
+  gruposMarcados,
   isEmpty,
   isSolvable,
   jogadaLegal,
   packed,
   parDe,
   respeitaSoldas,
-  temGrupoSoldado,
+  marcasDe,
+  temGrupoMarcado,
   toGroup,
   width,
   height,
@@ -72,7 +74,7 @@ describe("respeitar a solda", () => {
   it("a solda tira jogadas legais ao tabuleiro, nunca acrescenta", () => {
     const s: Soldas = [packed(2, 0)];
     const livres = [...findAllGroups(B)];
-    const comSolda = [...gruposSoldados(B, s)];
+    const comSolda = [...gruposMarcados(B, marcasDe(s))];
 
     expect(comSolda.length).toBeLessThan(livres.length);
     const chaves = new Set(livres.map((g) => g.join(",")));
@@ -82,11 +84,11 @@ describe("respeitar a solda", () => {
   it("o par óbvio deixa de servir, e é esse o objetivo", () => {
     // (2,1)=2 com (1,1)=5 dá 7 e é legal sem soldas.
     const par = toGroup([packed(1, 1), packed(2, 1)]);
-    expect(jogadaLegal(B, par, SEM_SOLDAS)).toBe(true);
+    expect(jogadaLegal(B, par, SEM_MARCAS)).toBe(true);
 
     // Soldado o 2 ao 1 que tem por baixo, o mesmo toque passa a ilegal:
     // teria de arrastar o 1, e 5+2+1 são 8.
-    expect(jogadaLegal(B, par, [packed(2, 0)])).toBe(false);
+    expect(jogadaLegal(B, par, marcasDe([packed(2, 0)]))).toBe(false);
   });
 });
 
@@ -179,19 +181,19 @@ describe("o solver conta com as soldas", () => {
   });
 
   it("uma solda que não estorva mantém a solução", () => {
-    expect(isSolvable(T, undefined, [packed(0, 0)])).toBe("yes");
+    expect(isSolvable(T, undefined, marcasDe([packed(0, 0)]))).toBe("yes");
   });
 
   it("a solução devolvida respeita as soldas", () => {
     const s: Soldas = [packed(0, 0)];
-    const caminho = findSolution(T, undefined, s);
+    const caminho = findSolution(T, undefined, marcasDe(s));
 
     expect(caminho).not.toBeNull();
 
     let b: Board = T;
     let soldas: Soldas = s;
     for (const g of caminho as Group[]) {
-      expect(jogadaLegal(b, g, soldas)).toBe(true);
+      expect(jogadaLegal(b, g, marcasDe(soldas))).toBe(true);
       soldas = aplicarSoldas(b, soldas, g);
       b = applyMove(b, g);
     }
@@ -217,7 +219,7 @@ describe("o solver conta com as soldas", () => {
     expect(isSolvable(U)).toBe("yes"); // 3+4 e 5+2
 
     // 3 soldado ao 5 = bloco de 8. Nunca sai, e nada o pode salvar.
-    expect(isSolvable(U, undefined, [packed(0, 0)])).toBe("no");
+    expect(isSolvable(U, undefined, marcasDe([packed(0, 0)]))).toBe("no");
   });
 
   it("temGrupoSoldado concorda com a enumeração", () => {
@@ -226,7 +228,7 @@ describe("o solver conta com as soldas", () => {
       [3, 5],
       [4, 2],
     ];
-    expect(temGrupoSoldado(U, s)).toBe([...gruposSoldados(U, s)].length > 0);
+    expect(temGrupoMarcado(U, marcasDe(s))).toBe([...gruposMarcados(U, marcasDe(s))].length > 0);
   });
 });
 
@@ -275,7 +277,7 @@ describe("uma solda nunca se parte", () => {
           const [baixo, cima] = parDe(s[0] as Packed);
           const faces = [cellAt(b, baixo), cellAt(b, cima)];
 
-          for (const g of gruposSoldados(b, s)) {
+          for (const g of gruposMarcados(b, marcasDe(s))) {
             const depois = applyMove(b, g);
             const soldasDepois = aplicarSoldas(b, s, g);
 

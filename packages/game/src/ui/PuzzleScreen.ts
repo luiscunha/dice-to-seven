@@ -17,7 +17,15 @@
  */
 
 import type { Group, Level, Packed } from "@dicetoseven/engine";
-import { JOKER, cellAt, colOf, jokerAt, rowOf, totalSum } from "@dicetoseven/engine";
+import {
+  JOKER,
+  cellAt,
+  colOf,
+  jokerAt,
+  marcasDe,
+  rowOf,
+  totalSum,
+} from "@dicetoseven/engine";
 
 import type { PuzzleState } from "../session/PuzzleSession";
 import {
@@ -184,7 +192,7 @@ export class PuzzleScreen {
       aoEscolher: (valor) => void this.escolherJoker(valor),
     });
     this.view.dimensionarPara(level.board);
-    this.view.montar(level.board, level.soldas);
+    this.view.montar(level.board, marcasDe(level.soldas, level.gelo));
 
     this.btDesfazer.addEventListener("click", () => {
       this.desfazer();
@@ -278,7 +286,7 @@ export class PuzzleScreen {
 
   private desfazer(): void {
     this.estado = undoPuzzle(this.estado);
-    this.view.montar(this.estado.game.board, this.estado.game.soldas);
+    this.view.montar(this.estado.game.board, this.estado.game.marcas);
     this.view.marcarSugestao(undefined);
     this.pintar();
   }
@@ -286,7 +294,7 @@ export class PuzzleScreen {
   private reiniciar(): void {
     this.estado = restartPuzzle(this.estado);
     this.pontos = 0;
-    this.view.montar(this.estado.game.board, this.estado.game.soldas);
+    this.view.montar(this.estado.game.board, this.estado.game.marcas);
     this.view.marcarSugestao(undefined);
     this.pintar();
   }
@@ -411,6 +419,20 @@ export class PuzzleScreen {
     if (jogo.rejection === "over-target") {
       this.elAviso.dataset["tipo"] = "erro";
       this.elAviso.replaceChildren(marca("⚠"), texto("essa peça passava de 7"));
+      return;
+    }
+
+    /*
+     * Diz a regra, não a jogada. "Só sai com uma peça" é o que o jogador
+     * precisa de saber para perceber a recusa; qual é a peça que completa 7 é
+     * aritmética que ele faz, e é o desafio.
+     */
+    if (jogo.rejection === "gelo-so-a-par") {
+      this.elAviso.dataset["tipo"] = "erro";
+      this.elAviso.replaceChildren(
+        marca("❄"),
+        texto("uma peça gelada só sai com uma peça"),
+      );
       return;
     }
 

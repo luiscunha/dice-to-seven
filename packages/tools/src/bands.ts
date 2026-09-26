@@ -120,6 +120,19 @@ export interface BandSpec {
    */
   readonly soldas?: number;
 
+  /**
+   * Peças geladas a pedir por nível. Zero — por omissão — é o jogo de sempre.
+   *
+   * Como as soldas, não entra no `accept`: escolhem-se depois de o nível ser
+   * aceite, e por construção não podem torná-lo impossível.
+   *
+   * O gelo é a alavanca que mexe na **taxa de erro**, que é o que as soldas não
+   * fazem — daí só o `perito` o ter, e com moderação. Três peças geladas num
+   * tabuleiro de 49 não é um tabuleiro de gelo: são três nós que obrigam a
+   * pensar na ordem das jogadas.
+   */
+  readonly gelo?: number;
+
   readonly accept: {
     /** Intervalo fechado de taxa de sobrevivência. */
     readonly survival: readonly [number, number];
@@ -289,6 +302,7 @@ export const BANDS: readonly BandSpec[] = [
     formas: [[7, 7]],
     soFormas: true,
     soldas: 4,
+    gelo: 3,
     accept: { survival: [0.03, 0.22], fairnessDepth: 2 },
   },
   /*
