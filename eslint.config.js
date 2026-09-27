@@ -43,6 +43,14 @@ export default tseslint.config(
       "**/coverage/**",
       ".vs/**",
       "**/*.d.ts",
+
+      /*
+       * Os projetos nativos do Capacitor. São Java, Gradle e XML gerados, e a
+       * pasta ainda recebe o bundle do jogo já construído — que o `cap sync`
+       * copia para lá e que o lint tentaria analisar como se fosse nosso.
+       */
+      "packages/mobile/android/**",
+      "packages/mobile/ios/**",
     ],
   },
 

@@ -32,3 +32,8 @@ packages/tools/out/level-pack.json linguist-generated=true
 *.ogg binary
 *.pdf binary
 *.zip binary
+
+# O wrapper do Gradle: o script de shell tem de manter LF e o .bat tem de manter
+# CRLF, senão nenhum dos dois corre na sua plataforma. O Git normalizava ambos.
+packages/mobile/android/gradlew text eol=lf
+packages/mobile/android/gradlew.bat text eol=crlf
