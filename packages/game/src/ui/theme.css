@@ -58,29 +58,33 @@
   --solda-luz: rgb(255 255 255 / 0.55);
 
   /*
-   * O gelo é uma **laje por cima da peça**, e não uma moldura à volta dela.
+   * O gelo é uma **laje por cima da peça**, e a cor dela não é um azul claro
+   * qualquer — é a única cor do jogo que sai da rampa da marca, e tem de sair.
    *
-   * A primeira versão foi uma moldura, porque eu receava que um vidro
-   * translúcido baixasse o contraste das pintas. Medido, é o contrário: com a
-   * laje a 0,88 e as pintas forçadas a escuro, o contraste das pintas fica
-   * entre **7,5 e 9,0** contra a laje — melhor do que os 1,17 que a face 1 dá
-   * sem gelo nenhum.
+   * ── Porque a primeira laje não se via, e mais opacidade não a salvava ──
    *
-   * A laje sai quase igual sobre as seis faces, e é isso que se quer: uma peça
-   * gelada é *a mesma matéria* seja qual for a face que tapa. A face deixa de
-   * se ver, e não faz falta — as pintas carregam sempre o valor completo, como
-   * diz o `dice.ts`.
+   * A laje era #c7e6f8, um azul-gelo pálido. Medida a diferença de cor
+   * percebida (CIELAB ΔE) contra as seis faces:
    *
-   * A 0,96 a laje é quase opaca — varia de #c7e6f8 a #c1e1f3 sobre as seis
-   * faces — e é o que a faz parecer gelo a sério e não um véu. Subir a
-   * opacidade **melhora** o contraste das pintas, de 9,75 para 10,9 no pior
-   * caso, porque as aproxima da laje pura em vez da mistura com a face.
+   *   face 1   **4**      face 4   48
+   *   face 2   11         face 5   48
+   *   face 3   33         face 6   54
+   *
+   * ΔE abaixo de 10 é "a mesma cor". Uma peça gelada de face 1 ou 2 era
+   * indistinguível de uma peça normal — e **subir a opacidade não muda isso**,
+   * porque mesmo a 100% a laje continuava a ser a cor da face. O problema nunca
+   * foi o alfa; era a matiz.
+   *
+   * #3aa0d8 dá **ΔE mínimo 27** — "outra cor" contra todas as seis — e ainda
+   * deixa 5,6 de contraste para as pintas escuras, acima do mínimo de 4,5.
+   * Mais saturado que isto (#2f8fd0, ΔE 33) desce as pintas para 4,6 e começa a
+   * gritar num tabuleiro que é todo dessaturado.
    */
-  --gelo-laje: #c7e6f8;
-  --gelo-pinta: #0d2b33;
-  --gelo-borda: rgb(255 255 255 / 0.8);
-  --gelo-linha: rgb(18 63 77 / 0.45);
-  --gelo-opacidade: 0.96;
+  --gelo-laje: #3aa0d8;
+  --gelo-pinta: #08232c;
+  --gelo-borda: rgb(255 255 255 / 0.85);
+  --gelo-linha: rgb(8 44 62 / 0.5);
+  --gelo-opacidade: 0.97;
 
   /* ─── Forma ───────────────────────────────────────────────────────────── */
   --raio: 10px;
@@ -134,13 +138,14 @@
     --solda-luz: rgb(255 255 255 / 0.32);
     /*
      * No escuro a laje escurece e as pintas passam a claras: uma laje clara num
-     * tabuleiro escuro era um farol, e obrigava a olhar para as peças geladas
-     * antes de olhar para o tabuleiro.
+     * tabuleiro escuro era um farol. Mantém-se a matiz azul saturada, que é o
+     * que a distingue das faces — aqui o contraste contra o fundo é 2,4, e a
+     * textura branca por cima trata do resto.
      */
-    --gelo-laje: #2a5f7d;
-    --gelo-pinta: #e8f6ff;
-    --gelo-borda: rgb(190 226 246 / 0.5);
-    --gelo-linha: rgb(4 18 26 / 0.5);
+    --gelo-laje: #1d6f9e;
+    --gelo-pinta: #eaf7ff;
+    --gelo-borda: rgb(200 232 250 / 0.6);
+    --gelo-linha: rgb(3 20 30 / 0.55);
     --gelo-opacidade: 0.97;
     --sombra: 0 1px 2px rgb(0 0 0 / 0.5), 0 8px 22px rgb(0 0 0 / 0.35);
   }
@@ -160,13 +165,14 @@
   --solda-luz: rgb(255 255 255 / 0.32);
   /*
    * No escuro a laje escurece e as pintas passam a claras: uma laje clara num
-   * tabuleiro escuro era um farol, e obrigava a olhar para as peças geladas
-   * antes de olhar para o tabuleiro.
+   * tabuleiro escuro era um farol. Mantém-se a matiz azul saturada, que é o
+   * que a distingue das faces — aqui o contraste contra o fundo é 2,4, e a
+   * textura branca por cima trata do resto.
    */
-  --gelo-laje: #2a5f7d;
-  --gelo-pinta: #e8f6ff;
-  --gelo-borda: rgb(190 226 246 / 0.5);
-  --gelo-linha: rgb(4 18 26 / 0.5);
+  --gelo-laje: #1d6f9e;
+  --gelo-pinta: #eaf7ff;
+  --gelo-borda: rgb(200 232 250 / 0.6);
+  --gelo-linha: rgb(3 20 30 / 0.55);
   --gelo-opacidade: 0.97;
   --sombra: 0 1px 2px rgb(0 0 0 / 0.5), 0 8px 22px rgb(0 0 0 / 0.35);
 }
