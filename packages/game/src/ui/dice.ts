@@ -81,6 +81,22 @@ export function desenharFace(
   }
 }
 
+/**
+ * O sinal pequeno que fica no canto de um joker **com valor escolhido**.
+ *
+ * A peça passa a mostrar as pintas do valor — é a face que ela vale nesta
+ * jogada, e tem de se ler como as outras. Mas sem esta marca o jogador perdia
+ * de vista qual das peças é o joker, que é a informação de que precisa para
+ * saber que ainda pode mudar de ideias.
+ */
+export function marcaDeJoker(): HTMLElement {
+  const el = document.createElement("span");
+  el.className = "marca-joker";
+  el.textContent = "✳";
+  el.setAttribute("aria-hidden", "true");
+  return el;
+}
+
 function glifo(texto: string): HTMLElement {
   const el = document.createElement("span");
   el.className = "glifo";

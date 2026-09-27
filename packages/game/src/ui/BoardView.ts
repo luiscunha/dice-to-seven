@@ -22,6 +22,7 @@
 
 import type { Board, Cell, Group, Marcas, Packed } from "@dicetoseven/engine";
 import {
+  JOKER,
   SEM_MARCAS,
   applyMove,
   colOf,
@@ -34,7 +35,7 @@ import {
 import type { PieceMove } from "../session/transition";
 import { midpointOf, transition } from "../session/transition";
 import type { ModoFace } from "./dice";
-import { criarPeca, desenharFace } from "./dice";
+import { criarPeca, desenharFace, marcaDeJoker } from "./dice";
 
 /** Lado máximo de uma peça. Acima disto o tabuleiro fica esparso e estranho. */
 const LADO_MAX = 72;
@@ -298,10 +299,27 @@ export class BoardView {
    * Sem isto o jogador escolhe 5, junta peças, e a meio já não se lembra do que
    * escolheu — que é precisamente a decisão que o nível inteiro depende.
    */
+/**
+   * O joker com valor escolhido mostra **a face desse valor**, em pintas, como
+   * qualquer outra peça.
+   *
+   * Antes era um dígito desenhado por CSS com `content: attr(...)`. Num jogo
+   * em que as pintas são a identidade e os dígitos são uma definição que o
+   * jogador escolhe, o joker era a única peça que não respeitava nem uma coisa
+   * nem outra — aparecia em número mesmo para quem joga com pintas.
+   *
+   * Fica um `✳` pequeno no canto, senão perdia-se de vista qual das peças é o
+   * joker, que é o que diz ao jogador que ainda pode mudar de ideias.
+   */
   marcarJoker(p: Packed | undefined, valor: number | undefined): void {
-    for (const el of this.pecas.values()) {
+    // Quem já tinha valor volta ao ✳ — e só esses, para não redesenhar o
+    // tabuleiro inteiro a cada toque.
+    for (const [q, el] of this.pecas) {
+      if (!el.classList.contains("joker-escolhido")) continue;
+
       el.classList.remove("joker-escolhido");
       delete el.dataset["jokerAs"];
+      desenharFace(el, this.valorEm(q) ?? JOKER, this.modo);
     }
 
     if (p === undefined || valor === undefined) return;
@@ -311,6 +329,9 @@ export class BoardView {
 
     el.classList.add("joker-escolhido");
     el.dataset["jokerAs"] = String(valor);
+
+    desenharFace(el, valor as Cell, this.modo);
+    el.appendChild(marcaDeJoker());
   }
 
   marcarSelecao(selecao: ReadonlySet<Packed>): void {

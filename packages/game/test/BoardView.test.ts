@@ -320,3 +320,113 @@ describe("dimensionamento", () => {
     view.destruir();
   });
 });
+
+/*
+ * ── O joker com valor escolhido ──
+ *
+ * Mostrava o valor em **dígito**, posto por CSS com `content: attr(...)`. Num
+ * jogo em que as pintas são a identidade e os dígitos são uma definição que o
+ * jogador escolhe, o joker era a única peça que não respeitava nem uma coisa
+ * nem outra: aparecia em número mesmo para quem joga com pintas.
+ */
+describe("o joker mostra a face do valor que toma", () => {
+  /*
+   *   r0  ✳  4
+   *       c0 c1
+   */
+  const COM_JOKER: Board = [[0], [4]];
+  const JOKER = packed(0, 0);
+
+  let host: HTMLElement;
+
+  beforeEach(() => {
+    document.body.replaceChildren();
+    host = document.createElement("div");
+    document.body.appendChild(host);
+  });
+
+  const pecaDoJoker = (): HTMLElement =>
+    host.querySelector(`.peca[data-pos="${String(JOKER)}"]`) as HTMLElement;
+
+  it("sem valor escolhido é o ✳, e mais nada", () => {
+    const view = new BoardView(host, { aoTocar: () => undefined });
+    view.montar(COM_JOKER);
+
+    const el = pecaDoJoker();
+    expect(el.querySelectorAll(".glifo")).toHaveLength(1);
+    expect(el.textContent).toBe("✳");
+    expect(el.querySelectorAll(".pinta")).toHaveLength(0);
+
+    view.destruir();
+  });
+
+  it("com valor escolhido são **pintas**, tantas quantas o valor", () => {
+    const view = new BoardView(host, { aoTocar: () => undefined });
+    view.montar(COM_JOKER);
+    view.marcarJoker(JOKER, 3);
+
+    const el = pecaDoJoker();
+    expect(el.querySelectorAll(".pinta")).toHaveLength(3);
+    expect(el.querySelectorAll(".glifo")).toHaveLength(0);
+
+    // E continua a ser o joker: a cor da peça vem daqui.
+    expect(el.dataset["valor"]).toBe("0");
+
+    view.destruir();
+  });
+
+  it("fica um ✳ pequeno no canto — é o que diz qual das peças é o joker", () => {
+    const view = new BoardView(host, { aoTocar: () => undefined });
+    view.montar(COM_JOKER);
+    view.marcarJoker(JOKER, 5);
+
+    const marca = pecaDoJoker().querySelector(".marca-joker");
+    expect(marca?.textContent).toBe("✳");
+
+    view.destruir();
+  });
+
+  it("desfazer a escolha devolve o ✳ grande", () => {
+    const view = new BoardView(host, { aoTocar: () => undefined });
+    view.montar(COM_JOKER);
+
+    view.marcarJoker(JOKER, 2);
+    view.marcarJoker(undefined, undefined);
+
+    const el = pecaDoJoker();
+    expect(el.textContent).toBe("✳");
+    expect(el.querySelectorAll(".pinta")).toHaveLength(0);
+    expect(el.querySelectorAll(".marca-joker")).toHaveLength(0);
+
+    view.destruir();
+  });
+
+  it("mudar de valor troca as pintas, e não as acumula", () => {
+    const view = new BoardView(host, { aoTocar: () => undefined });
+    view.montar(COM_JOKER);
+
+    view.marcarJoker(JOKER, 6);
+    view.marcarJoker(JOKER, 1);
+
+    expect(pecaDoJoker().querySelectorAll(".pinta")).toHaveLength(1);
+
+    view.destruir();
+  });
+
+  it("as outras peças não são redesenhadas", () => {
+    const view = new BoardView(host, { aoTocar: () => undefined });
+    view.montar(COM_JOKER);
+
+    const quatro = host.querySelector(
+      `.peca[data-pos="${String(packed(1, 0))}"]`,
+    ) as HTMLElement;
+    const antes = quatro.innerHTML;
+
+    view.marcarJoker(JOKER, 3);
+    view.marcarJoker(undefined, undefined);
+
+    expect(quatro.innerHTML).toBe(antes);
+
+    view.destruir();
+  });
+});
