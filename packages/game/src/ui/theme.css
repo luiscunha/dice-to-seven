@@ -66,16 +66,21 @@
    * entre **7,5 e 9,0** contra a laje — melhor do que os 1,17 que a face 1 dá
    * sem gelo nenhum.
    *
-   * A laje sai quase igual sobre as seis faces (de #c8e6f7 a #afd5e3), e é isso
-   * que se quer: uma peça gelada é *a mesma matéria* seja qual for a face que
-   * tapa. A face deixa de se ver, e não faz falta — as pintas carregam sempre o
-   * valor completo, como diz o `dice.ts`.
+   * A laje sai quase igual sobre as seis faces, e é isso que se quer: uma peça
+   * gelada é *a mesma matéria* seja qual for a face que tapa. A face deixa de
+   * se ver, e não faz falta — as pintas carregam sempre o valor completo, como
+   * diz o `dice.ts`.
+   *
+   * A 0,96 a laje é quase opaca — varia de #c7e6f8 a #c1e1f3 sobre as seis
+   * faces — e é o que a faz parecer gelo a sério e não um véu. Subir a
+   * opacidade **melhora** o contraste das pintas, de 9,75 para 10,9 no pior
+   * caso, porque as aproxima da laje pura em vez da mistura com a face.
    */
   --gelo-laje: #c7e6f8;
   --gelo-pinta: #0d2b33;
   --gelo-borda: rgb(255 255 255 / 0.8);
   --gelo-linha: rgb(18 63 77 / 0.45);
-  --gelo-opacidade: 0.88;
+  --gelo-opacidade: 0.96;
 
   /* ─── Forma ───────────────────────────────────────────────────────────── */
   --raio: 10px;
@@ -136,7 +141,7 @@
     --gelo-pinta: #e8f6ff;
     --gelo-borda: rgb(190 226 246 / 0.5);
     --gelo-linha: rgb(4 18 26 / 0.5);
-    --gelo-opacidade: 0.9;
+    --gelo-opacidade: 0.97;
     --sombra: 0 1px 2px rgb(0 0 0 / 0.5), 0 8px 22px rgb(0 0 0 / 0.35);
   }
 }
@@ -162,7 +167,7 @@
   --gelo-pinta: #e8f6ff;
   --gelo-borda: rgb(190 226 246 / 0.5);
   --gelo-linha: rgb(4 18 26 / 0.5);
-  --gelo-opacidade: 0.9;
+  --gelo-opacidade: 0.97;
   --sombra: 0 1px 2px rgb(0 0 0 / 0.5), 0 8px 22px rgb(0 0 0 / 0.35);
 }
 
