@@ -45,6 +45,11 @@
   margin: 0;
 }
 
+/*
+ * A meta encosta à direita por `margin-left: auto` e não só pela ordem: quando o
+ * cabeçalho quebra de linha num ecrã estreito, o `.espaco` vai com a primeira
+ * linha e deixava a contagem de peças à esquerda na segunda.
+ */
 .topo .meta {
   color: var(--ink-muted);
   font-size: 14px;
@@ -52,6 +57,8 @@
   display: flex;
   gap: 14px;
   flex-wrap: wrap;
+  margin-left: auto;
+  text-align: right;
 }
 
 .topo .espaco {
@@ -325,6 +332,10 @@
   font-variant-numeric: tabular-nums;
 }
 
+.linha-selecao.sem-soma {
+  min-height: 22px;
+}
+
 .soma {
   font-size: 15px;
   font-weight: 600;
@@ -356,6 +367,27 @@
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+/*
+ * ── Os botões do jogo ──
+ *
+ * Corrigir à esquerda, gastar à direita. A separação não é estética: o desfazer
+ * é grátis e prime-se sem pensar, a dica tem um contador e acaba — e num rodapé
+ * onde os três estavam encostados, o dedo que ia ao desfazer acertava na dica.
+ *
+ * `space-between` em vez de um `.espaco`: são só dois grupos, e um elemento
+ * vazio para os separar é estrutura a fazer o trabalho do layout.
+ */
+.acoes-jogo {
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Os dois de corrigir andam juntos, e o espaço menor diz que são um par. */
+.grupo-acoes {
+  display: flex;
+  gap: 6px;
 }
 
 .btn {
@@ -393,6 +425,44 @@
 .btn .contador {
   color: var(--ink-muted);
   font-variant-numeric: tabular-nums;
+}
+
+/* ─── Ícones nos botões ───────────────────────────────────────────────────── */
+
+/*
+ * O ícone herda a cor pelo `currentColor`, portanto acompanha o tema e esmorece
+ * com o `:disabled` sem uma única regra a repetir cores.
+ *
+ * `flex-shrink: 0` porque num botão apertado o texto cede primeiro — um ícone
+ * amassado deixa de ser reconhecível, e é o reconhecimento que o justifica.
+ */
+.icone {
+  width: 18px;
+  height: 18px;
+  display: block;
+  flex-shrink: 0;
+}
+
+/*
+ * O botão de ícone é **quadrado e do tamanho do alvo de toque**, não um botão de
+ * texto com o texto tirado: 40px de lado é o piso de toque, e é o que impede que
+ * ficasse mais estreito do que o dedo ao perder a palavra.
+ */
+.btn.so-icone {
+  width: 40px;
+  min-width: 40px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+}
+
+/* Com ícone e palavra na mesma linha, o espaço entre eles é do layout. Classe
+ * explícita e não `:has(> .icone)`: a regra teria de valer numa WebView antiga
+ * tanto como no Chrome, e um botão que perde o espaçamento é um botão torto. */
+.btn.com-icone {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .btn.primario .contador {

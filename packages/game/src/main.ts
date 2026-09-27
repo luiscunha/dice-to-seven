@@ -303,6 +303,22 @@ async function mostrarJogo(id: string, indice: number): Promise<void> {
       : { ecra: "niveis", capitulo: capitulo.id };
 
   atual = new PuzzleScreen(app as HTMLElement, nivel, {
+    /*
+     * O nome que o jogador conhece: `Médio 23`, e não `meio-joker-000072`.
+     *
+     * A posição é a do **capítulo**, que é a lista onde ele escolheu o nível —
+     * não o índice na banda, que salta de três em três por causa do joker
+     * intercalado e daria dois níveis seguidos com o mesmo número.
+     *
+     * Dois dígitos sempre, porque a coluna do relógio ao lado não deve dançar
+     * ao passar do nível 9 para o 10.
+     */
+    ...(capitulo !== undefined && posicao >= 0
+      ? { titulo: `${capitulo.nome} ${String(posicao + 1).padStart(2, "0")}` }
+      : {}),
+
+    // A linha da soma é o andaime do Tutorial, e só de lá — ver `mostrarSoma`.
+    mostrarSoma: capitulo?.id === "tutorial",
     // O recorde de **antes** desta partida: o painel de fim compara com ele, e
     // o `recordLevel` abaixo é que o atualiza.
     melhorTempoMs: perfil.levels[nivel.id]?.bestTimeMs ?? 0,
