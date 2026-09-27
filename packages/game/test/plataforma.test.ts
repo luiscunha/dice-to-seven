@@ -114,3 +114,38 @@ describe("a rota acima", () => {
     }
   });
 });
+
+/*
+ * ── A armadilha do monorepo ──
+ *
+ * O `cap sync` procura plugins nas dependências do pacote **onde vive o
+ * `capacitor.config.ts`**, que é o `mobile`. Os `import` do TypeScript resolvem
+ * a partir do `game`. Se os plugins estiverem só num dos dois, compila e
+ * instala na mesma — e no telemóvel **nada funciona em silêncio**: sem vibração,
+ * sem barra de estado, e o pior, sem gravar o progresso.
+ *
+ * Foi exatamente o que aconteceu no primeiro `.apk`: `Found 0 Capacitor
+ * plugins`. Este teste é o que impede a repetição.
+ */
+describe("os plugins nativos estão nos dois pacotes", async () => {
+  const ler = async (caminho: string): Promise<Record<string, string>> => {
+    const bruto = await import(caminho, { with: { type: "json" } });
+    const j = bruto.default as { dependencies?: Record<string, string> };
+    return j.dependencies ?? {};
+  };
+
+  const game = await ler("../package.json");
+  const mobile = await ler("../../mobile/package.json");
+
+  const plugins = Object.keys(game).filter(
+    (d) => d.startsWith("@capacitor/") && d !== "@capacitor/core",
+  );
+
+  it("o game declara plugins do Capacitor", () => {
+    expect(plugins.length).toBeGreaterThan(0);
+  });
+
+  it.each(plugins)("o mobile também declara %s", (plugin) => {
+    expect(mobile[plugin]).toBeDefined();
+  });
+});
