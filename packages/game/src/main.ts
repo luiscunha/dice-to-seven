@@ -52,7 +52,8 @@ import { NiveisScreen } from "./ui/NiveisScreen";
 import { PuzzleScreen } from "./ui/PuzzleScreen";
 import type { Rota } from "./ui/rotas";
 import { deHash, paraHash, rotaLegada } from "./ui/rotas";
-import { SurvivalScreen, novaSeed, relogio } from "./ui/SurvivalScreen";
+import { SurvivalScreen, novaSeed } from "./ui/SurvivalScreen";
+import { relogio } from "./ui/tempo";
 import { TimeAttackScreen } from "./ui/TimeAttackScreen";
 
 const app = document.querySelector<HTMLElement>("#app");
@@ -261,8 +262,11 @@ async function mostrarJogo(id: string, indice: number): Promise<void> {
       : { ecra: "niveis", capitulo: capitulo.id };
 
   atual = new PuzzleScreen(app as HTMLElement, nivel, {
-    aoTerminar: ({ level, selo }) => {
-      perfil = recordLevel(perfil, level.id, selo as Seal);
+    // O recorde de **antes** desta partida: o painel de fim compara com ele, e
+    // o `recordLevel` abaixo é que o atualiza.
+    melhorTempoMs: perfil.levels[nivel.id]?.bestTimeMs ?? 0,
+    aoTerminar: ({ level, selo, tempoMs }) => {
+      perfil = recordLevel(perfil, level.id, selo as Seal, tempoMs);
       guardarPerfil();
     },
     aoPedirSeguinte: () => {

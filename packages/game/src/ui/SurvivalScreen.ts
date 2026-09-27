@@ -47,12 +47,13 @@ import {
 } from "../session/SurvivalSession";
 import type { CorridaGuardada } from "../session/corridaSurvival";
 import { BoardView } from "./BoardView";
+import { PASSO_RELOGIO, relogio } from "./tempo";
 import { criarPeca } from "./dice";
 import { botao, confirmar, elemento, texto } from "./dom";
 import { JokerPicker } from "./JokerPicker";
 
 /** De quanto em quanto o cronómetro se repinta. Décimos chegam. */
-const PASSO_RELOGIO = 100;
+
 
 export interface OpcoesSurvival {
   readonly seed: number;
@@ -508,13 +509,5 @@ export class SurvivalScreen {
 }
 
 /** `m:ss.d`. Décimos porque a marca é um tempo, e um tempo compara-se ao décimo. */
-export function relogio(ms: number): string {
-  const total = Math.max(0, ms);
-  const minutos = Math.floor(total / 60_000);
-  const segundos = Math.floor((total % 60_000) / 1000);
-  const decimos = Math.floor((total % 1000) / 100);
-  return `${String(minutos)}:${String(segundos).padStart(2, "0")}.${String(decimos)}`;
-}
-
 /** Uma seed nova. Aqui não há nada a reproduzir — a partilha é do que já correu. */
 export const novaSeed = (): number => Date.now() >>> 0;

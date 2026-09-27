@@ -43,7 +43,7 @@ import {
   selectionTotal,
   tap,
 } from "../session/GameSession";
-import { moveScore } from "../session/scoring";
+import { PASSO_RELOGIO, relogio } from "./tempo";
 import { confirmar } from "./dom";
 import { BoardView } from "./BoardView";
 import { JokerPicker } from "./JokerPicker";
@@ -58,7 +58,8 @@ export interface OpcoesPuzzleScreen {
   readonly aoTerminar?: (info: {
     readonly level: Level;
     readonly selo: string;
-    readonly pontos: number;
+    /** Quanto demorou, em ms. Zero se o nível não chegou a ser tocado. */
+    readonly tempoMs: number;
   }) => void;
   readonly aoPedirSeguinte?: () => void;
 
@@ -78,6 +79,15 @@ export interface OpcoesPuzzleScreen {
    * soma das faces no cabeçalho, enquanto o joker ainda estiver no tabuleiro.
    */
   readonly mostrarSomaDasFaces?: boolean;
+
+  /**
+   * O melhor tempo já feito neste nível, em ms. `0` ou ausente = ainda nenhum.
+   *
+   * Um recorde que não se mostra é o `bestMoves` outra vez — gravado e
+   * invisível, portanto inexistente. Aparece no painel de fim, que é onde há
+   * motivo para o bater: acabou-se de jogar e o botão de reiniciar está ali.
+   */
+  readonly melhorTempoMs?: number;
 }
 
 export class PuzzleScreen {
@@ -87,11 +97,25 @@ export class PuzzleScreen {
   private readonly opcoes: OpcoesPuzzleScreen;
 
   private estado: PuzzleState;
-  private pontos = 0;
   private jokerPendente: Packed | undefined;
+
+  /*
+   * ── O cronómetro ──
+   *
+   * Arranca ao **primeiro toque**, não ao abrir o ecrã: ler o tabuleiro antes
+   * de jogar é metade do puzzle, e cronometrar a leitura ensinava a não a
+   * fazer.
+   *
+   * Para ao limpar, e recomeça do zero ao reiniciar — é outra tentativa. O undo
+   * não lhe toca: é a mesma tentativa, e o preço do erro já está no selo.
+   */
+  private inicioMs: number | undefined;
+  private paradoMs = 0;
+  private cronometro: ReturnType<typeof setInterval> | undefined;
 
   private readonly elTitulo: HTMLElement;
   private readonly elMeta: HTMLElement;
+  private readonly elRelogio: HTMLElement;
   private readonly elSoma: HTMLElement;
   private readonly elAviso: HTMLElement;
   private readonly elFim: HTMLElement;
@@ -120,6 +144,12 @@ export class PuzzleScreen {
     this.elMeta = document.createElement("div");
     this.elMeta.className = "meta";
 
+    this.elRelogio = document.createElement("div");
+    this.elRelogio.className = "relogio";
+    // Não é uma corrida contra o relógio — é um recorde pessoal. Um leitor de
+    // ecrã não precisa de o ouvir a cada décimo.
+    this.elRelogio.setAttribute("aria-hidden", "true");
+
     const espaco = document.createElement("div");
     espaco.className = "espaco";
 
@@ -132,7 +162,7 @@ export class PuzzleScreen {
       topo.appendChild(voltar);
     }
 
-    topo.append(this.elTitulo, espaco, this.elMeta);
+    topo.append(this.elTitulo, espaco, this.elRelogio, this.elMeta);
 
     if (opcoes.aoPedirAjuda !== undefined) {
       const ajuda = botao("?", "redondo");
@@ -225,6 +255,7 @@ export class PuzzleScreen {
   }
 
   destruir(): void {
+    this.pararCronometro();
     /*
      * Fechar antes de remover. Um `<dialog>` modal vive na camada de topo do
      * documento, não no seu lugar na árvore, e sair do nível com ele aberto
@@ -258,6 +289,10 @@ export class PuzzleScreen {
 
     const jogo = tap(antes, p, jokerAs);
 
+    // Só o toque que a sessão aceita arranca o relógio: um toque recusado não é
+    // uma jogada, e começar a contar nele penalizava quem explora o tabuleiro.
+    if (jogo.rejection === undefined) this.arrancarCronometro();
+
     this.estado = { ...this.estado, game: jogo };
     this.view.marcarSugestao(undefined);
 
@@ -279,9 +314,67 @@ export class PuzzleScreen {
     await this.tocar(p, valor);
   }
 
+  /**
+   * A linha do recorde: ou bateu, ou fica a saber o que tem de bater.
+   *
+   * O `melhorTempoMs` que chega é o de **antes** desta partida — o `main.ts`
+   * grava depois de o painel aparecer. É o que permite dizer "novo recorde" sem
+   * comparar o tempo consigo próprio.
+   */
+  private marcaDoRecorde(): HTMLElement {
+    const anterior = this.opcoes.melhorTempoMs ?? 0;
+    const agora = this.paradoMs;
+
+    const linha = document.createElement("div");
+    linha.className = "recorde";
+
+    if (agora <= 0) {
+      linha.hidden = true;
+      return linha;
+    }
+
+    if (anterior === 0 || agora < anterior) {
+      linha.dataset["novo"] = "sim";
+      linha.textContent =
+        anterior === 0 ? "primeiro tempo" : `novo recorde — era ${relogio(anterior)}`;
+      return linha;
+    }
+
+    linha.textContent = `o teu recorde é ${relogio(anterior)}`;
+    return linha;
+  }
+
   private async animarJogada(grupo: Group): Promise<void> {
-    this.pontos += moveScore(grupo.length, 1);
     await this.view.aplicarJogada(grupo);
+  }
+
+  /** Quanto vai o cronómetro, esteja ele a andar ou já parado. */
+  private decorrido(): number {
+    if (this.inicioMs === undefined) return this.paradoMs;
+    return Date.now() - this.inicioMs;
+  }
+
+  private arrancarCronometro(): void {
+    if (this.inicioMs !== undefined) return;
+
+    this.inicioMs = Date.now();
+    this.cronometro = setInterval(() => {
+      this.pintarRelogio();
+    }, PASSO_RELOGIO);
+  }
+
+  private pararCronometro(): void {
+    if (this.cronometro !== undefined) clearInterval(this.cronometro);
+    this.cronometro = undefined;
+
+    if (this.inicioMs !== undefined) {
+      this.paradoMs = Date.now() - this.inicioMs;
+      this.inicioMs = undefined;
+    }
+  }
+
+  private pintarRelogio(): void {
+    this.elRelogio.textContent = relogio(this.decorrido());
   }
 
   private desfazer(): void {
@@ -293,7 +386,11 @@ export class PuzzleScreen {
 
   private reiniciar(): void {
     this.estado = restartPuzzle(this.estado);
-    this.pontos = 0;
+
+    this.pararCronometro();
+    this.paradoMs = 0;
+    this.pintarRelogio();
+
     this.view.montar(this.estado.game.board, this.estado.game.marcas);
     this.view.marcarSugestao(undefined);
     this.pintar();
@@ -325,9 +422,9 @@ export class PuzzleScreen {
       texto(`${String(restantes)}/${String(total)} peças`),
       ...this.andaime(),
       texto(`${String(jogo.moves)} jogadas`),
-      texto(`${String(this.pontos)} pontos`),
     );
 
+    this.pintarRelogio();
     this.pintarSelecao();
     this.view.marcarSelecao(new Set(jogo.selection));
 
@@ -469,10 +566,11 @@ export class PuzzleScreen {
     const selo = seal(this.estado) ?? "completed";
 
     if (this.elFim.hidden) {
+      this.pararCronometro();
       this.opcoes.aoTerminar?.({
         level: jogo.level,
         selo,
-        pontos: this.pontos,
+        tempoMs: this.paradoMs,
       });
     }
 
@@ -485,10 +583,10 @@ export class PuzzleScreen {
     const detalhe = document.createElement("div");
     detalhe.className = "detalhe";
     detalhe.textContent =
-      `${String(jogo.moves)} jogadas · ${String(this.pontos)} pontos · ` +
+      `${relogio(this.paradoMs)} · ${String(jogo.moves)} jogadas · ` +
       `${String(jogo.undos)} undos · ${String(jogo.hints)} dicas`;
 
-    this.elFim.replaceChildren(titulo, detalhe);
+    this.elFim.replaceChildren(titulo, detalhe, this.marcaDoRecorde());
 
     if (this.opcoes.aoPedirSeguinte !== undefined) {
       const seguinte = botao("Nível seguinte", "primario");

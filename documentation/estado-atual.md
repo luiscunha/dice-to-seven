@@ -633,6 +633,14 @@ normal: é assim que ela sai.
 
 ## Decisões de arquitetura que não se leem no código
 
+- **A campanha não tem pontuação, tem um recorde de tempo.** A pontuação era
+  `10 × n^1.5` por jogada; com o número de jogadas fixo (`somaTotal / 7`) e o
+  número de peças fixo, o tamanho médio dos grupos também é fixo, e jogar de
+  propósito para pontuar mede **±14%** de margem. Pior: a estratégia que ela
+  premiava — caçar grupos grandes — **encrava o nível em 98% das tentativas** no
+  avançado e 99% no perito, porque gasta o parceiro das peças geladas. Era uma
+  pontuação a ensinar a perder. O `scoring.ts` fica para o modo tempo, onde o
+  combo é real, e para o Survival, onde não há total fixo de peças.
 - **O grupo que a jogada eliminou vem da sessão (`GameState.lastMove`), não da
   interface.** Cada ecrã reconstruía-o como "a seleção de antes mais a peça
   tocada", e essa conta rebentou no dia em que um toque passou a trazer duas

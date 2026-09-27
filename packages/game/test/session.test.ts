@@ -701,8 +701,9 @@ describe("progresso", () => {
       const p = load(comRaw(raw));
 
       expect(Object.keys(p.levels)).toEqual(["bom"]);
-      // O `bestMoves` dos perfis antigos entra no JSON e não sai do outro lado.
-      expect(p.levels["bom"]).toEqual({ seal: "clean" });
+      // O `bestMoves` dos perfis antigos entra no JSON e não sai do outro lado;
+      // o `bestTimeMs`, que eles não têm, entra a zero.
+      expect(p.levels["bom"]).toEqual({ seal: "clean", bestTimeMs: 0 });
       expect(p.bestTimeAttackScore).toBe(0);
       expect(p.bestBoardsCleared).toBe(3);
     });
@@ -710,5 +711,54 @@ describe("progresso", () => {
 
   it("a chave é estável — mudá-la apaga o progresso de toda a gente", () => {
     expect(PROFILE_KEY).toBe("dicetoseven.profile");
+  });
+});
+
+/* ─── O recorde de tempo por nível ───────────────────────────────────────────
+ *
+ * Substituiu os pontos, que mediam ±14% de margem e premiavam a estratégia que
+ * encrava o nível. O tempo é a única coisa que o jogador controla e melhora.
+ */
+describe("o melhor tempo por nível", () => {
+  it("guarda o primeiro, e depois só o que for menor", () => {
+    let p = recordLevel(emptyProfile(), "x", "clean", 9000);
+    expect(p.levels["x"]?.bestTimeMs).toBe(9000);
+
+    p = recordLevel(p, "x", "clean", 12_000);
+    expect(p.levels["x"]?.bestTimeMs).toBe(9000);
+
+    p = recordLevel(p, "x", "clean", 7500);
+    expect(p.levels["x"]?.bestTimeMs).toBe(7500);
+  });
+
+  it("zero não é um tempo — é a ausência dele", () => {
+    // Sem isto, o primeiro nível acabado ficava com um recorde de 0:00.0 que
+    // nunca mais se batia.
+    let p = recordLevel(emptyProfile(), "x", "clean", 0);
+    expect(p.levels["x"]?.bestTimeMs).toBe(0);
+
+    p = recordLevel(p, "x", "clean", 5000);
+    expect(p.levels["x"]?.bestTimeMs).toBe(5000);
+
+    p = recordLevel(p, "x", "clean", 0);
+    expect(p.levels["x"]?.bestTimeMs).toBe(5000);
+  });
+
+  it("o selo e o tempo melhoram cada um por sua conta", () => {
+    // Um jogo mais rápido mas com dica não pode apagar o selo Perfeito, e um
+    // jogo Perfeito mais lento não pode apagar o recorde.
+    let p = recordLevel(emptyProfile(), "x", "perfect", 20_000);
+    p = recordLevel(p, "x", "completed", 8000);
+
+    expect(p.levels["x"]?.seal).toBe("perfect");
+    expect(p.levels["x"]?.bestTimeMs).toBe(8000);
+  });
+
+  it("vai e volta do armazenamento", () => {
+    const storage = memoryStorage();
+    const p = recordLevel(emptyProfile(), "meio-000015", "clean", 4321);
+
+    save(storage, p);
+    expect(load(storage).levels["meio-000015"]?.bestTimeMs).toBe(4321);
   });
 });
