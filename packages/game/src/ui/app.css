@@ -594,20 +594,27 @@
  * peças, e a meio já não se lembra do que escolheu — que é justamente a decisão
  * de que o nível depende.
  */
-.peca.joker-escolhido::before {
-  content: attr(data-joker-as);
+/*
+ * O joker com valor escolhido mostra **a face desse valor**, em pintas — o
+ * `BoardView` desenha-a como desenha qualquer outra.
+ *
+ * Era um dígito, posto aqui com `content: attr(data-joker-as)`. Num jogo em que
+ * as pintas são a identidade e os dígitos são uma definição que o jogador
+ * escolhe, o joker era a única peça que não respeitava nem uma coisa nem outra.
+ *
+ * Fica o `✳` no canto, pequeno e discreto: diz qual das peças é o joker sem
+ * disputar a leitura com as pintas que agora estão lá.
+ */
+.marca-joker {
   position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  font-size: calc(var(--lado-real) * 0.44);
-  font-weight: 700;
-  color: var(--tinta);
-}
+  top: calc(var(--lado-real) * 0.04);
+  right: calc(var(--lado-real) * 0.08);
 
-.peca.joker-escolhido .glifo {
-  opacity: 0.25;
-  transform: translate(28%, -28%) scale(0.42);
+  font-size: calc(var(--lado-real) * 0.3);
+  line-height: 1;
+  color: var(--tinta);
+  opacity: 0.55;
+  pointer-events: none;
 }
 
 /* ─── Tutorial do joker ───────────────────────────────────────────────────── */

@@ -120,3 +120,32 @@ export function rotaLegada(procura: string): Rota | undefined {
     nivel: Number.isFinite(n) && n >= 0 ? n : 0,
   };
 }
+
+/**
+ * A rota **acima** desta na hierarquia, ou `undefined` no topo.
+ *
+ * Acima na hierarquia, não atrás no histórico: quem chega a um nível por link
+ * direto não tem para onde recuar, mas tem sempre a lista acima de si. É a
+ * mesma regra da seta do cabeçalho, e é a que o botão "para trás" do Android
+ * tem de seguir — por omissão ele sairia da aplicação de onde quer que fosse.
+ *
+ * O `capitulo` é o do nível em jogo, que só o `main.ts` sabe calcular. Sem ele
+ * sobe-se à lista de capítulos, que é o destino certo mas menos preciso.
+ */
+export function rotaAcima(r: Rota, capitulo?: string): Rota | undefined {
+  switch (r.ecra) {
+    case "home":
+      return undefined;
+
+    case "jogo":
+      return capitulo === undefined
+        ? { ecra: "bandas" }
+        : { ecra: "niveis", capitulo };
+
+    case "niveis":
+      return { ecra: "bandas" };
+
+    default:
+      return { ecra: "home" };
+  }
+}

@@ -42,12 +42,26 @@ export interface Settings {
   readonly version: number;
   readonly tema: Tema;
   readonly tempoInicial: TempoInicial;
+
+  /**
+   * A vibração ao tocar nas peças. Ligada por omissão, e só existe no telemóvel.
+   *
+   * Está aqui por pedido de playtest, e por duas razões que são de quem joga e
+   * não de quem faz: há quem não goste da sensação, e há quem desconfie do que
+   * ela gasta de bateria. Nenhuma das duas se discute — desliga-se.
+   *
+   * **Ligada por omissão** porque um retorno que é preciso ir procurar é um
+   * retorno que quase ninguém encontra, e a vibração é a única coisa que
+   * confirma uma recusa a quem não está a olhar para o aviso.
+   */
+  readonly vibracao: boolean;
 }
 
 export const defaultSettings = (): Settings => ({
   version: SETTINGS_VERSION,
   tema: "sistema",
   tempoInicial: 60,
+  vibracao: true,
 });
 
 export const saveSettings = (
@@ -85,6 +99,9 @@ export function loadSettings(storage: ProfileStorage): Settings {
     tempoInicial: TEMPOS.includes(s.tempoInicial as TempoInicial)
       ? (s.tempoInicial as TempoInicial)
       : 60,
+    // Só um `false` explícito desliga. Um ficheiro gravado antes de isto
+    // existir não tem o campo, e ligada é a omissão.
+    vibracao: s.vibracao !== false,
   };
 }
 

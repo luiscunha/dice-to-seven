@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">DiceToSeven</string>
+    <string name="title_activity_main">DiceToSeven</string>
+    <string name="package_name">com.luiscunha.dicetoseven</string>
+    <string name="custom_url_scheme">com.luiscunha.dicetoseven</string>
+</resources>

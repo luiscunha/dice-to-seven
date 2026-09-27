@@ -43,6 +43,14 @@ export default tseslint.config(
       "**/coverage/**",
       ".vs/**",
       "**/*.d.ts",
+
+      /*
+       * Os projetos nativos do Capacitor. São Java, Gradle e XML gerados, e a
+       * pasta ainda recebe o bundle do jogo já construído — que o `cap sync`
+       * copia para lá e que o lint tentaria analisar como se fosse nosso.
+       */
+      "packages/mobile/android/**",
+      "packages/mobile/ios/**",
     ],
   },
 
@@ -149,6 +157,22 @@ export default tseslint.config(
    */
   {
     files: ["packages/tools/**/*.ts", "test/**/*.ts", "*.config.ts"],
+    rules: {
+      "no-restricted-imports": "off",
+      "no-restricted-globals": "off",
+    },
+  },
+
+  /*
+   * Os utilitários de linha de comandos do `mobile` — hoje só o gerador de
+   * ícones. Correm com `node` à mão, fora do build, e por isso têm os globais
+   * do Node como qualquer script.
+   */
+  {
+    files: ["packages/mobile/*.mjs"],
+    languageOptions: {
+      globals: { console: "readonly", process: "readonly" },
+    },
     rules: {
       "no-restricted-imports": "off",
       "no-restricted-globals": "off",

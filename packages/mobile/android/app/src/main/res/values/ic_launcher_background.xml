@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      O papel da marca. É o fundo do ícone adaptativo: o Android 8+ recorta o
+      primeiro plano à forma que o fabricante escolher e pinta isto por trás,
+      portanto a cor tem de ser a mesma que o ícone tem nas bordas.
+    -->
+    <color name="ic_launcher_background">#F1F2F0</color>
+</resources>
