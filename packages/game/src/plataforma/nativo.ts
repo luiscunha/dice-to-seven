@@ -18,10 +18,35 @@ import { Style, StatusBar } from "@capacitor/status-bar";
 
 const nativo = (): boolean => Capacitor.isNativePlatform();
 
+/** Há telemóvel a sério por baixo? É o que decide se a definição aparece. */
+export const emTelemovel = (): boolean => Capacitor.isNativePlatform();
+
+/*
+ * ── A vibração é uma preferência, e vive aqui ──
+ *
+ * Podia ir por parâmetro até ao `PuzzleScreen`, mas então cada ecrã que vibre
+ * teria de a receber e de a fazer chegar ao sítio certo — e são quatro, a contar
+ * com o Survival e o modo tempo. Uma variável neste módulo é o mesmo alcance com
+ * um sítio só para esquecer.
+ *
+ * Arranca ligada porque é o valor por omissão das preferências; o `main.ts`
+ * corrige-a mal as leia.
+ */
+let vibracaoLigada = true;
+
+export function definirVibracao(ligada: boolean): void {
+  vibracaoLigada = ligada;
+}
+
+const podeVibrar = (): boolean => vibracaoLigada && nativo();
+
 /* ─── Vibração ──────────────────────────────────────────────────────────────
  *
  * Três intensidades, e cada uma diz uma coisa diferente. A regra é a mesma do
  * som num jogo: se vibrar sempre igual, deixa de informar e passa a incomodar.
+ *
+ * Todas passam pelo `podeVibrar`, que junta a plataforma à preferência do
+ * jogador — ver `definirVibracao`.
  *
  * Nenhuma delas espera pelo resultado. Uma vibração que chega tarde é pior do
  * que nenhuma, e travar o toque à espera dela seria trocar resposta por
@@ -30,13 +55,13 @@ const nativo = (): boolean => Capacitor.isNativePlatform();
 
 /** Uma peça entrou ou saiu da seleção. O mais leve que há. */
 export function vibrarToque(): void {
-  if (!nativo()) return;
+  if (!podeVibrar()) return;
   void Haptics.impact({ style: ImpactStyle.Light }).catch(() => undefined);
 }
 
 /** O grupo fechou e a jogada aconteceu. */
 export function vibrarJogada(): void {
-  if (!nativo()) return;
+  if (!podeVibrar()) return;
   void Haptics.impact({ style: ImpactStyle.Medium }).catch(() => undefined);
 }
 
@@ -49,7 +74,7 @@ export function vibrarJogada(): void {
  * saber na mesma que a jogada não entrou.
  */
 export function vibrarRecusa(): void {
-  if (!nativo()) return;
+  if (!podeVibrar()) return;
   void Haptics.notification({ type: NotificationType.Warning }).catch(
     () => undefined,
   );
@@ -57,7 +82,7 @@ export function vibrarRecusa(): void {
 
 /** O tabuleiro ficou limpo. */
 export function vibrarVitoria(): void {
-  if (!nativo()) return;
+  if (!podeVibrar()) return;
   void Haptics.notification({ type: NotificationType.Success }).catch(
     () => undefined,
   );

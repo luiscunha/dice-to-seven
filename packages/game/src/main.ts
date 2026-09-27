@@ -53,7 +53,11 @@ import { PuzzleScreen } from "./ui/PuzzleScreen";
 import type { Rota } from "./ui/rotas";
 import { deHash, paraHash, rotaAcima, rotaLegada } from "./ui/rotas";
 import { abrirArmazenamento } from "./plataforma/armazenamento";
-import { aplicacaoPronta, ligarBotaoDeVoltar } from "./plataforma/nativo";
+import {
+  aplicacaoPronta,
+  definirVibracao,
+  ligarBotaoDeVoltar,
+} from "./plataforma/nativo";
 import { SurvivalScreen, novaSeed } from "./ui/SurvivalScreen";
 import { relogio } from "./ui/tempo";
 import { TimeAttackScreen } from "./ui/TimeAttackScreen";
@@ -210,6 +214,12 @@ async function mostrar(rota: Rota): Promise<void> {
         tempoInicial: preferencias.tempoInicial,
         aoMudarTempoInicial: (segundos: TempoInicial) => {
           preferencias = { ...preferencias, tempoInicial: segundos };
+          guardarPreferencias();
+        },
+        vibracao: preferencias.vibracao,
+        aoMudarVibracao: (ligada: boolean) => {
+          preferencias = { ...preferencias, vibracao: ligada };
+          definirVibracao(ligada);
           guardarPreferencias();
         },
         aoApagarProgresso: () => {
@@ -430,6 +440,7 @@ async function arrancar(): Promise<void> {
   }
 
   aplicarTema(document.documentElement, preferencias.tema);
+  definirVibracao(preferencias.vibracao);
   ligarBotaoDeVoltar(subirUmNivel);
 
   try {

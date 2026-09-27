@@ -1,9 +1,13 @@
 /**
  * Definições.
  *
- * Duas por agora — tema e apagar o progresso. O desenho §5.8 prevê mais, e o som
- * há de entrar quando existir som; a estrutura é uma lista de secções, para que
- * acrescentar uma entrada não obrigue a mexer nas outras.
+ * Tema, contra-relógio, vibração e apagar o progresso. O desenho §5.8 prevê
+ * mais, e o som há de entrar quando existir som; a estrutura é uma lista de
+ * secções, para que acrescentar uma entrada não obrigue a mexer nas outras.
+ *
+ * **A vibração só aparece no telemóvel.** Uma definição que não faz nada é pior
+ * do que não existir: quem a desliga fica convencido de que resolveu alguma
+ * coisa.
  *
  * **Apagar o progresso pede confirmação no próprio botão**, e não numa caixa de
  * diálogo. Um `confirm()` do browser é feio, bloqueia, e em telemóvel aparece
@@ -13,6 +17,7 @@
  */
 
 import type { Tema, TempoInicial } from "../session/settings";
+import { emTelemovel } from "../plataforma/nativo";
 import { botao, cabecalho, elemento } from "./dom";
 
 const TEMAS: readonly { readonly valor: Tema; readonly rotulo: string }[] = [
@@ -28,6 +33,8 @@ export interface OpcoesDefinicoes {
   readonly aoMudarTema: (tema: Tema) => void;
   readonly tempoInicial: TempoInicial;
   readonly aoMudarTempoInicial: (segundos: TempoInicial) => void;
+  readonly vibracao: boolean;
+  readonly aoMudarVibracao: (ligada: boolean) => void;
   readonly aoApagarProgresso: () => void;
   readonly aoVoltar: () => void;
 }
@@ -44,11 +51,16 @@ export class DefinicoesScreen {
     const { el: topo } = cabecalho("Definições", opcoes.aoVoltar);
 
     const rolo = elemento("div", "rolo");
-    rolo.append(
-      this.seccaoTema(),
-      this.seccaoContraRelogio(),
-      this.seccaoProgresso(),
-    );
+    rolo.append(this.seccaoTema(), this.seccaoContraRelogio());
+
+    /*
+     * A vibração só aparece onde existe. Na web não há telemóvel para vibrar, e
+     * uma definição que não faz nada é pior do que não ter definição nenhuma —
+     * quem a desliga fica convencido de que resolveu alguma coisa.
+     */
+    if (emTelemovel()) rolo.appendChild(this.seccaoVibracao());
+
+    rolo.appendChild(this.seccaoProgresso());
 
     this.raiz.append(topo, rolo);
     host.replaceChildren(this.raiz);
@@ -88,6 +100,40 @@ export class DefinicoesScreen {
 
       b.setAttribute("role", "radio");
       b.setAttribute("aria-checked", String(valor === this.opcoes.tema));
+      grupo.appendChild(b);
+    }
+
+    el.appendChild(grupo);
+    return el;
+  }
+
+  /**
+   * A vibração ao tocar nas peças.
+   *
+   * Dois botões em vez de um interruptor, para falar a mesma língua das outras
+   * secções — e porque `Ligada`/`Desligada` diz o estado sem ser preciso saber
+   * ler a posição de um botão.
+   */
+  private seccaoVibracao(): HTMLElement {
+    const el = this.seccao(
+      "Vibração",
+      "Um toque no dedo a cada jogada, e um aviso quando a jogada não entra.",
+    );
+
+    const grupo = elemento("div", "segmentado");
+    grupo.setAttribute("role", "radiogroup");
+    grupo.setAttribute("aria-label", "vibração");
+
+    for (const ligada of [true, false]) {
+      const b = botao(ligada ? "Ligada" : "Desligada", "segmento", () => {
+        this.opcoes.aoMudarVibracao(ligada);
+        for (const outro of grupo.querySelectorAll("[role=radio]")) {
+          outro.setAttribute("aria-checked", String(outro === b));
+        }
+      });
+
+      b.setAttribute("role", "radio");
+      b.setAttribute("aria-checked", String(ligada === this.opcoes.vibracao));
       grupo.appendChild(b);
     }
 

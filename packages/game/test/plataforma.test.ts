@@ -17,6 +17,7 @@ import { describe, expect, it } from "vitest";
 import { CHAVES, abrirArmazenamento } from "../src/plataforma/armazenamento";
 import {
   aplicacaoPronta,
+  definirVibracao,
   ligarBotaoDeVoltar,
   vibrarJogada,
   vibrarRecusa,
@@ -27,6 +28,24 @@ import { PROFILE_KEY } from "../src/session/progress";
 import { CORRIDA_KEY } from "../src/session/corridaSurvival";
 import { SETTINGS_KEY } from "../src/session/settings";
 import { rotaAcima } from "../src/ui/rotas";
+import {
+  SETTINGS_VERSION,
+  defaultSettings,
+  loadSettings,
+  saveSettings,
+} from "../src/session/settings";
+import type { ProfileStorage } from "../src/session/progress";
+
+/** Um armazenamento de mentira, com um valor inicial ou vazio. */
+const memoria = (inicial: string | null): ProfileStorage => {
+  let guardado = inicial;
+  return {
+    getItem: () => guardado,
+    setItem: (_chave, valor) => {
+      guardado = valor;
+    },
+  };
+};
 
 describe("o armazenamento", () => {
   it("na web é o localStorage, tal como sempre foi", async () => {
@@ -147,5 +166,59 @@ describe("os plugins nativos estão nos dois pacotes", async () => {
 
   it.each(plugins)("o mobile também declara %s", (plugin) => {
     expect(mobile[plugin]).toBeDefined();
+  });
+});
+
+/*
+ * ── A vibração como preferência ──
+ *
+ * Pedido de playtest: há quem não goste da sensação e quem desconfie do que ela
+ * gasta de bateria. Nenhuma das duas se discute.
+ */
+describe("a preferência da vibração", () => {
+  it("vem ligada por omissão", () => {
+    expect(defaultSettings().vibracao).toBe(true);
+  });
+
+  it("um ficheiro gravado antes disto existir lê-se com ela ligada", () => {
+    // O campo é novo e não sobe a versão: ninguém perde o tema por causa dele.
+    const antigo = memoria(
+      JSON.stringify({ version: SETTINGS_VERSION, tema: "escuro", tempoInicial: 90 }),
+    );
+
+    const lido = loadSettings(antigo);
+    expect(lido.vibracao).toBe(true);
+    expect(lido.tema).toBe("escuro");
+  });
+
+  it("só um `false` explícito a desliga", () => {
+    for (const [valor, esperado] of [
+      [false, false],
+      [true, true],
+      ["não", true],
+      [undefined, true],
+    ] as const) {
+      const s = memoria(
+        JSON.stringify({ version: SETTINGS_VERSION, vibracao: valor }),
+      );
+      expect(loadSettings(s).vibracao).toBe(esperado);
+    }
+  });
+
+  it("vai e volta do armazenamento", () => {
+    const s = memoria(null);
+    saveSettings(s, { ...defaultSettings(), vibracao: false });
+    expect(loadSettings(s).vibracao).toBe(false);
+  });
+
+  it("desligada, nenhuma vibração rebenta", () => {
+    definirVibracao(false);
+    expect(() => {
+      vibrarToque();
+      vibrarJogada();
+      vibrarRecusa();
+      vibrarVitoria();
+    }).not.toThrow();
+    definirVibracao(true);
   });
 });
