@@ -43,8 +43,37 @@ const LADO_MAX = 72;
 /** Piso de toque da acessibilidade. Abaixo disto marca-se, não se impede. */
 export const LADO_MIN_TOQUE = 44;
 
-/** Linhas acima do tabuleiro de onde a linha injetada parte. */
-const ALTURA_DA_QUEDA = 3;
+/**
+ * Linhas acima do tabuleiro de onde a linha injetada parte.
+ *
+ * **Uma, e não três.** No Survival o tabuleiro ocupa a altura máxima desde o
+ * primeiro instante — a caixa é dimensionada para `alturaMaxima` e não para as
+ * peças que lá estão. Três linhas acima do topo punham as peças novas fora do
+ * palco durante quase toda a queda: caíam, mas caíam onde ninguém as via, e a
+ * linha parecia aparecer do nada.
+ *
+ * A uma linha, o percurso passa pela faixa da fila — que é de onde as peças
+ * dizem vir — e vê-se de ponta a ponta.
+ */
+const ALTURA_DA_QUEDA = 1;
+
+/**
+ * Desfasamento entre colunas na queda, em ms.
+ *
+ * A linha aterra como uma onda da esquerda para a direita, em vez de sete peças
+ * a bater ao mesmo instante. Sete impactos simultâneos lêem-se como um corte de
+ * imagem; sete a seguir uns aos outros lêem-se como queda.
+ */
+const ATRASO_POR_COLUNA = 28;
+
+/**
+ * Folga entre o fim da transição e o fim da espera.
+ *
+ * Sem ela, quem chamou repinta exatamente no instante em que a última peça
+ * assenta — e um repinte um fotograma cedo corta o fim da queda. É o defeito
+ * que fazia a linha injetada parecer instantânea.
+ */
+const MARGEM_DA_QUEDA = 60;
 
 export interface OpcoesBoardView {
   readonly aoTocar: (p: Packed) => void;
@@ -77,6 +106,9 @@ export class BoardView {
    * elementos, e quem chegasse ao fim por último ganhava.
    */
   private fecharAnimacao: (() => void) | undefined;
+
+  /** A linha de fogo, quando o modo a pede. Ver `marcarTeto`. */
+  private teto: HTMLElement | undefined;
 
   private geracao = 0;
   private readonly observador: ResizeObserver | undefined;
@@ -164,6 +196,10 @@ export class BoardView {
     }
 
     for (const p of marcas.gelo) this.pecas.get(p)?.classList.add("gelada");
+
+    // O `replaceChildren` acima levou a linha de fogo à frente. Ela é do
+    // tabuleiro, não da montagem: volta, e volta por cima das peças.
+    if (this.teto !== undefined) this.grelha.appendChild(this.teto);
 
     this.redimensionar();
   }
@@ -257,6 +293,7 @@ export class BoardView {
     );
 
     const novas: { readonly el: HTMLElement; readonly p: Packed }[] = [];
+    let ultimaColuna = 0;
 
     for (let c = 0; c < depois.length; c++) {
       const col = depois[c];
@@ -269,11 +306,23 @@ export class BoardView {
         const p = packed(c, r);
         const el = criarPeca(valor, this.modo);
         el.dataset["pos"] = String(p);
+
+        /*
+         * A peça em queda tem transição própria — mais lenta do que a
+         * gravidade, e com atraso por coluna. Ver `.peca.a-cair`.
+         *
+         * A classe sai no fim. Uma peça que ficasse `a-cair` para sempre levava
+         * o atraso da coluna para todas as jogadas seguintes, e a gravidade de
+         * meio tabuleiro começava a arrastar-se sem razão visível.
+         */
+        el.classList.add("a-cair");
+        el.style.setProperty("--atraso", `${String(c * ATRASO_POR_COLUNA)}ms`);
         this.posicionar(el, packed(c, r + ALTURA_DA_QUEDA));
 
         this.pecas.set(p, el);
         this.grelha.appendChild(el);
         novas.push({ el, p });
+        ultimaColuna = Math.max(ultimaColuna, c);
       }
     }
 
@@ -285,7 +334,57 @@ export class BoardView {
     void this.grelha.offsetHeight;
 
     for (const { el, p } of novas) this.posicionar(el, p);
-    await this.espera("--t-gravidade", minha);
+
+    /*
+     * A espera cobre a queda **inteira**: a duração, mais o atraso da última
+     * coluna, mais a margem. Esperar só a duração devolvia o controlo a meio da
+     * onda, e quem chamou repintava por cima dela.
+     */
+    const queda = this.varNum("--t-queda");
+    const total =
+      queda <= 0 ? 0 : queda + ultimaColuna * ATRASO_POR_COLUNA + MARGEM_DA_QUEDA;
+
+    if (!(await this.esperaMs(total, minha))) return;
+
+    for (const { el } of novas) {
+      el.classList.remove("a-cair");
+      el.style.removeProperty("--atraso");
+    }
+  }
+
+  /**
+   * A linha de fogo: onde o tabuleiro transborda.
+   *
+   * **Está sempre lá, e só muda de intensidade.** Um aviso que aparece quando
+   * já não há nada a fazer não é um aviso — é um obituário. O Survival tinha
+   * exatamente isso: a caixa de fim a dizer que transbordou, sem que nada antes
+   * dissesse onde ficava o limite.
+   *
+   * Fica no topo da caixa do tabuleiro, e é aí que é literalmente verdade: a
+   * caixa é dimensionada para `alturaMaxima` linhas, portanto o seu topo **é** o
+   * teto. Uma peça que encoste à linha está na última linha permitida.
+   *
+   * Vive dentro da grelha e é reposta pelo `montar`, porque é parte do
+   * tabuleiro e não do ecrã — só o tabuleiro sabe onde está o seu topo.
+   */
+  marcarTeto(grau: "escondido" | "folgado" | "aviso" | "critico"): void {
+    if (grau === "escondido") {
+      this.teto?.remove();
+      this.teto = undefined;
+      return;
+    }
+
+    if (this.teto === undefined) {
+      const el = document.createElement("div");
+      el.className = "linha-fogo";
+      el.setAttribute("aria-hidden", "true");
+      this.teto = el;
+    }
+
+    this.teto.dataset["grau"] = grau;
+    // Sempre o último filho: a linha passa por cima das peças, e o topo do
+    // tabuleiro é o sítio onde as peças mais altas lhe encostam.
+    this.grelha.appendChild(this.teto);
   }
 
   /** Retângulo de uma peça no ecrã — o seletor do joker ancora-se nele. */
@@ -412,7 +511,11 @@ export class BoardView {
 
   /** `false` significa que outra jogada chegou e esta deve desistir. */
   private espera(token: string, minha: number): Promise<boolean> {
-    const ms = this.varNum(token);
+    return this.esperaMs(this.varNum(token), minha);
+  }
+
+  /** `false` significa que outra jogada chegou e esta deve desistir. */
+  private esperaMs(ms: number, minha: number): Promise<boolean> {
     if (ms <= 0) return Promise.resolve(this.geracao === minha);
 
     return new Promise((resolve) => {

@@ -296,3 +296,144 @@ describe("recomeçar pergunta antes", () => {
     ecra.destruir();
   });
 });
+
+/*
+ * ── A linha de fogo, e a queda que se vê ──
+ *
+ * Os dois vêm do mesmo relato de playtest, e são a mesma queixa vista de dois
+ * lados: *o tabuleiro transbordava sem aviso, e a linha nova aparecia do nada*.
+ *
+ * A causa da segunda metade era medível: as peças novas nasciam **três** linhas
+ * acima do topo, e no Survival a caixa do tabuleiro tem a altura máxima desde o
+ * primeiro instante — a queda inteira acontecia fora do palco.
+ */
+describe("a queda da linha injetada", () => {
+  let host: HTMLElement;
+  let ecra: SurvivalScreen;
+
+  const puxar = (): void => {
+    host.querySelector<HTMLButtonElement>(".rodape .acoes .btn")?.click();
+  };
+
+  const assentar = async (): Promise<void> => {
+    await new Promise((r) => {
+      setTimeout(r, 900);
+    });
+  };
+
+  beforeEach(() => {
+    document.body.replaceChildren();
+    host = document.createElement("div");
+    document.body.appendChild(host);
+    ecra = new SurvivalScreen(host, {
+      seed: SEED,
+      melhorTempo: 0,
+      aoGuardar: () => undefined,
+      aoTerminar: () => undefined,
+      aoSair: () => undefined,
+      aoRecomecar: () => undefined,
+    });
+  });
+
+  it("a peça em queda tem transição própria e atraso por coluna", () => {
+    puxar();
+
+    // Lido **antes** de assentar: a classe é o que dá à peça a transição lenta,
+    // e é ela que se perde se alguém voltar a usar a da gravidade.
+    const aCair = [...host.querySelectorAll<HTMLElement>(".tabuleiro .a-cair")];
+    expect(aCair).toHaveLength(DEFAULT_SURVIVAL.largura);
+
+    const atrasos = aCair.map((p) => p.style.getPropertyValue("--atraso"));
+    // Uma onda da esquerda para a direita: sete impactos ao mesmo instante
+    // lêem-se como um corte de imagem, não como uma queda.
+    expect(new Set(atrasos).size).toBe(DEFAULT_SURVIVAL.largura);
+    expect(atrasos[0]).toBe("0ms");
+
+    ecra.destruir();
+  });
+
+  it("a classe sai quando a peça assenta — o atraso não fica para sempre", async () => {
+    puxar();
+    await assentar();
+
+    /*
+     * Se ficasse, a coluna 6 arrastava 168 ms de atraso em **todas** as jogadas
+     * seguintes, e metade do tabuleiro passava a cair com desfasamento sem que
+     * nada no ecrã explicasse porquê.
+     */
+    expect(host.querySelectorAll(".tabuleiro .a-cair")).toHaveLength(0);
+    expect(
+      [...host.querySelectorAll<HTMLElement>(".tabuleiro .peca")].every(
+        (p) => p.style.getPropertyValue("--atraso") === "",
+      ),
+    ).toBe(true);
+
+    ecra.destruir();
+  });
+});
+
+describe("a linha de fogo", () => {
+  let host: HTMLElement;
+  let ecra: SurvivalScreen;
+
+  const fogo = (): HTMLElement | null =>
+    host.querySelector(".tabuleiro .linha-fogo");
+
+  beforeEach(() => {
+    document.body.replaceChildren();
+    host = document.createElement("div");
+    document.body.appendChild(host);
+    ecra = new SurvivalScreen(host, {
+      seed: SEED,
+      melhorTempo: 0,
+      aoGuardar: () => undefined,
+      aoTerminar: () => undefined,
+      aoSair: () => undefined,
+      aoRecomecar: () => undefined,
+    });
+  });
+
+  it("**está lá desde o princípio**, dentro do tabuleiro", () => {
+    /*
+     * É esta a correção. Antes, a única notícia do teto era a caixa de fim a
+     * dizer que ele tinha sido ultrapassado — um aviso que chega quando já não
+     * há nada a fazer não é um aviso.
+     *
+     * Dentro do tabuleiro e não do palco: a caixa do tabuleiro é dimensionada
+     * para `alturaMaxima` linhas, portanto o topo dela **é** o limite. No palco
+     * a linha ficaria num sítio que não quer dizer nada.
+     */
+    expect(fogo()).not.toBeNull();
+    expect(fogo()?.getAttribute("aria-hidden")).toBe("true");
+    ecra.destruir();
+  });
+
+  it("arranca em «aviso» — duas linhas de folga já é pouco", () => {
+    // 5 de altura inicial contra 7 de máximo.
+    expect(fogo()?.dataset["grau"]).toBe("aviso");
+    ecra.destruir();
+  });
+
+  it("passa a «crítico» quando falta uma linha", async () => {
+    host.querySelector<HTMLButtonElement>(".rodape .acoes .btn")?.click();
+    await new Promise((r) => {
+      setTimeout(r, 900);
+    });
+
+    expect(fogo()?.dataset["grau"]).toBe("critico");
+    ecra.destruir();
+  });
+
+  it("sobrevive à remontagem do tabuleiro", async () => {
+    // O `montar` limpa a grelha inteira. A linha é do tabuleiro, não da
+    // montagem: tem de voltar, e voltar por cima das peças.
+    host.querySelector<HTMLButtonElement>(".rodape .acoes .btn")?.click();
+    await new Promise((r) => {
+      setTimeout(r, 900);
+    });
+
+    expect(fogo()).not.toBeNull();
+    expect(fogo()).toBe(host.querySelector(".tabuleiro")?.lastElementChild);
+    ecra.destruir();
+  });
+});

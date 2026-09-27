@@ -86,6 +86,20 @@
   --gelo-linha: rgb(8 44 62 / 0.5);
   --gelo-opacidade: 0.97;
 
+  /*
+   * ─── A linha de fogo ──────────────────────────────────────────────────
+   *
+   * O único vermelho do jogo, e é de propósito: a paleta inteira é verde e
+   * azul dessaturados, portanto o vermelho não compete com face nenhuma — não
+   * há como confundir o teto com uma peça.
+   *
+   * É também a única cor que não tem de carregar informação de valor, e por
+   * isso pode ser saturada sem estragar a leitura das pintas.
+   */
+  --fogo: #d93a16;
+  --fogo-veu: rgb(217 58 22 / 0.16);
+  --fogo-forca: 0.3;
+
   /* ─── Forma ───────────────────────────────────────────────────────────── */
   --raio: 10px;
   --raio-peca: 0.21;
@@ -101,6 +115,17 @@
   --t-saida: 140ms;
   --t-gravidade: 220ms;
   --t-colapso: 260ms;
+
+  /*
+   * A queda da linha injetada, no Survival.
+   *
+   * Mais lenta do que a gravidade, de propósito: a gravidade é o ajuste que se
+   * segue a uma jogada que o jogador escolheu, e ele já sabe o que vai
+   * acontecer. A linha injetada é material novo, e material novo tem de se ler
+   * antes de assentar — à velocidade da gravidade não dava tempo de ver que
+   * face vinha em que coluna.
+   */
+  --t-queda: 380ms;
   --t-ui: 120ms;
   --suavizacao: cubic-bezier(0.22, 0.61, 0.36, 1);
 }
@@ -147,6 +172,9 @@
     --gelo-borda: rgb(200 232 250 / 0.6);
     --gelo-linha: rgb(3 20 30 / 0.55);
     --gelo-opacidade: 0.97;
+    /* Mais claro e menos saturado: num fundo escuro o vermelho puro floresce. */
+    --fogo: #ff6a45;
+    --fogo-veu: rgb(255 106 69 / 0.14);
     --sombra: 0 1px 2px rgb(0 0 0 / 0.5), 0 8px 22px rgb(0 0 0 / 0.35);
   }
 }
@@ -174,6 +202,9 @@
   --gelo-borda: rgb(200 232 250 / 0.6);
   --gelo-linha: rgb(3 20 30 / 0.55);
   --gelo-opacidade: 0.97;
+  /* Mais claro e menos saturado: num fundo escuro o vermelho puro floresce. */
+  --fogo: #ff6a45;
+  --fogo-veu: rgb(255 106 69 / 0.14);
   --sombra: 0 1px 2px rgb(0 0 0 / 0.5), 0 8px 22px rgb(0 0 0 / 0.35);
 }
 
@@ -242,6 +273,7 @@ body {
     --t-saida: 0ms;
     --t-gravidade: 0ms;
     --t-colapso: 0ms;
+    --t-queda: 0ms;
     --t-ui: 0ms;
   }
 }
