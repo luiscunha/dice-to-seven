@@ -58,20 +58,33 @@
   --solda-luz: rgb(255 255 255 / 0.55);
 
   /*
-   * O gelo, em **dois tons**, e não num só.
+   * O gelo é uma **laje por cima da peça**, e a cor dela não é um azul claro
+   * qualquer — é a única cor do jogo que sai da rampa da marca, e tem de sair.
    *
-   * A primeira versão usava um azul frio único (#7fb4d6) e era invisível: a
-   * rampa das faces vai de luminância 0,746 a 0,116, e qualquer tom a meio
-   * caminho encosta-se a alguma delas. Medido, esse azul dava contraste 1,08
-   * contra a face 4 e 1,13 contra a face 3 — ou seja, nenhum.
+   * ── Porque a primeira laje não se via, e mais opacidade não a salvava ──
    *
-   * Nenhuma cor única resolve isto: branco dá 1,32 contra a face 1, escuro dá
-   * 2,36 contra a face 6. O par claro+escuro dá **3,93 no pior caso**, e é o
-   * mesmo truque que o anel de seleção já usa por escrito: um dos dois
-   * destaca-se sempre.
+   * A laje era #c7e6f8, um azul-gelo pálido. Medida a diferença de cor
+   * percebida (CIELAB ΔE) contra as seis faces:
+   *
+   *   face 1   **4**      face 4   48
+   *   face 2   11         face 5   48
+   *   face 3   33         face 6   54
+   *
+   * ΔE abaixo de 10 é "a mesma cor". Uma peça gelada de face 1 ou 2 era
+   * indistinguível de uma peça normal — e **subir a opacidade não muda isso**,
+   * porque mesmo a 100% a laje continuava a ser a cor da face. O problema nunca
+   * foi o alfa; era a matiz.
+   *
+   * #3aa0d8 dá **ΔE mínimo 27** — "outra cor" contra todas as seis — e ainda
+   * deixa 5,6 de contraste para as pintas escuras, acima do mínimo de 4,5.
+   * Mais saturado que isto (#2f8fd0, ΔE 33) desce as pintas para 4,6 e começa a
+   * gritar num tabuleiro que é todo dessaturado.
    */
-  --gelo-claro: #f4fbff;
-  --gelo-escuro: #123f4d;
+  --gelo-laje: #3aa0d8;
+  --gelo-pinta: #08232c;
+  --gelo-borda: rgb(255 255 255 / 0.85);
+  --gelo-linha: rgb(8 44 62 / 0.5);
+  --gelo-opacidade: 0.97;
 
   /* ─── Forma ───────────────────────────────────────────────────────────── */
   --raio: 10px;
@@ -123,8 +136,17 @@
     --on-accent: #0d1917;
     --solda: #0a1512;
     --solda-luz: rgb(255 255 255 / 0.32);
-    --gelo-claro: #eaf6fc;
-    --gelo-escuro: #07222b;
+    /*
+     * No escuro a laje escurece e as pintas passam a claras: uma laje clara num
+     * tabuleiro escuro era um farol. Mantém-se a matiz azul saturada, que é o
+     * que a distingue das faces — aqui o contraste contra o fundo é 2,4, e a
+     * textura branca por cima trata do resto.
+     */
+    --gelo-laje: #1d6f9e;
+    --gelo-pinta: #eaf7ff;
+    --gelo-borda: rgb(200 232 250 / 0.6);
+    --gelo-linha: rgb(3 20 30 / 0.55);
+    --gelo-opacidade: 0.97;
     --sombra: 0 1px 2px rgb(0 0 0 / 0.5), 0 8px 22px rgb(0 0 0 / 0.35);
   }
 }
@@ -141,8 +163,17 @@
   --on-accent: #0d1917;
   --solda: #0a1512;
   --solda-luz: rgb(255 255 255 / 0.32);
-  --gelo-claro: #eaf6fc;
-  --gelo-escuro: #07222b;
+  /*
+   * No escuro a laje escurece e as pintas passam a claras: uma laje clara num
+   * tabuleiro escuro era um farol. Mantém-se a matiz azul saturada, que é o
+   * que a distingue das faces — aqui o contraste contra o fundo é 2,4, e a
+   * textura branca por cima trata do resto.
+   */
+  --gelo-laje: #1d6f9e;
+  --gelo-pinta: #eaf7ff;
+  --gelo-borda: rgb(200 232 250 / 0.6);
+  --gelo-linha: rgb(3 20 30 / 0.55);
+  --gelo-opacidade: 0.97;
   --sombra: 0 1px 2px rgb(0 0 0 / 0.5), 0 8px 22px rgb(0 0 0 / 0.35);
 }
 

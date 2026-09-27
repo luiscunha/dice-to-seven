@@ -204,68 +204,80 @@
  * ─── Gelo ─────────────────────────────────────────────────────────────────
  *
  * Uma peça gelada só sai acompanhada por **uma** peça — a que completa 7 com
- * ela. O desenho tem de dizer duas coisas ao mesmo tempo: *esta peça é
- * especial* e *a face continua a ser aquela*, porque é da face que se deduz o
- * parceiro de que ela precisa.
+ * ela. Desenha-se como o que é: o dado **encastrado num bloco de gelo**.
  *
- * Daí a casca ser uma moldura por dentro e não um véu por cima: um vidro
- * translúcido baixava o contraste das pintas — a face 1 já só tem 1,17 contra o
- * papel — e tornava ilegível exatamente a informação de que o jogador precisa.
+ * ── A moldura não chegava ──
  *
- * ── Dois tons, e a razão é medida ──
+ * A primeira versão foi um anel à volta da peça, porque eu receava que um vidro
+ * translúcido baixasse o contraste das pintas. Duas coisas estavam erradas.
  *
- * A primeira versão tinha um anel de um azul frio só, e não se via. A rampa das
- * faces vai de luminância 0,746 a 0,116; um tom a meio caminho encosta-se a
- * alguma delas, e aquele dava **1,08 contra a face 4**. Nenhuma cor única
- * resolve — branco dá 1,32 contra a face 1, escuro dá 2,36 contra a face 6.
+ * A primeira é que o receio não se confirma: com a laje opaca e as pintas
+ * forçadas a escuro, o contraste das pintas fica em **5,6** — quando a face 1
+ * sem gelo nenhum dá 1,17.
  *
- * Claro por fora, escuro por dentro, dá 3,93 no pior caso. É o mesmo argumento
- * do anel de seleção, e está escrito lá em cima: um dos dois destaca-se sempre.
+ * A segunda é que uma moldura diz "esta peça está assinalada"; uma laje diz
+ * "esta peça está presa". A regra é a segunda, e o desenho tem de a dizer sem
+ * legenda.
  *
- * A moldura é **por dentro** e a da seleção é por fora, portanto podem coexistir
- * sem competir — e é preciso que coexistam, porque uma peça gelada
- * selecionada é o caso normal.
+ * ── O que a laje leva, e o que não leva ──
+ *
+ * Fissuras em **células fechadas**, não em ramos: a primeira malha era uma
+ * árvore e lia-se como galhos. Cada fissura é um traço azul largo com um fio
+ * branco fino por cima, que é o que dá profundidade dentro do vidro em vez de
+ * um risco pintado.
+ *
+ * Flocos só nos cantos. Um floco ao centro caía por trás das pintas e lia-se
+ * como sujidade.
+ *
+ * **Sem gotas a pingar.** Ficam bem num ícone de 1024 px; a 40 px num telemóvel
+ * seriam ruído de dois píxeis, e transbordariam para a peça de baixo, que está
+ * a 4 px de distância.
  */
 .peca.gelada {
-  box-shadow:
-    inset 0 0 0 2px var(--gelo-claro),
-    inset 0 0 0 4px var(--gelo-escuro),
-    inset 0 calc(var(--lado-real) * -0.055) 0 rgb(0 0 0 / 0.14);
+  /* Ver a nota: as pintas por cima da laje, sempre no tom que contrasta com ela. */
+  --tinta: var(--gelo-pinta);
+  isolation: isolate;
 }
 
-/*
- * Os cantos lascados. São o **segundo canal**: a cor nunca é o único sinal, e
- * quatro triângulos dão à peça uma silhueta que se reconhece mesmo a preto e
- * branco, ou com a peça reduzida a 38 px num telemóvel.
- *
- * Ficam por cima do anel escuro, portanto lêem-se também nas faces claras, onde
- * o claro sozinho não chegaria.
- */
 .peca.gelada::before {
   content: "";
   position: absolute;
   inset: 0;
+  z-index: 1;
   border-radius: inherit;
   pointer-events: none;
+  opacity: var(--gelo-opacidade);
 
-  --lasca: var(--gelo-claro) 0 calc(var(--lado-real) * 0.2), transparent 0;
   background:
-    linear-gradient(135deg, var(--lasca)) top left / 55% 55% no-repeat,
-    linear-gradient(225deg, var(--lasca)) top right / 55% 55% no-repeat,
-    linear-gradient(45deg, var(--lasca)) bottom left / 55% 55% no-repeat,
-    linear-gradient(315deg, var(--lasca)) bottom right / 55% 55% no-repeat;
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cpath d='M 38 30 L 63 25 L 76 46 L 66 71 L 41 77 L 28 53 Z M 38 30 L 30 2 M 63 25 L 80 3 M 76 46 L 99 38 M 66 71 L 90 88 M 41 77 L 37 99 M 28 53 L 1 60 M 63 25 L 52 47 L 66 71 M 28 53 L 41 77' fill='none' stroke='%234f92bd' stroke-opacity='0.3' stroke-width='3' stroke-linejoin='round' stroke-linecap='round'/%3E%3Cpath d='M 38 30 L 63 25 L 76 46 L 66 71 L 41 77 L 28 53 Z M 38 30 L 30 2 M 63 25 L 80 3 M 76 46 L 99 38 M 66 71 L 90 88 M 41 77 L 37 99 M 28 53 L 1 60 M 63 25 L 52 47 L 66 71 M 28 53 L 41 77' fill='none' stroke='%23ffffff' stroke-opacity='0.75' stroke-width='1.2' stroke-linejoin='round' stroke-linecap='round'/%3E%3Cpath transform='translate(17 15)' d='M 0 0 L 12.0 0.0 M 7.0 0.0 L 10.3 -2.8 M 7.0 0.0 L 10.3 2.8 M 0 0 L 6.0 10.4 M 3.5 6.0 L 7.5 7.5 M 3.5 6.0 L 2.7 10.3 M 0 0 L -6.0 10.4 M -3.5 6.0 L -2.7 10.3 M -3.5 6.0 L -7.5 7.5 M 0 0 L -12.0 0.0 M -7.0 0.0 L -10.3 2.8 M -7.0 0.0 L -10.3 -2.8 M 0 0 L -6.0 -10.4 M -3.5 -6.0 L -7.5 -7.5 M -3.5 -6.0 L -2.7 -10.3 M 0 0 L 6.0 -10.4 M 3.5 -6.0 L 2.7 -10.3 M 3.5 -6.0 L 7.5 -7.5' stroke='%23ffffff' stroke-opacity='0.6' stroke-width='1.92' stroke-linecap='round' fill='none'/%3E%3Cpath transform='translate(84 17)' d='M 0 0 L 10.0 0.0 M 5.8 0.0 L 8.6 -2.3 M 5.8 0.0 L 8.6 2.3 M 0 0 L 5.0 8.7 M 2.9 5.0 L 6.3 6.3 M 2.9 5.0 L 2.3 8.6 M 0 0 L -5.0 8.7 M -2.9 5.0 L -2.3 8.6 M -2.9 5.0 L -6.3 6.3 M 0 0 L -10.0 0.0 M -5.8 0.0 L -8.6 2.3 M -5.8 0.0 L -8.6 -2.3 M 0 0 L -5.0 -8.7 M -2.9 -5.0 L -6.3 -6.3 M -2.9 -5.0 L -2.3 -8.6 M 0 0 L 5.0 -8.7 M 2.9 -5.0 L 2.3 -8.6 M 2.9 -5.0 L 6.3 -6.3' stroke='%23ffffff' stroke-opacity='0.5' stroke-width='1.60' stroke-linecap='round' fill='none'/%3E%3Cpath transform='translate(13 85)' d='M 0 0 L 11.0 0.0 M 6.4 0.0 L 9.4 -2.5 M 6.4 0.0 L 9.4 2.5 M 0 0 L 5.5 9.5 M 3.2 5.5 L 6.9 6.9 M 3.2 5.5 L 2.5 9.4 M 0 0 L -5.5 9.5 M -3.2 5.5 L -2.5 9.4 M -3.2 5.5 L -6.9 6.9 M 0 0 L -11.0 0.0 M -6.4 0.0 L -9.4 2.5 M -6.4 0.0 L -9.4 -2.5 M 0 0 L -5.5 -9.5 M -3.2 -5.5 L -6.9 -6.9 M -3.2 -5.5 L -2.5 -9.4 M 0 0 L 5.5 -9.5 M 3.2 -5.5 L 2.5 -9.4 M 3.2 -5.5 L 6.9 -6.9' stroke='%23ffffff' stroke-opacity='0.55' stroke-width='1.76' stroke-linecap='round' fill='none'/%3E%3Cpath transform='translate(87 86)' d='M 0 0 L 9.0 0.0 M 5.2 0.0 L 7.7 -2.1 M 5.2 0.0 L 7.7 2.1 M 0 0 L 4.5 7.8 M 2.6 4.5 L 5.7 5.6 M 2.6 4.5 L 2.0 7.7 M 0 0 L -4.5 7.8 M -2.6 4.5 L -2.0 7.7 M -2.6 4.5 L -5.7 5.6 M 0 0 L -9.0 0.0 M -5.2 0.0 L -7.7 2.1 M -5.2 0.0 L -7.7 -2.1 M 0 0 L -4.5 -7.8 M -2.6 -4.5 L -5.7 -5.6 M -2.6 -4.5 L -2.0 -7.7 M 0 0 L 4.5 -7.8 M 2.6 -4.5 L 2.0 -7.7 M 2.6 -4.5 L 5.7 -5.6' stroke='%23ffffff' stroke-opacity='0.45' stroke-width='1.44' stroke-linecap='round' fill='none'/%3E%3C/svg%3E"),
+    linear-gradient(
+      158deg,
+      rgb(255 255 255 / 0.3) 0 30%,
+      rgb(255 255 255 / 0.1) 30% 45%,
+      rgb(10 55 80 / 0.16) 45%
+    ),
+    linear-gradient(0deg, var(--gelo-laje), var(--gelo-laje));
+
+  box-shadow:
+    inset 0 0 0 2px var(--gelo-borda),
+    inset 0 0 0 3.5px var(--gelo-linha);
+}
+
+/* As pintas ficam **por cima** da laje. Sem isto o gelo tapava-as. */
+.peca.gelada .pinta,
+.peca.gelada .glifo {
+  position: relative;
+  z-index: 2;
 }
 
 /*
- * Selecionada: o anel de seleção entra **por fora** e a casca fica onde estava.
- * A peça gelada selecionada é o caso normal — é assim que ela sai do tabuleiro.
+ * Selecionada: o anel de seleção entra por fora e a laje fica onde estava. Uma
+ * peça gelada selecionada é o caso normal — é assim que ela sai do tabuleiro.
  */
 .peca.gelada.selecionada {
   box-shadow:
     0 0 0 2px #ffffff,
     0 0 0 5px #08221e,
-    inset 0 0 0 2px var(--gelo-claro),
-    inset 0 0 0 4px var(--gelo-escuro),
     inset 0 calc(var(--lado-real) * -0.055) 0 rgb(0 0 0 / 0.14);
 }
 
