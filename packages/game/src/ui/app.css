@@ -281,6 +281,21 @@
     inset 0 calc(var(--lado-real) * -0.055) 0 rgb(0 0 0 / 0.14);
 }
 
+/*
+ * A linha do recorde, no painel de fim. Discreta quando não se bateu nada, e
+ * com a cor de destaque quando se bateu — é a única diferença que interessa.
+ */
+.recorde {
+  margin-top: 4px;
+  font-size: 0.85rem;
+  color: var(--ink-muted);
+}
+
+.recorde[data-novo="sim"] {
+  color: var(--accent);
+  font-weight: 600;
+}
+
 /* Sair é desaparecer, não explodir. */
 .peca.a-sair {
   opacity: 0;
@@ -1038,6 +1053,20 @@
 
 .relogio.a-acabar {
   color: var(--accent);
+}
+
+/*
+ * Na campanha o relógio é discreto, e é a diferença entre os dois modos escrita
+ * em CSS: no modo tempo o relógio **é** o jogo e domina o cabeçalho; aqui é um
+ * recorde pessoal que se consulta no fim. A 32 px ficava maior do que o nome do
+ * nível e transformava um puzzle de pensar numa corrida.
+ */
+.topo > .relogio {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--ink-muted);
+  min-width: 4.5ch;
+  text-align: right;
 }
 
 /* O prémio sobe do sítio onde foi ganho, e desvanece. */

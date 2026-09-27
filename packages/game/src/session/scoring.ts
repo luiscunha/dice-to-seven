@@ -9,6 +9,19 @@
  * 2. **O combo multiplica, não soma.** Somar torna o encadeamento irrelevante
  *    depois de duas ou três jogadas.
  * 3. **Nada disto está fixo no código.** Os números são de playtest, e mudam.
+ *
+ * ── A campanha não usa isto, e é de propósito ──
+ *
+ * Usava, e media ±14% de margem: com o número de jogadas fixo (`somaTotal / 7`)
+ * e o número de peças fixo, o tamanho médio dos grupos também é fixo, e só a
+ * dispersão varia. Pior — a estratégia que esta pontuação premeia, caçar grupos
+ * grandes, **encrava o nível em 98% das tentativas** no avançado e 99% no
+ * perito, porque gasta o parceiro das peças geladas.
+ *
+ * Fica para os modos onde há mesmo o que pontuar: o **tempo**, onde o
+ * `comboCount` é real e a cadeia de jogadas é a habilidade; e o **Survival**,
+ * onde o tabuleiro cresce e não há um total fixo de peças. Na campanha o
+ * recorde é o tempo, e o mérito é o selo.
  */
 
 export interface ScoringConfig {

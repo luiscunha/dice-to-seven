@@ -24,6 +24,16 @@ export const PROFILE_VERSION = 2;
 
 export interface LevelProgress {
   readonly seal: Seal;
+
+  /**
+   * Melhor tempo a limpar o nível, em ms. `0` = ainda nenhum.
+   *
+   * É o **único** recorde por nível que existe, e existe porque é a única coisa
+   * que o jogador pode melhorar. O número de jogadas é constante (cada jogada
+   * tira exatamente 7 à soma), e a pontuação por tamanho de grupo mede ±14% de
+   * margem — ver a nota em `recordLevel`.
+   */
+  readonly bestTimeMs: number;
 }
 
 export interface Profile {
@@ -98,27 +108,50 @@ const SEAL_RANK: Readonly<Record<Seal, number>> = {
  * (plano §6.2), e se uma tentativa pior apagasse o selo conquistado, ninguém
  * arriscaria repetir.
  *
- * ── Porque não se guarda o número de jogadas ──
+ * ── O que se guarda, e o que não ──
  *
- * Guardava-se, e não queria dizer nada: cada jogada tira **exatamente** 7 à soma
- * do tabuleiro, portanto limpar um tabuleiro custa sempre `somaTotal / 7`
- * jogadas. Não há jogo melhor nem pior em número de jogadas — há só o jogo que
- * acaba e o que fica preso. Verificado nos 240 níveis publicados: em todos,
- * `solutionLength === somaTotal / 7`.
+ * **Jogadas, não.** Cada jogada tira exatamente 7 à soma do tabuleiro, portanto
+ * limpar um tabuleiro custa sempre `somaTotal / 7` jogadas. Verificado nos 240
+ * níveis publicados: em todos. Um recorde que ninguém pode bater não é um
+ * recorde.
  *
- * Um recorde que ninguém pode bater não é um recorde. O mérito está no selo.
+ * **Pontos, também não.** A pontuação era `10 × n^1.5` por jogada, e com o
+ * número de jogadas fixo *e* o número de peças fixo, o tamanho médio dos grupos
+ * também é fixo. Medido nos packs publicados, jogar de propósito para pontuar
+ * dá **±14%** — e pior: a estratégia que a pontuação premiava, caçar grupos
+ * grandes, **encrava o nível em 98% das tentativas** no avançado e 99% no
+ * perito, porque gasta o parceiro das peças geladas. Era uma pontuação a
+ * ensinar a perder.
+ *
+ * **Tempo, sim.** É a única coisa que o jogador controla e pode melhorar. Só se
+ * grava quando o nível é limpo, e guarda-se o menor.
  */
 export function recordLevel(
   profile: Profile,
   levelId: string,
   seal: Seal,
+  tempoMs = 0,
 ): Profile {
   const previous = profile.levels[levelId];
+  const anterior = previous?.bestTimeMs ?? 0;
 
-  const best: LevelProgress =
-    previous === undefined
-      ? { seal }
-      : { seal: SEAL_RANK[seal] > SEAL_RANK[previous.seal] ? seal : previous.seal };
+  /*
+   * O menor tempo ganha, e zero não conta como tempo — é a ausência dele.
+   * Sem esta distinção, o primeiro nível acabado ficava com um recorde de
+   * 0:00.0 que nunca mais se batia.
+   */
+  const melhorTempo =
+    tempoMs <= 0 ? anterior : anterior === 0 ? tempoMs : Math.min(anterior, tempoMs);
+
+  const best: LevelProgress = {
+    seal:
+      previous === undefined
+        ? seal
+        : SEAL_RANK[seal] > SEAL_RANK[previous.seal]
+          ? seal
+          : previous.seal,
+    bestTimeMs: melhorTempo,
+  };
 
   return { ...profile, levels: { ...profile.levels, [levelId]: best } };
 }
@@ -204,8 +237,9 @@ function sanitizeLevels(value: unknown): Record<string, LevelProgress> {
     const e = entry as Partial<LevelProgress>;
     if (e.seal === undefined || SEAL_RANK[e.seal] === undefined) continue;
 
-    // Perfis antigos trazem `bestMoves`; ignora-se, e some na próxima gravação.
-    out[id] = { seal: e.seal };
+    // Perfis antigos trazem `bestMoves` e não trazem `bestTimeMs`: o primeiro
+    // ignora-se e some na gravação seguinte, o segundo entra a zero.
+    out[id] = { seal: e.seal, bestTimeMs: finiteOrZero(e.bestTimeMs) };
   }
 
   return out;
