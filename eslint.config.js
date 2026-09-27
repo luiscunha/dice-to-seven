@@ -162,4 +162,20 @@ export default tseslint.config(
       "no-restricted-globals": "off",
     },
   },
+
+  /*
+   * Os utilitários de linha de comandos do `mobile` — hoje só o gerador de
+   * ícones. Correm com `node` à mão, fora do build, e por isso têm os globais
+   * do Node como qualquer script.
+   */
+  {
+    files: ["packages/mobile/*.mjs"],
+    languageOptions: {
+      globals: { console: "readonly", process: "readonly" },
+    },
+    rules: {
+      "no-restricted-imports": "off",
+      "no-restricted-globals": "off",
+    },
+  },
 );
