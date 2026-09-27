@@ -44,6 +44,12 @@ import {
   tap,
 } from "../session/GameSession";
 import { PASSO_RELOGIO, relogio } from "./tempo";
+import {
+  vibrarJogada,
+  vibrarRecusa,
+  vibrarToque,
+  vibrarVitoria,
+} from "../plataforma/nativo";
 import { confirmar } from "./dom";
 import { BoardView } from "./BoardView";
 import { JokerPicker } from "./JokerPicker";
@@ -292,6 +298,17 @@ export class PuzzleScreen {
     // Só o toque que a sessão aceita arranca o relógio: um toque recusado não é
     // uma jogada, e começar a contar nele penalizava quem explora o tabuleiro.
     if (jogo.rejection === undefined) this.arrancarCronometro();
+
+    /*
+     * A vibração diz o que aconteceu, e **antes** da animação: é o retorno ao
+     * dedo, e chegar depois de meio segundo de peças a cair já não é retorno.
+     *
+     * Três casos distintos de propósito. Uma vibração sempre igual deixa de
+     * informar e passa a incomodar.
+     */
+    if (jogo.rejection !== undefined) vibrarRecusa();
+    else if (jogo.lastMove !== undefined) vibrarJogada();
+    else vibrarToque();
 
     this.estado = { ...this.estado, game: jogo };
     this.view.marcarSugestao(undefined);
@@ -567,6 +584,7 @@ export class PuzzleScreen {
 
     if (this.elFim.hidden) {
       this.pararCronometro();
+      vibrarVitoria();
       this.opcoes.aoTerminar?.({
         level: jogo.level,
         selo,

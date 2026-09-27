@@ -1,0 +1,22 @@
+{
+  "name": "@dicetoseven/mobile",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Casca nativa (Capacitor) para iOS e Android. Sem código próprio: embrulha o build do game.",
+  "scripts": {
+    "sync": "pnpm --filter @dicetoseven/game build && cap sync",
+    "android": "cap open android",
+    "ios": "cap open ios",
+    "add:android": "cap add android",
+    "add:ios": "cap add ios"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.2"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/ios": "^8.5.2"
+  }
+}

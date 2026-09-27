@@ -26,7 +26,7 @@ import {
   recordTimeAttack,
   save,
 } from "./session/progress";
-import type { Profile } from "./session/progress";
+import type { Profile, ProfileStorage } from "./session/progress";
 import type { Seal } from "./session/PuzzleSession";
 import type { Settings, Tema, TempoInicial } from "./session/settings";
 import {
@@ -51,7 +51,9 @@ import { JokerTutorial } from "./ui/JokerTutorial";
 import { NiveisScreen } from "./ui/NiveisScreen";
 import { PuzzleScreen } from "./ui/PuzzleScreen";
 import type { Rota } from "./ui/rotas";
-import { deHash, paraHash, rotaLegada } from "./ui/rotas";
+import { deHash, paraHash, rotaAcima, rotaLegada } from "./ui/rotas";
+import { abrirArmazenamento } from "./plataforma/armazenamento";
+import { aplicacaoPronta, ligarBotaoDeVoltar } from "./plataforma/nativo";
 import { SurvivalScreen, novaSeed } from "./ui/SurvivalScreen";
 import { relogio } from "./ui/tempo";
 import { TimeAttackScreen } from "./ui/TimeAttackScreen";
@@ -59,16 +61,15 @@ import { TimeAttackScreen } from "./ui/TimeAttackScreen";
 const app = document.querySelector<HTMLElement>("#app");
 if (app === null) throw new Error("não encontrei #app");
 
-const armazenamento =
-  typeof localStorage === "undefined" ? undefined : localStorage;
-
-let perfil: Profile =
-  armazenamento === undefined ? emptyProfile() : load(armazenamento);
-
-let preferencias: Settings =
-  armazenamento === undefined ? defaultSettings() : loadSettings(armazenamento);
-
-aplicarTema(document.documentElement, preferencias.tema);
+/*
+ * O armazenamento abre-se no `arrancar()`, porque no telemóvel a leitura é
+ * assíncrona — ver `plataforma/armazenamento.ts`. Até lá o jogo tem o perfil
+ * vazio, e nada corre antes disso: os ecrãs só se montam depois do
+ * `resolver()`, lá no fim.
+ */
+let armazenamento: ProfileStorage | undefined;
+let perfil: Profile = emptyProfile();
+let preferencias: Settings = defaultSettings();
 
 /** Todas as bandas do índice, incluindo a do modo tempo. */
 let bandas: readonly BandaNoIndice[] = [];
@@ -99,8 +100,7 @@ let tutorial: JokerTutorial | undefined;
  * disco porque a página também é: num telemóvel, trocar de aplicação e voltar
  * basta para o browser a montar de novo.
  */
-let corridaSurvival: CorridaGuardada | undefined =
-  armazenamento === undefined ? undefined : lerCorrida(armazenamento);
+let corridaSurvival: CorridaGuardada | undefined;
 
 const guardarSurvival = (corrida: CorridaGuardada | undefined): void => {
   corridaSurvival = corrida;
@@ -136,6 +136,37 @@ const voltarA = (r: Rota): (() => void) => () => {
 function resolver(): void {
   const rota = deHash(location.hash);
   void mostrar(rota);
+}
+
+/**
+ * Um passo para cima, para o botão "para trás" do Android. `false` = já não há
+ * para onde ir, e quem chamou decide se sai da aplicação.
+ *
+ * Uma caixa aberta fecha-se primeiro. É o que se espera de um botão de voltar —
+ * e evita que um toque para fechar uma confirmação salte dois ecrãs de uma vez.
+ */
+function subirUmNivel(): boolean {
+  const aberta = document.querySelector<HTMLDialogElement>("dialog[open]");
+  if (aberta !== null) {
+    if (typeof aberta.close === "function") aberta.close();
+    else aberta.open = false;
+    return true;
+  }
+
+  const rota = deHash(location.hash);
+
+  const capitulo =
+    rota.ecra === "jogo"
+      ? campanha.find((c) =>
+          c.niveis.some((n) => n.banda === rota.banda && n.indice === rota.nivel),
+        )?.capitulo.id
+      : undefined;
+
+  const acima = rotaAcima(rota, capitulo);
+  if (acima === undefined) return false;
+
+  ir(acima);
+  return true;
 }
 
 async function mostrar(rota: Rota): Promise<void> {
@@ -386,6 +417,21 @@ function mostrarMensagem(texto: string): void {
 }
 
 async function arrancar(): Promise<void> {
+  /*
+   * O perfil antes de tudo o resto, e o tema logo a seguir: montar o primeiro
+   * ecrã com o tema errado e corrigi-lo a seguir é um piscar que se vê.
+   */
+  armazenamento = await abrirArmazenamento();
+
+  if (armazenamento !== undefined) {
+    perfil = load(armazenamento);
+    preferencias = loadSettings(armazenamento);
+    corridaSurvival = lerCorrida(armazenamento);
+  }
+
+  aplicarTema(document.documentElement, preferencias.tema);
+  ligarBotaoDeVoltar(subirUmNivel);
+
   try {
     bandas = await carregarIndice();
 
@@ -410,6 +456,13 @@ async function arrancar(): Promise<void> {
     mostrarMensagem(
       erro instanceof Error ? erro.message : "não consegui carregar os níveis",
     );
+  } finally {
+    /*
+     * `finally`: o ecrã de arranque esconde-se mesmo quando os níveis não
+     * carregam. Senão a aplicação ficava tapada por ele e nem a mensagem de
+     * erro se via — que é o pior desfecho possível.
+     */
+    void aplicacaoPronta(document.documentElement.dataset["tema"] === "escuro");
   }
 }
 
