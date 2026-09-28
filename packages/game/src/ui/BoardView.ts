@@ -101,9 +101,36 @@ export class BoardView {
   private board: Board = [];
   private modo: ModoFace;
 
-  /** Dimensões fixadas na montagem: o tabuleiro não encolhe a meio do nível. */
+  /**
+   * A **extensão da caixa** — quanto espaço o tabuleiro ocupa no palco.
+   *
+   * Não encolhe a meio de um nível: o colapso tira colunas, e uma caixa que as
+   * seguisse fazia o tabuleiro inteiro andar de lado a cada jogada, porque o
+   * palco a centra.
+   */
   private colunas = 0;
   private linhas = 0;
+
+  /**
+   * A **referência do tamanho da peça**, que é outra coisa.
+   *
+   * Separou-se da caixa quando o Contra-Relógio passou a crescer. Ali a peça
+   * tem de ser medida pelo maior tabuleiro da corrida — senão ela encolhe à
+   * medida que o tabuleiro cresce, os dois efeitos anulam-se e o crescimento
+   * nunca se vê. Mas a **caixa** tem de seguir o tabuleiro do momento, senão um
+   * tabuleiro de quatro colunas fica encostado ao canto de um enquadramento
+   * feito para sete.
+   *
+   * No Survival é ao contrário e de propósito: a caixa é a do tamanho máximo
+   * porque o topo dela **é** o teto, e é onde a linha de fogo mora.
+   *
+   * Zero quer dizer «mede pela caixa», que é o que todos os modos faziam antes.
+   */
+  private colunasMedida = 0;
+  private linhasMedida = 0;
+
+  /** A caixa segue cada tabuleiro montado, em vez de ficar no máximo. */
+  private caixaPorTabuleiro = false;
 
   /**
    * Fecha a animação em curso, saltando para o estado final.
@@ -201,11 +228,20 @@ export class BoardView {
     this.pecas = new Map();
     this.grelha.replaceChildren();
 
-    this.colunas = Math.max(this.colunas, width(board));
-    this.linhas = Math.max(
-      this.linhas,
-      board.reduce((m, col) => Math.max(m, col.length), 0),
-    );
+    const largura = width(board);
+    const altura = board.reduce((m, col) => Math.max(m, col.length), 0);
+
+    /*
+     * Montar é o início de um tabuleiro novo, e é o único momento em que a
+     * caixa pode encolher. Durante o nível só cresce — ver `colunas`.
+     */
+    if (this.caixaPorTabuleiro) {
+      this.colunas = largura;
+      this.linhas = altura;
+    } else {
+      this.colunas = Math.max(this.colunas, largura);
+      this.linhas = Math.max(this.linhas, altura);
+    }
 
     for (let c = 0; c < board.length; c++) {
       const coluna = board[c];
@@ -241,10 +277,29 @@ export class BoardView {
     this.redimensionar();
   }
 
-  /** Fixa as dimensões da caixa a partir do tabuleiro inicial do nível. */
-  dimensionarPara(board: Board): void {
-    this.colunas = width(board);
-    this.linhas = board.reduce((m, col) => Math.max(m, col.length), 0);
+  /**
+   * Fixa por que tabuleiro se mede a peça.
+   *
+   * Por omissão a caixa fica igual à medida, que é o que a campanha e o
+   * Survival querem: o nível não muda de tamanho, ou a caixa **é** o limite.
+   *
+   * Com `caixaPorTabuleiro`, a peça continua medida por este tabuleiro mas a
+   * caixa passa a seguir cada montagem. É o que o Contra-Relógio precisa para
+   * os tabuleiros crescerem à vista sem ficarem encostados ao canto de um
+   * enquadramento que ainda não é deles.
+   */
+  dimensionarPara(
+    board: Board,
+    opcoes: { readonly caixaPorTabuleiro?: boolean } = {},
+  ): void {
+    this.colunasMedida = width(board);
+    this.linhasMedida = board.reduce((m, col) => Math.max(m, col.length), 0);
+    this.caixaPorTabuleiro = opcoes.caixaPorTabuleiro === true;
+
+    if (!this.caixaPorTabuleiro) {
+      this.colunas = this.colunasMedida;
+      this.linhas = this.linhasMedida;
+    }
   }
 
   get tabuleiro(): Board {
@@ -518,8 +573,16 @@ export class BoardView {
     const largura = caixa.width - espaco.horizontal;
     const altura = caixa.height - espaco.vertical;
 
-    const porLargura = (largura - gap * (this.colunas - 1)) / this.colunas;
-    const porAltura = (altura - gap * (this.linhas - 1)) / this.linhas;
+    /*
+     * A peça mede-se pela **medida** e a caixa desenha-se pela **caixa**. São a
+     * mesma coisa em todos os modos menos no Contra-Relógio — ver
+     * `colunasMedida`.
+     */
+    const medidaC = this.colunasMedida === 0 ? this.colunas : this.colunasMedida;
+    const medidaL = this.linhasMedida === 0 ? this.linhas : this.linhasMedida;
+
+    const porLargura = (largura - gap * (medidaC - 1)) / medidaC;
+    const porAltura = (altura - gap * (medidaL - 1)) / medidaL;
 
     const lado = Math.max(
       12,
