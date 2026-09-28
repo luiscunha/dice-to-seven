@@ -22,11 +22,29 @@
  * descem à base pela gravidade normal, e a largura repõe-se.
  *
  * **Puxar a linha paga.** Um botão que só faz mal nunca é premido, e seria UI
- * morta. Puxar de vontade própria rende pontos proporcionais ao espaço que
- * ainda existe — e reinicia o contador da injeção automática. A decisão passa a
- * ser real: puxo agora, com folga, para arrecadar pontos e comprar tempo, ou
+ * morta. Puxar de vontade própria rende um multiplicador proporcional ao espaço
+ * que ainda existe — e reinicia o relógio da injeção automática. A decisão passa
+ * a ser real: puxo agora, com folga, para arrecadar pontos e comprar tempo, ou
  * seguro e arrisco que a automática caia no pior momento? É a mesma tensão
  * entre ganância e segurança que sustenta o jogo todo.
+ *
+ * ### A pressão é o relógio
+ *
+ * As linhas caíam a cada N **jogadas**. Caem a cada N **segundos**, e a troca
+ * muda o modo inteiro: parar a pensar deixou de ser grátis, e jogar depressa
+ * deixou de ser apenas elegante para passar a ser a única forma de ganhar
+ * espaço. É a diferença entre um puzzle com um contador e um jogo de reflexos
+ * com um puzzle dentro.
+ *
+ * Isto substitui o contador de jogadas, não se soma a ele. Dois relógios a
+ * competir pela mesma injeção davam ao jogador duas contas para fazer e nenhuma
+ * para confiar.
+ *
+ * **A sessão continua a não ler as horas.** Recebe o decorrido da corrida e
+ * compara-o com um prazo que guarda no estado — ver `avancarRelogio`. Um
+ * `Date.now()` aqui dentro tornava os testes dependentes da máquina e a corrida
+ * impossível de pausar, e a pausa é a coisa que um jogo de telemóvel mais
+ * precisa de acertar.
  *
  * ### Sem joker, por enquanto
  *
@@ -36,9 +54,10 @@
  * fora até a pergunta ter resposta — e quando tiver, o joker aqui será uma peça
  * **diferente** da da campanha: um curinga livre, resgate em vez de armadilha.
  *
- * Nada aqui lê o relógio nem `Math.random()`. As linhas derivam da seed pelo
- * índice, portanto a mesma seed dá sempre a mesma corrida — que é o que torna
- * uma pontuação comparável e uma seed partilhável.
+ * Nada aqui chama `Date.now()` nem `Math.random()`. As linhas derivam da seed
+ * pelo índice, portanto a mesma seed dá sempre as mesmas peças pela mesma ordem
+ * — que é o que torna uma seed partilhável. O que a corrida faz com elas passou
+ * a depender de quão depressa o jogador se mexe, e isso é o modo.
  */
 
 import type { Board, Cell, Level, Packed } from "@dicetoseven/engine";
@@ -81,11 +100,24 @@ export interface SurvivalConfig {
    */
   readonly alturaMaxima: number;
 
-  /** Jogadas entre injeções automáticas, no início. */
-  readonly jogadasPorLinha: number;
-  /** O piso desse contador, por muito que a corrida se prolongue. */
-  readonly minJogadasPorLinha: number;
-  /** Quantas linhas injetadas até o contador descer uma unidade. */
+  /**
+   * Milissegundos entre injeções automáticas, no início.
+   *
+   * **A pressão do modo é o relógio.** Antes era um contador de jogadas, e a
+   * diferença não é de afinação: com um contador, parar a pensar era grátis e
+   * o tabuleiro esperava indefinidamente. O tabuleiro deixou de esperar.
+   *
+   * Trinta segundos é aproximadamente o que as cinco jogadas do contador
+   * antigo custavam a quem joga com cuidado, portanto o arranque não fica mais
+   * apertado do que estava — o que muda é que o tempo passa a correr também
+   * enquanto se olha.
+   */
+  readonly msPorLinha: number;
+  /** O piso desse intervalo, por muito que a corrida se prolongue. */
+  readonly minMsPorLinha: number;
+  /** Quanto o intervalo encolhe a cada degrau. */
+  readonly msPorDegrau: number;
+  /** Quantas linhas caídas até o intervalo descer um degrau. */
   readonly linhasPorDegrau: number;
 
   /** Quantas linhas o jogador vê à frente. */
@@ -153,8 +185,9 @@ export const DEFAULT_SURVIVAL: SurvivalConfig = {
   largura: 7,
   alturaInicial: 5,
   alturaMaxima: 7,
-  jogadasPorLinha: 5,
-  minJogadasPorLinha: 2,
+  msPorLinha: 30_000,
+  minMsPorLinha: 10_000,
+  msPorDegrau: 5_000,
   linhasPorDegrau: 6,
   previsao: 1,
   bonusPorFolga: 0.25,
@@ -172,8 +205,18 @@ export interface SurvivalState {
 
   /** Quantas linhas já entraram. É também o índice da próxima na fila. */
   readonly linhasInjetadas: number;
-  /** Jogadas desde a última linha. Chega ao limite, cai outra. */
-  readonly jogadasDesdeLinha: number;
+  /**
+   * O instante — em tempo de corrida — em que a próxima linha cai.
+   *
+   * Absoluto e não uma contagem decrescente, porque quem manda no relógio é o
+   * ecrã: a sessão nunca lê `Date.now()`, recebe o decorrido e compara. Um
+   * contador a descer obrigava a sessão a saber quanto tempo passou desde a
+   * última vez que alguém lhe falou, e ninguém lho pode dizer com confiança.
+   *
+   * É também o que faz a pausa sair de graça. O decorrido da corrida já pára
+   * quando o jogador sai do ecrã, portanto um prazo medido nele pára com ele.
+   */
+  readonly proximaLinhaMs: number;
   /** Tabuleiros esvaziados por completo. É o objetivo do modo. */
   readonly limpezas: number;
   /** Peças entradas desde o último joker. Decide quando aparece o próximo. */
@@ -261,15 +304,44 @@ export const folga = (
 export const restoParaLimpar = (s: SurvivalState): number =>
   totalSum(s.game.board) % 7;
 
-/** Jogadas entre injeções, já com a aceleração da corrida aplicada. */
+/**
+ * Milissegundos entre injeções, já com a aceleração da corrida aplicada.
+ *
+ * Conta **linhas caídas**, não `linhasInjetadas`: este último arranca em
+ * `alturaInicial` porque é o índice da fila, e usá-lo aqui gastava os primeiros
+ * degraus a montar o tabuleiro inicial. A corrida começava já acelerada, e o
+ * valor configurado para o arranque nunca chegava a valer para ninguém.
+ */
 export const cadencia = (
   s: SurvivalState,
   config: SurvivalConfig = DEFAULT_SURVIVAL,
-): number =>
-  Math.max(
-    config.minJogadasPorLinha,
-    config.jogadasPorLinha - Math.floor(s.linhasInjetadas / config.linhasPorDegrau),
+): number => {
+  const caidas = Math.max(0, s.linhasInjetadas - config.alturaInicial);
+  return Math.max(
+    config.minMsPorLinha,
+    config.msPorLinha - Math.floor(caidas / config.linhasPorDegrau) * config.msPorDegrau,
   );
+};
+
+/**
+ * Quanto falta para a próxima linha, em milissegundos. Nunca negativo.
+ *
+ * É o que o ecrã desenha. Antes da primeira jogada `agoraMs` é 0 e isto dá o
+ * intervalo inteiro: o cronómetro só arranca ao primeiro toque, e portanto
+ * ninguém é cronometrado a olhar para o tabuleiro pela primeira vez.
+ */
+export const faltaParaLinha = (s: SurvivalState, agoraMs: number): number =>
+  Math.max(0, s.proximaLinhaMs - agoraMs);
+
+/** A fração do intervalo que ainda falta, de 1 a 0. É a barra do ecrã. */
+export const fracaoParaLinha = (
+  s: SurvivalState,
+  agoraMs: number,
+  config: SurvivalConfig = DEFAULT_SURVIVAL,
+): number => {
+  const total = cadencia(s, config);
+  return total <= 0 ? 0 : Math.min(1, faltaParaLinha(s, agoraMs) / total);
+};
 
 /* ─── Arranque ────────────────────────────────────────────────────────────── */
 
@@ -294,7 +366,7 @@ export function startSurvival(
     game: startGame(nivelDe(seed, board)),
     score: 0,
     linhasInjetadas: config.alturaInicial,
-    jogadasDesdeLinha: 0,
+    proximaLinhaMs: config.msPorLinha,
     limpezas: 0,
     pecasDesdeJoker: 0,
     limpo: false,
@@ -325,11 +397,21 @@ const comTabuleiro = (s: SurvivalState, board: Board): SurvivalState => ({
  * `voluntaria` decide se paga: puxar é uma escolha e uma escolha premeia-se; a
  * automática é a pressão e não paga nada. O histórico é limpo porque não há
  * undo neste modo — e guardá-lo seria prometer um retrocesso que não existe.
+ *
+ * `agoraMs` é o decorrido da corrida, e serve para marcar o prazo seguinte a
+ * partir de **agora** e não do prazo que acabou de passar. A diferença nota-se
+ * quando a injeção chega atrasada — o ecrã estava a animar uma jogada, ou o
+ * jogador tinha a app em segundo plano: sem isto o atraso descontava do
+ * intervalo seguinte, e duas linhas caíam quase coladas.
+ *
+ * É também aqui que puxar de vontade própria compra tempo. O prazo reinicia
+ * por inteiro, o que torna a compra literal em vez de metafórica.
  */
 export function injectRow(
   s: SurvivalState,
   voluntaria: boolean,
   config: SurvivalConfig = DEFAULT_SURVIVAL,
+  agoraMs = 0,
 ): SurvivalState {
   if (s.morto || s.limpo) return s;
 
@@ -340,15 +422,47 @@ export function injectRow(
   const comJoker = trazJoker(s, config);
   const board = pushRow(s.game.board, proximaLinha(s, config));
 
-  return {
+  const seguinte: SurvivalState = {
     ...comTabuleiro(s, board),
     ...bonus,
     linhasInjetadas: s.linhasInjetadas + 1,
-    jogadasDesdeLinha: 0,
     // O contador reinicia quando o joker cai, e acumula quando não cai.
     pecasDesdeJoker: comJoker ? 0 : s.pecasDesdeJoker + config.largura,
     morto: tallestColumn(board) > config.alturaMaxima,
+    proximaLinhaMs: s.proximaLinhaMs,
   };
+
+  // A cadência lê-se **depois** de a linha entrar: é ela que conta para o degrau.
+  return { ...seguinte, proximaLinhaMs: agoraMs + cadencia(seguinte, config) };
+}
+
+/**
+ * O relógio andou até `agoraMs`. Faz cair a linha, se o prazo venceu.
+ *
+ * É a única porta da injeção automática, e é **pura**: quem sabe as horas é o
+ * ecrã, que as passa para aqui. A regra 5 do projeto diz que a engine não sabe
+ * em que modo está; o corolário é que a sessão não sabe que horas são.
+ *
+ * **Cai no máximo uma linha por chamada, e o atraso perdoa-se.** Cai da regra
+ * de o prazo seguinte contar a partir de agora: por muito tempo que tenha
+ * passado, sobra sempre um intervalo inteiro antes da linha a seguir. Não é um
+ * acidente que se tolera, é a propriedade que se quer — um separador congelado,
+ * uma animação longa ou um arranque lento nunca podem despejar meio tabuleiro
+ * de uma vez sobre alguém que não teve hipótese de jogar.
+ *
+ * A pausa de segundo plano, no ecrã, trata do caso legítimo. Isto é a rede por
+ * baixo dela.
+ */
+export function avancarRelogio(
+  s: SurvivalState,
+  agoraMs: number,
+  config: SurvivalConfig = DEFAULT_SURVIVAL,
+): { readonly state: SurvivalState; readonly caiu: boolean } {
+  if (s.morto || s.limpo || agoraMs < s.proximaLinhaMs) {
+    return { state: s, caiu: false };
+  }
+
+  return { state: injectRow(s, false, config, agoraMs), caiu: true };
 }
 
 /* ─── Jogada ──────────────────────────────────────────────────────────────── */
@@ -358,8 +472,6 @@ export interface SurvivalTap {
   /** A jogada aconteceu, e não foi só um toque a acumular seleção. */
   readonly moved: boolean;
   readonly gainedScore: number;
-  /** A jogada fez cair uma linha automática. */
-  readonly injected: boolean;
   /** A jogada esvaziou o tabuleiro. */
   readonly cleared: boolean;
 }
@@ -368,17 +480,16 @@ const parado = (s: SurvivalState): SurvivalTap => ({
   state: s,
   moved: false,
   gainedScore: 0,
-  injected: false,
   cleared: false,
 });
 
 /**
  * Um toque.
  *
- * Depois de uma jogada a sério, três coisas por esta ordem: pontuar, ver se o
- * tabuleiro ficou limpo, e ver se chegou a hora da linha automática. A ordem
- * importa — pontuar a limpeza *antes* de injetar é o que faz o prémio ser do
- * jogador e não do acaso da linha seguinte.
+ * **Uma jogada já não faz cair nada.** Quem faz cair é o relógio, por
+ * `avancarRelogio`, e por isso jogar depressa passou a ser a forma de ganhar
+ * espaço em vez de a forma de o gastar. A jogada aqui só pontua e vê se o
+ * tabuleiro ficou limpo.
  */
 export function survivalTap(
   s: SurvivalState,
@@ -401,10 +512,10 @@ export function survivalTap(
   if (!jogou) return { ...parado(s), state: { ...s, game } };
 
   /*
-   * Sem combo por tempo, e é deliberado. O `registerMove` de `combos.ts` mede o
-   * intervalo entre jogadas, o que introduziria pressão de relógio num modo
-   * cuja pressão é **espaço**. Aqui o mérito vem do tamanho do grupo, como na
-   * campanha, e quem pára a pensar não é castigado por isso.
+   * Sem combo por tempo, e continua a ser deliberado — agora por outra razão.
+   * O relógio já castiga quem demora, com linhas a cair; um combo que também
+   * premiasse a velocidade punha o mesmo eixo a pagar duas vezes, e o tamanho
+   * do grupo — que é a decisão interessante — deixava de contar para nada.
    */
   let ganho = moveScore(candidato.length, 1, scoring);
 
@@ -417,37 +528,37 @@ export function survivalTap(
 
   const restantes = comBonus ? s.jogadasComBonus - 1 : 0;
 
-  const jogadas = s.jogadasDesdeLinha + 1;
-  let seguinte: SurvivalState = {
+  /*
+   * **Limpar o tabuleiro acaba a corrida**, e acaba-a bem. É o objetivo do modo:
+   * o relógio corre até lá, e o tempo é a marca. `avancarRelogio` vê o `limpo`
+   * e não injeta mais nada por cima de uma vitória.
+   */
+  const seguinte: SurvivalState = {
     ...s,
     game,
     score: s.score + ganho,
-    jogadasDesdeLinha: jogadas,
     limpezas: limpou ? s.limpezas + 1 : s.limpezas,
     limpo: limpou,
     jogadasComBonus: restantes,
     multiplicador: restantes > 0 ? s.multiplicador : 1,
   };
 
-  /*
-   * **Limpar o tabuleiro acaba a corrida**, e acaba-a bem. É o objetivo do modo:
-   * o relógio corre até lá, e o tempo é a marca. Não se injeta mais nada por
-   * cima de uma vitória.
-   */
-  const injeta = !limpou && jogadas >= cadencia(seguinte, config);
-  if (injeta) seguinte = injectRow(seguinte, false, config);
-
   return {
     state: seguinte,
     moved: true,
     gainedScore: ganho,
-    injected: injeta,
     cleared: limpou,
   };
 }
 
-/** Puxar a linha por vontade própria. É onde está a decisão do modo. */
+/**
+ * Puxar a linha por vontade própria. É onde está a decisão do modo.
+ *
+ * `agoraMs` faz o prazo seguinte contar a partir de agora — é assim que puxar
+ * compra tempo, e não só pontos.
+ */
 export const puxarLinha = (
   s: SurvivalState,
   config: SurvivalConfig = DEFAULT_SURVIVAL,
-): SurvivalState => injectRow(s, true, config);
+  agoraMs = 0,
+): SurvivalState => injectRow(s, true, config, agoraMs);

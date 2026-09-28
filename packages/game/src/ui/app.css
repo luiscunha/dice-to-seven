@@ -1310,68 +1310,174 @@
  * porque uma linha vermelha a berrar durante uma corrida inteira deixa de se
  * ver ao fim de meio minuto — que é o mesmo que não existir, só que mais feio.
  *
- * O brilho desce para dentro do tabuleiro em vez de subir: é para dentro que as
- * peças vêm, e é a zona de perigo que se quer assinalada, não o ar por cima.
+ * São três camadas: um núcleo que desvanece nas pontas, um halo que o segue, e
+ * um véu que desce para dentro do tabuleiro. A intensidade escolhe quanto de
+ * cada uma se vê — a geometria é a mesma nos três graus, e é por isso que a
+ * passagem de um para o outro é uma transição e não uma troca de aspeto.
  */
 .linha-fogo {
   position: absolute;
   left: 0;
   right: 0;
   top: calc(var(--gap-peca) * -0.5);
-  height: 2px;
+  height: var(--fogo-nucleo);
   z-index: 3;
   pointer-events: none;
-  border-radius: 2px;
-  background: var(--fogo);
   opacity: var(--fogo-forca);
+
+  /* Ficam aqui e não no tema: são geometria do aviso, não cor do jogo. */
+  --fogo-nucleo: 2px;
+  --fogo-brilho: 0px;
+
   transition:
     opacity var(--t-ui) linear,
-    box-shadow var(--t-ui) linear;
+    height var(--t-ui) linear;
 }
 
-/* O rescaldo: um véu que desce para dentro do tabuleiro. */
+/*
+ * O núcleo, em três camadas — e nenhuma delas é um `border`.
+ *
+ * 1. As pontas apagam-se. Uma linha que vai de bordo a bordo com a mesma força
+ *    lê-se como a moldura da caixa, e a moldura de uma caixa é decoração:
+ *    ignora-se ao fim de meio minuto. Uma linha que desvanece nas pontas foi
+ *    **desenhada ali**, e é essa a conclusão que se quer que o olho tire.
+ * 2. O meio é mais quente do que as pontas, o que dá à linha um sítio onde arde
+ *    mais — a diferença entre uma brasa e um traço a marcador.
+ * 3. O brilho é `drop-shadow` e não `box-shadow`: o `drop-shadow` segue o alfa
+ *    do que está pintado, portanto o halo desvanece nas pontas junto com o
+ *    núcleo. Com `box-shadow` o halo seguiria a caixa, e as pontas apagadas
+ *    ficavam com uma auréola retangular à volta de nada.
+ *
+ * A primeira camada do `background` é a faísca, parada fora do ecrã enquanto
+ * não for crítico. Ver `fogo-faisca`.
+ */
+.linha-fogo::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 2px;
+  background:
+    linear-gradient(90deg, transparent, var(--fogo-faisca), transparent),
+    linear-gradient(
+      90deg,
+      transparent 0%,
+      var(--fogo) 7%,
+      var(--fogo-quente) 50%,
+      var(--fogo) 93%,
+      transparent 100%
+    );
+  background-repeat: no-repeat;
+  background-size:
+    38% 100%,
+    100% 100%;
+  background-position:
+    -60% 0,
+    0 0;
+  filter: drop-shadow(0 0 var(--fogo-brilho) var(--fogo));
+  transition: filter var(--t-ui) linear;
+}
+
+/*
+ * O rescaldo: um véu que desce para dentro do tabuleiro.
+ *
+ * Desce e não sobe porque é para dentro que as peças vêm — a zona de perigo é
+ * a de baixo, não o ar por cima. Começa **debaixo** do núcleo (`top: 100%`),
+ * senão o véu assenta sobre a própria linha e rouba-lhe contraste.
+ *
+ * Três paragens, não duas: um degradê direto até `transparent` acaba a meio do
+ * caminho a parecer uma banda com aresta. A máscara repete o desvanecer das
+ * pontas do núcleo, para que as duas camadas acabem no mesmo sítio.
+ */
 .linha-fogo::after {
   content: "";
   position: absolute;
-  inset: 0 0 auto;
-  height: calc(var(--lado, 48px) * 0.55);
-  background: linear-gradient(to bottom, var(--fogo-veu), transparent);
+  top: 100%;
+  left: 0;
+  right: 0;
+  height: calc(var(--lado, 48px) * 0.6);
+  background: linear-gradient(
+    to bottom,
+    var(--fogo-veu) 0%,
+    var(--fogo-veu-meio) 38%,
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    transparent,
+    #000 7%,
+    #000 93%,
+    transparent
+  );
+  mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
   pointer-events: none;
 }
 
 .linha-fogo[data-grau="folgado"] {
-  --fogo-forca: 0.3;
+  --fogo-forca: 0.32;
 }
 
 .linha-fogo[data-grau="aviso"] {
-  --fogo-forca: 0.7;
-  height: 3px;
+  --fogo-forca: 0.75;
+  --fogo-nucleo: 3px;
+  --fogo-brilho: 5px;
 }
 
 /*
- * Uma linha de folga. A pulsação é o único movimento do ecrã que não vem de uma
- * jogada — e é por isso que se nota sem ser preciso estar a olhar para ela.
+ * Uma linha de folga.
+ *
+ * O movimento é o único do ecrã que não vem de uma jogada, e é por isso que se
+ * nota sem ser preciso estar a olhar para ele. Mas **não é a opacidade que
+ * pulsa**: uma linha que escurece a cada segundo passa metade do tempo a
+ * avisar menos do que podia, exatamente quando há menos margem. O que se move
+ * é o halo, que respira à volta de um núcleo sempre a plena força, mais uma
+ * faísca que a percorre de lado a lado de dois em dois segundos e meio.
  */
 .linha-fogo[data-grau="critico"] {
   --fogo-forca: 1;
-  height: 3px;
-  animation: brasa 1.1s ease-in-out infinite;
+  --fogo-nucleo: 3px;
+  --fogo-brilho: 7px;
 }
 
-@keyframes brasa {
+.linha-fogo[data-grau="critico"]::before {
+  animation:
+    fogo-faisca 2.5s linear infinite,
+    fogo-respiro 1.3s ease-in-out infinite;
+}
+
+/* A faísca entra por fora e sai por fora: a pausa antes de repetir é de propósito. */
+@keyframes fogo-faisca {
+  0% {
+    background-position:
+      -60% 0,
+      0 0;
+  }
+  60%,
+  100% {
+    background-position:
+      160% 0,
+      0 0;
+  }
+}
+
+@keyframes fogo-respiro {
   0%,
   100% {
-    opacity: 0.6;
+    filter: drop-shadow(0 0 5px var(--fogo));
   }
   50% {
-    opacity: 1;
+    filter: drop-shadow(0 0 12px var(--fogo-quente));
   }
 }
 
-/* A pulsação é aviso, não informação: sem ela a linha continua lá, e vermelha. */
+/*
+ * O movimento é aviso, não informação: sem ele a linha continua lá, à mesma
+ * largura e à mesma força. Fica com o halo do meio da respiração, que é o que
+ * a animação mostra em média.
+ */
 @media (prefers-reduced-motion: reduce) {
-  .linha-fogo[data-grau="critico"] {
+  .linha-fogo[data-grau="critico"]::before {
     animation: none;
+    filter: drop-shadow(0 0 8px var(--fogo));
   }
 }
 
@@ -1384,18 +1490,16 @@
 }
 
 /*
- * A fila fica **entre o topo e o tabuleiro**, que é de onde as peças vêm. Pô-la
+ * A fila fica **entre o topo e o tabuleiro**, que é de onde as peças caem. Pô-la
  * ao lado ou no rodapé obrigava a ligar mentalmente duas zonas do ecrã que não
  * têm relação espacial nenhuma com a injeção.
- */
-/*
- * A fila fica **entre o topo e o tabuleiro**, que é de onde as peças caem.
  *
  * As peças são as mesmas do tabuleiro — mesma fábrica, mesmas pintas, mesmas
  * cores — só que mais pequenas e sem toque. Uma fila com números obrigava a
  * traduzir entre dois alfabetos a cada linha.
  */
 .fila {
+  position: relative;
   display: flex;
   gap: var(--gap-peca);
   justify-content: center;
@@ -1403,6 +1507,45 @@
   padding: 6px;
   border-radius: var(--raio);
   background: var(--tray);
+  overflow: hidden;
+}
+
+/*
+ * A contagem para a linha seguinte.
+ *
+ * Um pseudo-elemento e não um filho: `pintarFila` troca os filhos a cada
+ * repintura, e uma barra que vivesse lá dentro desaparecia a cada linha nova —
+ * precisamente no instante em que ela tem mais a dizer.
+ *
+ * `scaleX` e não `width`: a transformação corre no compositor, e isto repinta
+ * dez vezes por segundo durante a corrida inteira. A transição dura exatamente
+ * um passo do relógio, o que transforma os saltos de décimo em movimento
+ * contínuo sem nunca ficar atrás do que mostra.
+ */
+.fila::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: var(--accent);
+  transform: scaleX(var(--conta, 1));
+  transform-origin: left center;
+  transition: transform var(--t-ui) linear;
+  pointer-events: none;
+}
+
+/*
+ * Os últimos cinco segundos ganham a cor do teto.
+ *
+ * É o mesmo vermelho da linha de fogo, e é de propósito: as duas coisas dizem
+ * a mesma ameaça — o tabuleiro vai subir — e uma segunda cor de alarme obrigava
+ * a aprender dois vocabulários para o mesmo perigo.
+ */
+.fila[data-urgente="sim"]::after {
+  height: 4px;
+  background: var(--fogo);
 }
 
 .fila .peca.na-fila {

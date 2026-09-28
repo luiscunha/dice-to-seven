@@ -21,8 +21,11 @@ import {
   width,
 } from "@dicetoseven/engine";
 
+import type { Board, Group } from "@dicetoseven/engine";
+
 import {
   DEFAULT_SURVIVAL,
+  avancarRelogio,
   cadencia,
   injectRow,
   linhaDe,
@@ -37,6 +40,10 @@ import {
 import type { SurvivalState } from "../src/session/SurvivalSession";
 
 const SEED = 20260822;
+
+/** Um grupo qualquer que sirva, ou nada. Chega para fazer jogadas a sério. */
+const primeiroGrupo = (b: Board): Group | undefined =>
+  [...findAllGroups(b)][0];
 
 describe("a fila", () => {
   it("é determinística na seed e no índice", () => {
@@ -197,23 +204,115 @@ describe("puxar a linha", () => {
     expect(jogar(comBonus).multiplicador).toBe(1);
   });
 
-  it("reinicia o contador da automática", () => {
-    let s = startSurvival(SEED);
-    s = { ...s, jogadasDesdeLinha: 4 };
-    expect(puxarLinha(s).jogadasDesdeLinha).toBe(0);
+  it("**compra tempo**: o prazo da automática reinicia por inteiro", () => {
+    const s = startSurvival(SEED);
+
+    // Faltavam três segundos para a linha cair; puxar devolve o intervalo todo.
+    const apertado: SurvivalState = {
+      ...s,
+      proximaLinhaMs: DEFAULT_SURVIVAL.msPorLinha,
+    };
+    const agora = DEFAULT_SURVIVAL.msPorLinha - 3000;
+
+    const depois = puxarLinha(apertado, DEFAULT_SURVIVAL, agora);
+    expect(depois.proximaLinhaMs - agora).toBe(cadencia(depois));
   });
 });
 
 describe("a cadência", () => {
   it("aperta com a corrida, até ao piso", () => {
-    const em = (linhas: number): number =>
-      cadencia({ ...startSurvival(SEED), linhasInjetadas: linhas });
+    const em = (caidas: number): number =>
+      cadencia({
+        ...startSurvival(SEED),
+        linhasInjetadas: DEFAULT_SURVIVAL.alturaInicial + caidas,
+      });
 
-    expect(em(0)).toBe(DEFAULT_SURVIVAL.jogadasPorLinha);
+    expect(em(0)).toBe(DEFAULT_SURVIVAL.msPorLinha);
     expect(em(DEFAULT_SURVIVAL.linhasPorDegrau)).toBe(
-      DEFAULT_SURVIVAL.jogadasPorLinha - 1,
+      DEFAULT_SURVIVAL.msPorLinha - DEFAULT_SURVIVAL.msPorDegrau,
     );
-    expect(em(500)).toBe(DEFAULT_SURVIVAL.minJogadasPorLinha);
+    expect(em(500)).toBe(DEFAULT_SURVIVAL.minMsPorLinha);
+  });
+
+  /*
+   * O degrau conta **linhas caídas**, não linhas injetadas.
+   *
+   * `linhasInjetadas` arranca em `alturaInicial` porque é o índice da fila. Com
+   * ele a contar para o degrau, as cinco linhas do arranque gastavam o primeiro
+   * patamar e a corrida começava já acelerada — o valor configurado para o
+   * arranque nunca valia para ninguém.
+   */
+  it("o tabuleiro inicial não gasta degraus: a corrida começa no valor configurado", () => {
+    expect(cadencia(startSurvival(SEED))).toBe(DEFAULT_SURVIVAL.msPorLinha);
+  });
+});
+
+describe("o relógio é que faz cair", () => {
+  it("nada cai antes do prazo, e cai quando ele chega", () => {
+    const s = startSurvival(SEED);
+    const prazo = s.proximaLinhaMs;
+
+    expect(avancarRelogio(s, prazo - 1).caiu).toBe(false);
+    expect(avancarRelogio(s, prazo - 1).state).toBe(s);
+
+    const caiu = avancarRelogio(s, prazo);
+    expect(caiu.caiu).toBe(true);
+    expect(caiu.state.linhasInjetadas).toBe(s.linhasInjetadas + 1);
+  });
+
+  /*
+   * O prazo conta a partir de **agora** e não do prazo vencido. Sem isto, uma
+   * injeção atrasada — o ecrã a animar, a app em segundo plano — descontava o
+   * atraso ao intervalo seguinte e duas linhas caíam quase coladas.
+   */
+  it("o prazo seguinte conta a partir de agora, não do prazo que passou", () => {
+    const s = startSurvival(SEED);
+    const atrasado = s.proximaLinhaMs + 9000;
+
+    const r = avancarRelogio(s, atrasado);
+    expect(r.state.proximaLinhaMs - atrasado).toBe(cadencia(r.state));
+  });
+
+  it("**jogar já não faz cair nada** — só o relógio faz", () => {
+    let s = startSurvival(SEED);
+    const antes = s.linhasInjetadas;
+
+    // Jogadas a sério, muitas mais do que a cadência antiga de cinco.
+    for (let i = 0; i < 20 && !s.morto && !s.limpo; i++) {
+      const grupo = primeiroGrupo(s.game.board);
+      if (grupo === undefined) break;
+      for (const p of grupo) s = survivalTap(s, p).state;
+    }
+
+    expect(s.linhasInjetadas).toBe(antes);
+  });
+
+  /*
+   * O atraso perdoa-se, e é a propriedade que protege quem volta de longe.
+   * Uma hora fora não são cento e vinte linhas em dívida: é uma linha, e um
+   * intervalo inteiro para jogar antes da seguinte.
+   */
+  it("**uma hora de atraso faz cair uma linha, não cento e vinte**", () => {
+    const s = startSurvival(SEED);
+    const tarde = s.proximaLinhaMs + 60 * 60 * 1000;
+
+    const r = avancarRelogio(s, tarde);
+
+    expect(r.caiu).toBe(true);
+    expect(r.state.linhasInjetadas).toBe(s.linhasInjetadas + 1);
+    expect(r.state.morto).toBe(false);
+    expect(r.state.proximaLinhaMs - tarde).toBe(cadencia(r.state));
+  });
+
+  it("depois de limpo ou morto o relógio não injeta mais nada", () => {
+    const s = startSurvival(SEED);
+    const tarde = s.proximaLinhaMs + 10 * 60 * 1000;
+
+    for (const fim of [{ limpo: true }, { morto: true }]) {
+      const parado = { ...s, ...fim };
+      expect(avancarRelogio(parado, tarde).caiu).toBe(false);
+      expect(avancarRelogio(parado, tarde).state).toBe(parado);
+    }
   });
 });
 
@@ -279,7 +378,6 @@ describe("limpar o tabuleiro acaba a corrida", () => {
     const quase: SurvivalState = {
       ...base,
       game: { ...base.game, board: [[3], [4]] },
-      jogadasDesdeLinha: DEFAULT_SURVIVAL.jogadasPorLinha - 1,
     };
 
     let s = quase;
