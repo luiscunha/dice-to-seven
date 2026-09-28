@@ -27,7 +27,13 @@ export type Rota =
    * na engine. Sem seed no endereço, o modo sorteia uma.
    */
   | { readonly ecra: "survival"; readonly seed?: number }
-  | { readonly ecra: "definicoes" };
+  | { readonly ecra: "definicoes" }
+  /**
+   * As regras têm endereço próprio, como tudo o resto — e aqui o endereço faz
+   * mais do que arrumação: `#/como-jogar` é o link que se manda a quem perguntou
+   * como é que isto funciona, sem lhe pedir que abra o jogo e procure.
+   */
+  | { readonly ecra: "regras" };
 
 export const ROTA_INICIAL: Rota = { ecra: "home" };
 
@@ -49,6 +55,8 @@ export function paraHash(r: Rota): string {
         : `#/survival/${String(r.seed)}`;
     case "definicoes":
       return "#/definicoes";
+    case "regras":
+      return "#/como-jogar";
   }
 }
 
@@ -68,6 +76,9 @@ export function deHash(hash: string): Rota {
     return { ecra: "tempo" };
   }
   if (primeira === "definicoes") return { ecra: "definicoes" };
+  if (primeira === "como-jogar" || primeira === "regras") {
+    return { ecra: "regras" };
+  }
 
   if (primeira === "survival") {
     // Uma seed que não seja um inteiro não trava nada: sorteia-se outra.

@@ -50,6 +50,7 @@ describe("rotas", () => {
     { ecra: "tempo" },
     { ecra: "survival", seed: 20260822 },
     { ecra: "definicoes" },
+    { ecra: "regras" },
   ];
 
   it("ida e volta, para todas", () => {
@@ -62,6 +63,16 @@ describe("rotas", () => {
     for (const h of ["", "#", "#/", "#/inventado", "#/jogo", "#///"]) {
       expect(deHash(h)).toEqual({ ecra: "home" });
     }
+  });
+
+  /*
+   * `#/como-jogar` é o endereço que se manda a quem perguntou como é que isto
+   * funciona. `#/regras` era o nome interno e entrou antes do outro: continua a
+   * levar ao mesmo sítio, porque um link que já saiu daqui não pode partir.
+   */
+  it("as regras têm endereço, e o nome antigo continua a lá chegar", () => {
+    expect(paraHash({ ecra: "regras" })).toBe("#/como-jogar");
+    expect(deHash("#/regras")).toEqual({ ecra: "regras" });
   });
 
   it("um índice de nível absurdo cai no primeiro, em vez de rebentar", () => {

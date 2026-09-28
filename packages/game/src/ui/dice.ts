@@ -82,6 +82,28 @@ export function desenharFace(
 }
 
 /**
+ * Uma peça **fora do tabuleiro**: na Home e no ecrã das regras.
+ *
+ * É a mesma peça — a mesma cor, as mesmas pintas, o mesmo rebordo — e não um
+ * desenho parecido. Uma ilustração de uma peça diverge da peça no dia em que a
+ * paleta mudar, e o sítio onde isso se nota é justamente o ecrã que promete
+ * explicar o jogo.
+ *
+ * Muda duas coisas, ambas por serem mentira fora da grelha: perde o
+ * `role="gridcell"`, que anunciava uma célula de uma tabela que não existe, e
+ * passa a `aria-hidden` — quem ouve o ecrã recebe a explicação pelo texto ao
+ * lado, que diz a mesma coisa em palavras.
+ */
+export function pecaDeAmostra(valor: Cell, modo: ModoFace = "pintas"): HTMLElement {
+  const el = criarPeca(valor, modo);
+  el.classList.add("amostra");
+  el.removeAttribute("role");
+  el.removeAttribute("aria-label");
+  el.setAttribute("aria-hidden", "true");
+  return el;
+}
+
+/**
  * O sinal pequeno que fica no canto de um joker **com valor escolhido**.
  *
  * A peça passa a mostrar as pintas do valor — é a face que ela vale nesta

@@ -116,6 +116,20 @@ export const iconeDefinicoes = (): SVGElement =>
     "M11.5 16H20",
   ]);
 
+/**
+ * As regras: o livro aberto.
+ *
+ * Aberto e não fechado — um livro fechado lê-se como «documentação», e o que
+ * está do outro lado deste botão é curto e ilustrado. A lombada ao meio é o que
+ * o torna reconhecível a 18px; sem ela ficam dois retângulos.
+ */
+export const iconeRegras = (): SVGElement =>
+  icone("icone-regras", [
+    "M12 6.8C10.6 5.5 8.7 4.8 6.2 4.8H4v12.6h2.2c2.5 0 4.4.7 5.8 2",
+    "M12 6.8c1.4-1.3 3.3-2 5.8-2H20v12.6h-2.2c-2.5 0-4.4.7-5.8 2",
+    "M12 6.8v12.6",
+  ]);
+
 /*
  * ── Os três modos ──
  *

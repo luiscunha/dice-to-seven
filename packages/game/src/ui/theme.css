@@ -50,6 +50,52 @@
   --ink-joker: #123f3a;
 
   /*
+   * ─── Os três modos ────────────────────────────────────────────────────
+   *
+   * Os cartões da Home **são faces**, e não cores escolhidas por bonitas.
+   *
+   * A Home é o primeiro ecrã que se vê, e as seis cores da rampa são o
+   * vocabulário que o jogador vai passar o jogo inteiro a ler. Estrear esse
+   * vocabulário aqui poupa-lhe a primeira leitura do tabuleiro — e fecha a
+   * porta à cor de fora da paleta, que é como uma Home começa a parecer de
+   * outro jogo.
+   *
+   * Faces 6, 4 e 2 — espaçadas na rampa, portanto separadas por **luminância**
+   * e não só por matiz: escura, média, clara. É a mesma ordenação que carrega o
+   * valor das peças, e sobrevive a todas as formas de daltonismo.
+   *
+   * A tinta de cada cartão é a que a própria face já usa nas pintas. O
+   * contraste vem da mesma escolha que garante a leitura do tabuleiro: não há
+   * um segundo par de cores para manter afinado.
+   *
+   * Como as faces, **não mudam de tema**. Um modo tem uma cor, nos dois fundos.
+   */
+  --modo-puzzles: #1b6b62;
+  --modo-puzzles-tinta: #e8f3f0;
+  --modo-tempo: #3ebb94;
+  --modo-tempo-tinta: #0c332c;
+  --modo-survival: #a9cbe8;
+  --modo-survival-tinta: #123f3a;
+
+  /*
+   * A placa por baixo do ícone e da etiqueta do estado, em cada cartão.
+   *
+   * Um véu da própria tinta do cartão, e não um branco fixo: sobre a face 6 o
+   * branco a 15% levanta a placa, sobre a face 2 — que já é clara — não se via
+   * nada. Cada modo traz o véu que funciona sobre a sua cor.
+   */
+  --modo-puzzles-placa: rgb(255 255 255 / 0.15);
+  --modo-tempo-placa: rgb(12 51 44 / 0.14);
+  --modo-survival-placa: rgb(18 63 58 / 0.11);
+
+  /*
+   * O aro de 1px dos cartões de modo. É o mesmo da peça, e pela mesma razão: a
+   * face mais clara tem contraste 1,17 contra o papel, e sem contorno dissolve-
+   * -se no fundo.
+   */
+  --aro: rgb(18 63 58 / 0.18);
+
+  /*
    * A solda. Escura sobre qualquer face, porque tem de ler-se por cima das seis
    * cores da rampa — a mais clara tem luminância 0.746 — e o contorno claro
    * separa-a das faces escuras do outro extremo.
