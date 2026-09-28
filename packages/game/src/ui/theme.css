@@ -97,7 +97,20 @@
    * isso pode ser saturada sem estragar a leitura das pintas.
    */
   --fogo: #d93a16;
+  /*
+   * O centro da linha é mais claro do que as pontas. É o que separa uma brasa
+   * de um traço a marcador: o calor tem um sítio onde é mais forte.
+   */
+  --fogo-quente: #ff6a3d;
   --fogo-veu: rgb(217 58 22 / 0.16);
+  /*
+   * A paragem do meio do véu. Um degradê de duas paragens até `transparent`
+   * cai a direito e deixa bandas visíveis num fundo claro; esta terceira cor
+   * dobra-o e a queda passa a ler-se como luz.
+   */
+  --fogo-veu-meio: rgb(217 58 22 / 0.05);
+  /* O clarão que atravessa a linha quando ela fica crítica. */
+  --fogo-faisca: rgb(255 228 205 / 0.85);
   --fogo-forca: 0.3;
 
   /* ─── Forma ───────────────────────────────────────────────────────────── */
@@ -174,7 +187,10 @@
     --gelo-opacidade: 0.97;
     /* Mais claro e menos saturado: num fundo escuro o vermelho puro floresce. */
     --fogo: #ff6a45;
+    --fogo-quente: #ffb488;
     --fogo-veu: rgb(255 106 69 / 0.14);
+    --fogo-veu-meio: rgb(255 106 69 / 0.045);
+    --fogo-faisca: rgb(255 243 232 / 0.9);
     --sombra: 0 1px 2px rgb(0 0 0 / 0.5), 0 8px 22px rgb(0 0 0 / 0.35);
   }
 }
@@ -204,7 +220,10 @@
   --gelo-opacidade: 0.97;
   /* Mais claro e menos saturado: num fundo escuro o vermelho puro floresce. */
   --fogo: #ff6a45;
+  --fogo-quente: #ffb488;
   --fogo-veu: rgb(255 106 69 / 0.14);
+  --fogo-veu-meio: rgb(255 106 69 / 0.045);
+  --fogo-faisca: rgb(255 243 232 / 0.9);
   --sombra: 0 1px 2px rgb(0 0 0 / 0.5), 0 8px 22px rgb(0 0 0 / 0.35);
 }
 
