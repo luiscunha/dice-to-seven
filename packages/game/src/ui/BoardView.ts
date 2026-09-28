@@ -300,6 +300,14 @@ export class BoardView {
       this.colunas = this.colunasMedida;
       this.linhas = this.linhasMedida;
     }
+
+    /*
+     * Repõe já, em vez de esperar pela montagem seguinte. O Survival chama isto
+     * a cada pintura porque o tabuleiro alarga durante a corrida, e sem esta
+     * linha a peça só mudava de tamanho na jogada a seguir àquela em que a
+     * coluna nova entrou — um passo atrás do que está no ecrã.
+     */
+    this.redimensionar();
   }
 
   get tabuleiro(): Board {

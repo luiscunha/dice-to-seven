@@ -23,8 +23,14 @@ export const CORRIDA_KEY = "dicetoseven.survival";
  *
  * Uma versão que não se reconheça descarta a corrida em vez de tentar migrar:
  * são partidas a meio, não progresso conquistado.
+ *
+ * A 3 não mudou a forma, mudou o **significado**: a largura do tabuleiro passou
+ * a sair de `linhasInjetadas`, e uma corrida da 2 traz sete colunas onde o novo
+ * cálculo diz cinco. O ecrã dimensionava a peça para cinco e desenhava a caixa
+ * para sete — 486px de caixa num telemóvel de 375. Um campo novo não teria
+ * apanhado isto; o que está errado é a relação entre dois campos antigos.
  */
-const CORRIDA_VERSION = 2;
+const CORRIDA_VERSION = 3;
 
 export interface CorridaGuardada {
   readonly estado: SurvivalState;

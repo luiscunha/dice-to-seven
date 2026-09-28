@@ -242,8 +242,17 @@
     inset 0 calc(var(--lado-real) * 0.035) 0 rgb(255 255 255 / 0.17);
 
   cursor: pointer;
+  /*
+   * `width` e `height` transitam porque no Survival a peça encolhe a meio da
+   * corrida: o tabuleiro ganha colunas e o lado é recalculado. Sem transição a
+   * mudança era um salto seco no instante em que a linha nova aterrava, e
+   * ficava a parecer um defeito de render. Com ela, as peças encolhem no mesmo
+   * tempo em que a linha cai.
+   */
   transition:
     transform var(--t-gravidade) var(--suavizacao),
+    width var(--t-gravidade) var(--suavizacao),
+    height var(--t-gravidade) var(--suavizacao),
     opacity var(--t-saida) linear,
     scale var(--t-saida) var(--suavizacao);
 }

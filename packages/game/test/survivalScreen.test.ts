@@ -64,9 +64,9 @@ describe("SurvivalScreen", () => {
 
   it("arranca com o tabuleiro da seed e a fila à frente", () => {
     expect(pecas()).toBe(
-      DEFAULT_SURVIVAL.largura * DEFAULT_SURVIVAL.alturaInicial,
+      DEFAULT_SURVIVAL.larguraInicial * DEFAULT_SURVIVAL.alturaInicial,
     );
-    expect(fila()).toHaveLength(DEFAULT_SURVIVAL.largura);
+    expect(fila()).toHaveLength(DEFAULT_SURVIVAL.larguraInicial);
     // O cronómetro só arranca ao primeiro toque.
     expect(relogio()).toBe("0:00.0");
     ecra.destruir();
@@ -80,7 +80,7 @@ describe("SurvivalScreen", () => {
     // A queda é animada, portanto a fila só anda quando ela assenta.
     await assentar();
 
-    expect(pecas()).toBe(contagem + DEFAULT_SURVIVAL.largura);
+    expect(pecas()).toBe(contagem + DEFAULT_SURVIVAL.larguraInicial);
     // A linha que estava à frente entrou, e a fila mostra outra.
     expect(fila()).not.toEqual(antes);
     ecra.destruir();
@@ -341,12 +341,12 @@ describe("a queda da linha injetada", () => {
     // Lido **antes** de assentar: a classe é o que dá à peça a transição lenta,
     // e é ela que se perde se alguém voltar a usar a da gravidade.
     const aCair = [...host.querySelectorAll<HTMLElement>(".tabuleiro .a-cair")];
-    expect(aCair).toHaveLength(DEFAULT_SURVIVAL.largura);
+    expect(aCair).toHaveLength(DEFAULT_SURVIVAL.larguraInicial);
 
     const atrasos = aCair.map((p) => p.style.getPropertyValue("--atraso"));
     // Uma onda da esquerda para a direita: sete impactos ao mesmo instante
     // lêem-se como um corte de imagem, não como uma queda.
-    expect(new Set(atrasos).size).toBe(DEFAULT_SURVIVAL.largura);
+    expect(new Set(atrasos).size).toBe(DEFAULT_SURVIVAL.larguraInicial);
     expect(atrasos[0]).toBe("0ms");
 
     ecra.destruir();
