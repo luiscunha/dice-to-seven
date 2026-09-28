@@ -59,7 +59,8 @@ import type { CorridaGuardada } from "../session/corridaSurvival";
 import { BoardView } from "./BoardView";
 import { PASSO_RELOGIO, relogio } from "./tempo";
 import { criarPeca } from "./dice";
-import { botao, confirmar, elemento, texto } from "./dom";
+import { botao, botaoRedondo, confirmar, elemento, texto } from "./dom";
+import { iconeReiniciar, iconeVoltar } from "./icones";
 import { JokerPicker } from "./JokerPicker";
 
 /** De quanto em quanto o cronómetro se repinta. Décimos chegam. */
@@ -155,7 +156,7 @@ export class SurvivalScreen {
       }, PASSO_RELOGIO);
     }
 
-    this.raiz = elemento("div", "ecra survival");
+    this.raiz = elemento("div", "ecra jogo survival");
 
     /* ── topo: o cronómetro manda ── */
     const topo = elemento("header", "topo survival-topo");
@@ -165,11 +166,10 @@ export class SurvivalScreen {
      * guardada e retoma-se onde ficou. Confirmar aqui era pedir uma decisão
      * sobre uma consequência que não existe.
      */
-    const sair = botao("‹", "redondo", () => {
+    const sair = botaoRedondo(iconeVoltar(), "sair da corrida", () => {
       this.guardar();
       opcoes.aoSair();
     });
-    sair.setAttribute("aria-label", "sair da corrida");
 
     this.elRelogio = elemento("div", "relogio");
     this.elRelogio.setAttribute("role", "timer");
@@ -196,9 +196,10 @@ export class SurvivalScreen {
     this.btPuxar = botao("Puxar linha", "primario", () => {
       void this.puxar();
     });
-    this.btRecomecar = botao("Recomeçar", undefined, () => {
+    this.btRecomecar = botao("Recomeçar", "com-icone", () => {
       this.pedirParaRecomecar();
     });
+    this.btRecomecar.prepend(iconeReiniciar());
 
     acoes.append(this.btPuxar, this.btRecomecar);
 
@@ -254,6 +255,20 @@ export class SurvivalScreen {
       }
     };
     document.addEventListener("visibilitychange", this.aoEsconder);
+  }
+
+  /**
+   * O botão **para trás** do Android.
+   *
+   * Com o seletor do joker aberto, fecha-o — antes saía da corrida com a
+   * escolha a meio. De resto deixa navegar sem perguntar, pela mesma razão da
+   * seta: sair não perde nada, porque o `destruir` guarda a corrida.
+   */
+  interceptarVoltar(): boolean {
+    if (!this.picker.estaAberto) return false;
+
+    this.picker.fechar();
+    return true;
   }
 
   destruir(): void {
@@ -637,7 +652,7 @@ export class SurvivalScreen {
 
     const preso = !isEmpty(jogo.board) && !hasAnyGroup(jogo.board);
     this.btPuxar.textContent = preso
-      ? "Sem jogadas — puxa uma linha"
+      ? "Sem jogadas: puxa uma linha"
       : "Puxar linha";
     this.btPuxar.dataset["urgente"] = preso ? "sim" : "nao";
     this.btPuxar.disabled = this.terminado;

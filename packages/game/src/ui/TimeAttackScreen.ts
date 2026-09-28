@@ -33,7 +33,8 @@ import {
   tapTimeAttack,
 } from "../session/TimeAttackSession";
 import { BoardView } from "./BoardView";
-import { botao, confirmar, elemento, texto } from "./dom";
+import { botao, botaoRedondo, confirmar, elemento } from "./dom";
+import { iconeReiniciar, iconeVoltar } from "./icones";
 
 /** De quanto em quanto o relógio se repinta. Décimos chegam, e custam pouco. */
 const PASSO_RELOGIO = 100;
@@ -45,6 +46,12 @@ export interface OpcoesTimeAttack {
     readonly tabuleiros: number;
   }) => void;
   readonly aoSair: () => void;
+  /**
+   * Outra corrida, a partir do painel de fim. Sem isto o botão não aparece, e o
+   * fim tem só a saída — que era o que havia: acabar uma corrida obrigava a
+   * voltar à Home para começar outra.
+   */
+  readonly aoRecomecar?: () => void;
   readonly melhorPontuacao: number;
   /**
    * Segundos de arranque. O plano §6.3 pede um começo generoso, mas quanto é
@@ -92,33 +99,14 @@ export class TimeAttackScreen {
 
     this.estado = startTimeAttack(primeiro, Date.now(), this.config);
 
-    this.raiz = elemento("div", "ecra tempo");
+    this.raiz = elemento("div", "ecra jogo tempo");
 
     /* ── topo: o relógio manda ── */
     const topo = elemento("header", "topo tempo-topo");
 
-    /*
-     * Sair acaba a corrida — não há como a retomar, porque o relógio andou.
-     * Num telemóvel a seta fica onde o polegar já está, e um toque por engano
-     * custava a corrida inteira.
-     */
-    const sair = botao("‹", "redondo", () => {
-      if (this.terminado) {
-        opcoes.aoSair();
-        return;
-      }
-
-      confirmar(this.raiz, {
-        titulo: "Sair da corrida?",
-        texto: "O relógio não pára: a corrida acaba aqui.",
-        confirmar: "Sair",
-        aoConfirmar: () => {
-          this.terminar();
-          opcoes.aoSair();
-        },
-      });
+    const sair = botaoRedondo(iconeVoltar(), "sair da corrida", () => {
+      this.pedirParaSair();
     });
-    sair.setAttribute("aria-label", "sair da corrida");
 
     this.elRelogio = elemento("div", "relogio");
     this.elRelogio.setAttribute("role", "timer");
@@ -129,12 +117,19 @@ export class TimeAttackScreen {
     /* ── palco ── */
     this.palco = elemento("div", "palco");
 
+    /*
+     * O fim abre no palco, por cima do tabuleiro que ficou por acabar — como na
+     * campanha. É onde o olho está quando o relógio chega a zero.
+     */
+    this.elFim = elemento("div", "fim");
+    this.elFim.setAttribute("role", "status");
+    this.elFim.hidden = true;
+    this.palco.appendChild(this.elFim);
+
     /* ── rodapé ── */
     const rodape = elemento("footer", "rodape");
     this.elSoma = elemento("div", "soma");
-    this.elFim = elemento("div", "fim");
-    this.elFim.hidden = true;
-    rodape.append(this.elSoma, this.elFim);
+    rodape.append(this.elSoma);
 
     this.raiz.append(topo, this.palco, rodape);
     host.replaceChildren(this.raiz);
@@ -172,6 +167,42 @@ export class TimeAttackScreen {
     document.removeEventListener("visibilitychange", this.aoVoltarAoEcra);
     this.view.destruir();
     this.raiz.remove();
+  }
+
+  /**
+   * O botão **para trás** do Android: o mesmo caminho da seta.
+   *
+   * Antes saía direto — sem perguntar, e sem `terminar()`, portanto a
+   * pontuação da corrida nunca chegava a ser gravada. Numa corrida acabada não
+   * há nada a proteger, e deixa-se navegar.
+   */
+  interceptarVoltar(): boolean {
+    if (this.terminado) return false;
+
+    this.pedirParaSair();
+    return true;
+  }
+
+  /**
+   * Sair acaba a corrida — não há como a retomar, porque o relógio andou.
+   * Num telemóvel a seta fica onde o polegar já está, e um toque por engano
+   * custava a corrida inteira.
+   */
+  private pedirParaSair(): void {
+    if (this.terminado) {
+      this.opcoes.aoSair();
+      return;
+    }
+
+    confirmar(this.raiz, {
+      titulo: "Sair da corrida?",
+      texto: "O relógio não pára: a corrida acaba aqui.",
+      confirmar: "Sair",
+      aoConfirmar: () => {
+        this.terminar();
+        this.opcoes.aoSair();
+      },
+    });
   }
 
   /* ─── jogar ─────────────────────────────────────────────────────────────── */
@@ -244,18 +275,25 @@ export class TimeAttackScreen {
   private pintar(): void {
     this.pintarRelogio();
 
+    /*
+     * Cada contagem num `<span>`: dois nós de texto seguidos não são itens de
+     * flex, o `gap` da `.meta` não lhes chegava, e o cabeçalho lia
+     * «0 pontos0 tabuleiros». É o mesmo defeito que a campanha já tinha
+     * corrigido na contagem de peças.
+     */
     this.elMeta.replaceChildren(
-      texto(`${String(this.estado.score)} pontos`),
-      texto(`${String(this.estado.boardsCleared)} tabuleiros`),
+      elemento("span", undefined, `${String(this.estado.score)} pontos`),
+      elemento("span", undefined, `${String(this.estado.boardsCleared)} tabuleiros`),
     );
 
     const jogo = this.estado.game;
     this.view.marcarSelecao(new Set(jogo.selection));
 
+    // O mesmo formato do Survival: dois modos com relógio, a mesma leitura.
     this.elSoma.textContent =
       jogo.selection.length === 0
         ? "Toca nas peças para somar 7"
-        : `${String(selectionTotal(jogo))} — faltam ${String(7 - selectionTotal(jogo))}`;
+        : `${String(selectionTotal(jogo))} / 7`;
   }
 
   /**
@@ -300,21 +338,46 @@ export class TimeAttackScreen {
 
   private pintarFim(): void {
     this.elFim.hidden = false;
+    this.palco.classList.toggle("terminado", true);
+    this.raiz.dataset["estado"] = "fim";
 
     const recorde = this.estado.score > this.opcoes.melhorPontuacao;
 
-    this.elFim.replaceChildren(
-      elemento("div", "selo", recorde ? "Novo recorde" : "Acabou o tempo"),
-      elemento(
-        "div",
-        "detalhe",
-        `${String(this.estado.score)} pontos · ` +
-          `${String(this.estado.boardsCleared)} tabuleiros limpos`,
-      ),
-      botao("Sair", "primario", () => {
+    const acoes = elemento("div", "acoes fim-acoes");
+    acoes.appendChild(
+      botao("Sair", undefined, () => {
         this.opcoes.aoSair();
       }),
     );
+
+    const aoRecomecar = this.opcoes.aoRecomecar;
+    if (aoRecomecar !== undefined) {
+      const outra = botao("Jogar outra vez", "primario com-icone", aoRecomecar);
+      outra.prepend(iconeReiniciar());
+      acoes.appendChild(outra);
+    }
+
+    /*
+     * A pontuação é o número do modo, e ganha o tamanho que o tempo tem no fim
+     * de um nível da campanha. Os tabuleiros ficam por baixo, como contexto.
+     */
+    this.elFim.replaceChildren(
+      elemento("div", "selo", recorde ? "Novo recorde" : "Acabou o tempo"),
+      elemento("div", "fim-tempo", `${String(this.estado.score)} pontos`),
+      elemento(
+        "div",
+        "detalhe",
+        this.estado.boardsCleared === 1
+          ? "1 tabuleiro limpo"
+          : `${String(this.estado.boardsCleared)} tabuleiros limpos`,
+      ),
+      acoes,
+    );
+
+    // Quem jogava por teclado continua no teclado — ver o mesmo no PuzzleScreen.
+    if (document.activeElement?.closest(".tabuleiro") != null) {
+      acoes.querySelector<HTMLElement>(".primario, .btn")?.focus({ preventScroll: true });
+    }
   }
 
   /** Reexportado para os testes não terem de importar da engine. */

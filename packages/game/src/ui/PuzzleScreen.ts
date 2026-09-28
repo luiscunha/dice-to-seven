@@ -50,8 +50,15 @@ import {
   vibrarToque,
   vibrarVitoria,
 } from "../plataforma/nativo";
-import { confirmar } from "./dom";
-import { iconeDesfazer, iconeDica, iconeReiniciar } from "./icones";
+import { botaoRedondo, confirmar } from "./dom";
+import {
+  iconeDesfazer,
+  iconeDica,
+  iconeFechar,
+  iconeReiniciar,
+  iconeSeguir,
+  iconeVoltar,
+} from "./icones";
 import { BoardView } from "./BoardView";
 import { JokerPicker } from "./JokerPicker";
 
@@ -59,6 +66,18 @@ const SELO_TEXTO: Readonly<Record<string, string>> = {
   perfect: "Perfeito",
   clean: "Limpo",
   completed: "Concluído",
+};
+
+/**
+ * O glifo do selo — o mesmo da grelha de níveis.
+ *
+ * O painel de fim e a grelha dizem a mesma coisa em dois sítios: um `★` aqui
+ * tem de ser o `★` que o jogador vai encontrar na célula quando voltar à lista.
+ */
+const SELO_GLIFO: Readonly<Record<string, string>> = {
+  perfect: "★",
+  clean: "◆",
+  completed: "●",
 };
 
 export interface OpcoesPuzzleScreen {
@@ -147,6 +166,25 @@ export class PuzzleScreen {
   private paradoMs = 0;
   private cronometro: ReturnType<typeof setInterval> | undefined;
 
+  /**
+   * O instante em que a aplicação foi para segundo plano, com o cronómetro a
+   * andar. Ver `aoMudarVisibilidade`.
+   */
+  private pausaMs: number | undefined;
+  private readonly aoMudarVisibilidade: () => void;
+
+  /**
+   * O melhor tempo do nível, e o que valia antes da última vez que o nível
+   * acabou.
+   *
+   * Começam os dois no `melhorTempoMs` que chega de fora, e o `recorde` avança
+   * sozinho quando se bate: com o «Repetir» no painel de fim, a segunda partida
+   * tem de se comparar com a primeira, e o valor de fora é o de antes das duas.
+   */
+  private recorde: number;
+  private recordeAntes: number;
+
+  private readonly palco: HTMLElement;
   private readonly elTitulo: HTMLElement;
   private readonly elMeta: HTMLElement;
   private readonly elRelogio: HTMLElement;
@@ -165,9 +203,13 @@ export class PuzzleScreen {
   constructor(host: HTMLElement, level: Level, opcoes: OpcoesPuzzleScreen = {}) {
     this.opcoes = opcoes;
     this.estado = startPuzzle(level);
+    this.recorde = opcoes.melhorTempoMs ?? 0;
+    this.recordeAntes = this.recorde;
 
     this.raiz = document.createElement("div");
-    this.raiz.className = "ecra";
+    // `jogo` é o que dá a este ecrã a composição em calhas em paisagem — ver o
+    // fim de `app.css`. Os ecrãs de lista não a têm, e continuam a rolar.
+    this.raiz.className = "ecra jogo";
     host.replaceChildren(this.raiz);
 
     /* ── topo ── */
@@ -188,12 +230,11 @@ export class PuzzleScreen {
     espaco.className = "espaco";
 
     if (opcoes.aoVoltar !== undefined) {
-      const voltar = botao("‹", "redondo");
-      voltar.setAttribute("aria-label", "voltar à lista");
-      voltar.addEventListener("click", () => {
-        opcoes.aoVoltar?.();
-      });
-      topo.appendChild(voltar);
+      topo.appendChild(
+        botaoRedondo(iconeVoltar(), "voltar à lista", () => {
+          this.pedirParaSair();
+        }),
+      );
     }
 
     topo.append(this.elTitulo, espaco, this.elRelogio, this.elMeta);
@@ -210,6 +251,7 @@ export class PuzzleScreen {
     /* ── palco ── */
     const palco = document.createElement("div");
     palco.className = "palco";
+    this.palco = palco;
 
     /* ── rodapé ── */
     const rodape = document.createElement("footer");
@@ -266,14 +308,26 @@ export class PuzzleScreen {
 
     acoes.append(corrigir, this.btDica);
 
+    /*
+     * ── O painel de fim vive no palco ──
+     *
+     * Estava no rodapé, debaixo dos botões — no canto de baixo do ecrã, com o
+     * palco inteiro vazio por cima e o convite «toca nas peças» ainda à vista.
+     * O olho está no tabuleiro quando a última peça sai, e é aí que o
+     * resultado tem de aparecer: o palco ficou vazio, portanto não tapa nada.
+     *
+     * É posto antes do `BoardView` e é absoluto: não entra na conta do espaço
+     * que o tabuleiro tem para crescer.
+     */
     this.elFim = document.createElement("div");
     this.elFim.className = "fim";
     // Anunciado por leitor de ecrã: quem não vê o painel aparecer também tem de
-    // saber que o tabuleiro encravou, senão fica a tocar em peças sem resposta.
+    // saber que o nível acabou.
     this.elFim.setAttribute("role", "status");
     this.elFim.hidden = true;
+    palco.appendChild(this.elFim);
 
-    rodape.append(linha, acoes, this.elFim);
+    rodape.append(linha, acoes);
     this.elBeco = document.createElement("dialog");
     this.elBeco.className = "popup";
     this.elBeco.addEventListener("click", (e) => {
@@ -297,8 +351,17 @@ export class PuzzleScreen {
        * Pergunta só quando há o que perder. Num tabuleiro por tocar, reiniciar
        * não faz nada — e uma caixa que aparece sempre aprende-se a despachar
        * sem ler, o que a torna pior do que não existir.
+       *
+       * Um nível acabado também não tem nada a perder: o selo e o tempo já
+       * foram gravados, e reiniciar é jogá-lo outra vez — como tentativa nova,
+       * ver `novaTentativa`.
        */
-      if (this.estado.game.moves === 0 && this.estado.game.selection.length === 0) {
+      if (isFinished(this.estado.game)) {
+        this.novaTentativa();
+        return;
+      }
+
+      if (!this.haPartidaEmJogo() && this.estado.game.selection.length === 0) {
         this.reiniciar();
         return;
       }
@@ -316,10 +379,49 @@ export class PuzzleScreen {
       this.pedirDica();
     });
 
+    /*
+     * ── O cronómetro pára com a aplicação em segundo plano ──
+     *
+     * É um recorde pessoal, e o recorde mede o tempo a pensar no tabuleiro —
+     * não o tempo que o telemóvel passou no bolso. Sem isto, atender uma
+     * chamada a meio de um nível dava um «melhor tempo» de cinco minutos. O
+     * Survival já fazia o mesmo; a campanha tinha ficado de fora.
+     */
+    this.aoMudarVisibilidade = () => {
+      if (document.visibilityState === "hidden") this.pausarCronometro();
+      else this.retomarCronometro();
+    };
+    document.addEventListener("visibilitychange", this.aoMudarVisibilidade);
+
     this.pintar();
   }
 
+  /**
+   * O botão **para trás** do Android, antes de sair do ecrã.
+   *
+   * `true` quer dizer que o ecrã tratou do gesto e a navegação não deve
+   * acontecer. Duas coisas a tratar, por esta ordem:
+   *
+   * - **O seletor do joker aberto fecha-se.** É o que se espera de um botão de
+   *   voltar, e antes ele saía do nível com a escolha a meio.
+   * - **Uma partida a meio pergunta**, como a seta do cabeçalho. O gesto de
+   *   voltar dispara-se da borda do ecrã sem querer com muito mais facilidade
+   *   do que se carrega num botão, e deitava fora o nível inteiro.
+   */
+  interceptarVoltar(): boolean {
+    if (this.picker.estaAberto) {
+      this.picker.fechar();
+      return true;
+    }
+
+    if (!this.haPartidaEmJogo()) return false;
+
+    this.pedirParaSair();
+    return true;
+  }
+
   destruir(): void {
+    document.removeEventListener("visibilitychange", this.aoMudarVisibilidade);
     this.pararCronometro();
     /*
      * Fechar antes de remover. Um `<dialog>` modal vive na camada de topo do
@@ -334,6 +436,42 @@ export class PuzzleScreen {
   }
 
   /* ─── ações ─────────────────────────────────────────────────────────────── */
+
+  /**
+   * Há jogadas feitas que sair deitaria fora?
+   *
+   * Um nível acabado já não tem: o resultado está gravado. Um nível por tocar
+   * também não.
+   */
+  private haPartidaEmJogo(): boolean {
+    const jogo = this.estado.game;
+    return !isFinished(jogo) && jogo.moves > 0;
+  }
+
+  /**
+   * Sair para a lista, perguntando só quando há o que perder.
+   *
+   * A mesma regra do reiniciar e do Contra-Relógio. Antes a seta saía sempre
+   * sem perguntar, e o reiniciar ao lado — que perde exatamente o mesmo —
+   * pedia confirmação.
+   */
+  private pedirParaSair(): void {
+    const sair = (): void => {
+      this.opcoes.aoVoltar?.();
+    };
+
+    if (!this.haPartidaEmJogo()) {
+      sair();
+      return;
+    }
+
+    confirmar(this.raiz, {
+      titulo: "Sair do nível?",
+      texto: "As jogadas feitas até aqui perdem-se.",
+      confirmar: "Sair",
+      aoConfirmar: sair,
+    });
+  }
 
   private async tocar(p: Packed, jokerAs?: JokerValue): Promise<void> {
     const antes = this.estado.game;
@@ -393,12 +531,11 @@ export class PuzzleScreen {
   /**
    * A linha do recorde: ou bateu, ou fica a saber o que tem de bater.
    *
-   * O `melhorTempoMs` que chega é o de **antes** desta partida — o `main.ts`
-   * grava depois de o painel aparecer. É o que permite dizer "novo recorde" sem
-   * comparar o tempo consigo próprio.
+   * Compara com o `recordeAntes` — o melhor de **antes** desta partida. É o
+   * que permite dizer "novo recorde" sem comparar o tempo consigo próprio.
    */
   private marcaDoRecorde(): HTMLElement {
-    const anterior = this.opcoes.melhorTempoMs ?? 0;
+    const anterior = this.recordeAntes;
     const agora = this.paradoMs;
 
     const linha = document.createElement("div");
@@ -412,7 +549,7 @@ export class PuzzleScreen {
     if (anterior === 0 || agora < anterior) {
       linha.dataset["novo"] = "sim";
       linha.textContent =
-        anterior === 0 ? "primeiro tempo" : `novo recorde — era ${relogio(anterior)}`;
+        anterior === 0 ? "primeiro tempo" : `novo recorde, era ${relogio(anterior)}`;
       return linha;
     }
 
@@ -424,10 +561,10 @@ export class PuzzleScreen {
     await this.view.aplicarJogada(grupo);
   }
 
-  /** Quanto vai o cronómetro, esteja ele a andar ou já parado. */
+  /** Quanto vai o cronómetro, esteja ele a andar, em pausa ou já parado. */
   private decorrido(): number {
     if (this.inicioMs === undefined) return this.paradoMs;
-    return Date.now() - this.inicioMs;
+    return (this.pausaMs ?? Date.now()) - this.inicioMs;
   }
 
   private arrancarCronometro(): void {
@@ -444,9 +581,30 @@ export class PuzzleScreen {
     this.cronometro = undefined;
 
     if (this.inicioMs !== undefined) {
-      this.paradoMs = Date.now() - this.inicioMs;
+      this.paradoMs = this.decorrido();
       this.inicioMs = undefined;
     }
+    this.pausaMs = undefined;
+  }
+
+  /** Congela o decorrido — a aplicação foi para segundo plano. */
+  private pausarCronometro(): void {
+    if (this.inicioMs === undefined || this.pausaMs !== undefined) return;
+
+    this.pausaMs = Date.now();
+    if (this.cronometro !== undefined) clearInterval(this.cronometro);
+    this.cronometro = undefined;
+  }
+
+  /** Desloca o início pelo tempo parado, e o relógio continua de onde ia. */
+  private retomarCronometro(): void {
+    if (this.inicioMs === undefined || this.pausaMs === undefined) return;
+
+    this.inicioMs += Date.now() - this.pausaMs;
+    this.pausaMs = undefined;
+    this.cronometro ??= setInterval(() => {
+      this.pintarRelogio();
+    }, PASSO_RELOGIO);
   }
 
   private pintarRelogio(): void {
@@ -460,8 +618,31 @@ export class PuzzleScreen {
     this.pintar();
   }
 
+  /**
+   * Recomeçar **a meio**: a mesma tentativa, com o reinício a contar para o
+   * selo. É o custo desenhado — quem recomeça para fugir de um erro não sai
+   * com «Perfeito» (ver `seal`).
+   */
   private reiniciar(): void {
-    this.estado = restartPuzzle(this.estado);
+    this.recomecarCom(restartPuzzle(this.estado));
+  }
+
+  /**
+   * Jogar **outra vez** um nível acabado: uma tentativa nova, com o selo todo
+   * em jogo.
+   *
+   * Não é o mesmo que reiniciar. O `restartPuzzle` guarda os undos e soma um
+   * reinício, e com ele o «Repetir» do painel de fim convidava a caçar o
+   * «Perfeito» numa partida que já só podia dar «Concluído» — por muito bem que
+   * fosse jogada. Acabar o nível fecha a tentativa; a seguinte começa do zero,
+   * exatamente como se o jogador tivesse voltado à grelha e entrado outra vez.
+   */
+  private novaTentativa(): void {
+    this.recomecarCom(startPuzzle(this.estado.game.level));
+  }
+
+  private recomecarCom(estado: PuzzleState): void {
+    this.estado = estado;
 
     this.pararCronometro();
     this.paradoMs = 0;
@@ -676,14 +857,16 @@ export class PuzzleScreen {
     if (!isFinished(jogo)) {
       this.elFim.hidden = true;
       delete this.elFim.dataset["tipo"];
+      this.marcarTerminado(false);
       return;
     }
 
     this.elFim.dataset["tipo"] = "ganhou";
 
     const selo = seal(this.estado) ?? "completed";
+    const acabouAgora = this.elFim.hidden;
 
-    if (this.elFim.hidden) {
+    if (acabouAgora) {
       this.pararCronometro();
       vibrarVitoria();
       this.opcoes.aoTerminar?.({
@@ -691,29 +874,98 @@ export class PuzzleScreen {
         selo,
         tempoMs: this.paradoMs,
       });
+
+      // O recorde a bater passa a ser o desta partida, se o bateu: quem
+      // carregar em «Repetir» compara-se com o que acabou de fazer.
+      this.recordeAntes = this.recorde;
+      if (this.paradoMs > 0 && (this.recorde === 0 || this.paradoMs < this.recorde)) {
+        this.recorde = this.paradoMs;
+      }
     }
 
     this.elFim.hidden = false;
+    this.marcarTerminado(true);
+
+    /*
+     * O selo é o título, e leva o glifo da grelha à frente — é o que o jogador
+     * vai lá encontrar. O tempo vem logo a seguir e em grande, porque é a única
+     * coisa do painel que muda de partida para partida sem mudar o selo.
+     */
+    const cabeca = document.createElement("div");
+    cabeca.className = "fim-cabeca";
+
+    const glifo = document.createElement("span");
+    glifo.className = "fim-glifo";
+    glifo.dataset["selo"] = selo;
+    glifo.setAttribute("aria-hidden", "true");
+    glifo.textContent = SELO_GLIFO[selo] ?? "";
 
     const titulo = document.createElement("div");
     titulo.className = "selo";
     titulo.textContent = SELO_TEXTO[selo] ?? selo;
 
-    const detalhe = document.createElement("div");
-    detalhe.className = "detalhe";
-    detalhe.textContent =
-      `${relogio(this.paradoMs)} · ${String(jogo.moves)} jogadas · ` +
-      `${String(jogo.undos)} undos · ${String(jogo.hints)} dicas`;
+    cabeca.append(glifo, titulo);
 
-    this.elFim.replaceChildren(titulo, detalhe, this.marcaDoRecorde());
+    const tempo = document.createElement("div");
+    tempo.className = "fim-tempo";
+    tempo.textContent = relogio(this.paradoMs);
+
+    /*
+     * Os três números em colunas, e não numa frase com pontos a separar: são
+     * três contagens que se comparam de relance com as da última vez, e uma
+     * frase tem de se ler até ao fim para se chegar à terceira.
+     */
+    const detalhe = document.createElement("div");
+    detalhe.className = "detalhe fim-numeros";
+    detalhe.append(
+      numeroFim(jogo.moves, "jogadas"),
+      numeroFim(jogo.undos, "desfeitas"),
+      numeroFim(jogo.hints, "dicas"),
+    );
+
+    const acoes = document.createElement("div");
+    acoes.className = "acoes fim-acoes";
+
+    const repetir = botao("Repetir", "com-icone");
+    repetir.prepend(iconeReiniciar());
+    repetir.addEventListener("click", () => {
+      this.novaTentativa();
+    });
+    acoes.appendChild(repetir);
+
+    let principal: HTMLButtonElement = repetir;
 
     if (this.opcoes.aoPedirSeguinte !== undefined) {
-      const seguinte = botao("Nível seguinte", "primario");
+      const seguinte = botao("Nível seguinte", "primario com-icone");
+      seguinte.appendChild(iconeSeguir());
       seguinte.addEventListener("click", () => {
         this.opcoes.aoPedirSeguinte?.();
       });
-      this.elFim.appendChild(seguinte);
+      acoes.appendChild(seguinte);
+      principal = seguinte;
     }
+
+    this.elFim.replaceChildren(cabeca, tempo, detalhe, this.marcaDoRecorde(), acoes);
+
+    /*
+     * Quem jogou por teclado continua no teclado: o foco passa para a ação
+     * principal. Quem jogou com o dedo não ganha anel de foco nenhum — o
+     * `:focus-visible` só se acende quando a última interação foi de teclado.
+     */
+    if (acabouAgora && document.activeElement?.closest(".tabuleiro") != null) {
+      principal.focus({ preventScroll: true });
+    }
+  }
+
+  /**
+   * O palco em estado de fim: o tabuleiro recua e o convite para tocar em peças
+   * sai. Um convite a jogar debaixo de um nível acabado era uma contradição à
+   * vista.
+   */
+  private marcarTerminado(terminado: boolean): void {
+    this.palco.classList.toggle("terminado", terminado);
+    if (terminado) this.raiz.dataset["estado"] = "fim";
+    else delete this.raiz.dataset["estado"];
   }
 
   /**
@@ -745,9 +997,7 @@ export class PuzzleScreen {
     const jogo = this.estado.game;
     const restantes = jogo.board.reduce((n, col) => n + col.length, 0);
 
-    const fechar = botao("✕", "redondo");
-    fechar.setAttribute("aria-label", "ver o tabuleiro");
-    fechar.addEventListener("click", () => {
+    const fechar = botaoRedondo(iconeFechar(), "ver o tabuleiro", () => {
       this.esconderBeco();
     });
 
@@ -877,6 +1127,18 @@ function spanParcelas(s: string): HTMLElement {
   const el = document.createElement("span");
   el.className = "parcelas";
   el.textContent = s;
+  return el;
+}
+
+/** Uma coluna dos números do fim: o valor em cima, o que ele conta por baixo. */
+function numeroFim(n: number, rotulo: string): HTMLElement {
+  const el = document.createElement("span");
+  el.className = "fim-numero";
+
+  const valor = document.createElement("b");
+  valor.textContent = String(n);
+
+  el.append(valor, texto(rotulo));
   return el;
 }
 

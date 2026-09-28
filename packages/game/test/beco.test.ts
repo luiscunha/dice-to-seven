@@ -100,7 +100,10 @@ describe("beco sem saída", () => {
 
   it("o ✕ fecha sem sair do beco, e não o traz de volta sozinho", async () => {
     await jogadaFatal();
-    botao("✕")?.click();
+    // O `✕` é um ícone: encontra-se pelo nome que se ouve, não pelo desenho.
+    popup()
+      ?.querySelector<HTMLButtonElement>('[aria-label="ver o tabuleiro"]')
+      ?.click();
 
     expect(popup()?.open).toBe(false);
 

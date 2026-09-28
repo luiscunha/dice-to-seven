@@ -18,9 +18,21 @@
   display: none !important;
 }
 
+/*
+ * A coluna é `minmax(0, 1fr)`, e não a omissão — e é isso que deixa o tabuleiro
+ * encolher.
+ *
+ * Um item de grelha tem `min-width: auto`, portanto nunca fica mais estreito do
+ * que o conteúdo. O tabuleiro tem largura fixa em píxeis (é o `BoardView` que a
+ * calcula), e com a omissão o palco ficava preso a ela: estreitar a janela não
+ * encolhia o palco, o `ResizeObserver` nunca disparava, e o tabuleiro saía pela
+ * direita com uma barra de rolagem por baixo. Acontecia a redimensionar a janela
+ * num computador, e no Android em ecrã dividido ou num dobrável a fechar.
+ */
 .ecra {
   height: 100%;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto 1fr auto;
   gap: 12px;
   max-width: 920px;
@@ -30,33 +42,57 @@
 
 /* ─── Cabeçalho ───────────────────────────────────────────────────────────── */
 
+/*
+ * O cabeçalho é **uma linha só**, sempre.
+ *
+ * Quebrava: num nível com joker, o andaime «faces somam 62» mais o `?` não
+ * cabiam em 375px, e o `?` descia sozinho para uma segunda linha — 50px de
+ * tabuleiro a menos por causa de um botão. Agora quem cede é a meta, que quebra
+ * **por dentro** em duas linhas pequenas encostadas à direita, e em último caso
+ * o título, que corta com reticências. Os botões nunca: são alvos de toque.
+ */
 .topo {
   display: flex;
   align-items: center;
   gap: 12px;
-  flex-wrap: wrap;
-  min-height: 40px;
+  flex-wrap: nowrap;
+  min-height: var(--alvo);
 }
 
 .topo h1 {
-  font-size: 17px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-size: 18px;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
   margin: 0;
+  /*
+   * O título não encolhe enquanto couber em metade da linha: a meta cede
+   * primeiro. As reticências são só para o ecrã que nem assim chega.
+   */
+  flex-shrink: 0;
+  max-width: 50%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /*
- * A meta encosta à direita por `margin-left: auto` e não só pela ordem: quando o
- * cabeçalho quebra de linha num ecrã estreito, o `.espaco` vai com a primeira
- * linha e deixava a contagem de peças à esquerda na segunda.
+ * A meta encosta à direita por `margin-left: auto` e não só pela ordem, e é o
+ * item que encolhe: as suas entradas passam a linhas próprias antes de o
+ * cabeçalho precisar de mais largura do que tem.
  */
 .topo .meta {
   color: var(--ink-muted);
   font-size: 14px;
+  line-height: 1.35;
   font-variant-numeric: tabular-nums;
   display: flex;
-  gap: 14px;
+  justify-content: flex-end;
+  /* Quando quebra, as duas linhas ficam juntas ao meio, e não esticadas. */
+  align-content: center;
+  gap: 0 14px;
   flex-wrap: wrap;
+  min-width: 0;
   margin-left: auto;
   text-align: right;
 }
@@ -68,11 +104,26 @@
 /* ─── Tabuleiro ───────────────────────────────────────────────────────────── */
 
 .palco {
-  /* Contexto de posicionamento do seletor do joker, que ancora à peça. */
+  /*
+   * Contexto de posicionamento do seletor do joker, que ancora à peça, e do
+   * painel de fim, que abre por cima do tabuleiro.
+   */
   position: relative;
   display: grid;
   place-items: center;
   min-height: 0;
+  min-width: 0;
+  /*
+   * Entre o palco encolher e o `ResizeObserver` redimensionar o tabuleiro há um
+   * passo de layout em que o tabuleiro ainda tem a largura antiga. Cortado na
+   * horizontal, esse passo não gera largura de página — e no Chrome para
+   * Android uma página que foi larga uma vez fica a poder rolar para o lado.
+   *
+   * Só na horizontal: na vertical a linha do Survival cai de **fora** do palco,
+   * por cima da fila, e cortá-la era esconder a queda que foi desenhada para se
+   * ver de ponta a ponta.
+   */
+  overflow-x: clip;
   background: var(--tray);
   border-radius: var(--raio);
   padding: clamp(8px, 2vw, 20px);
@@ -82,6 +133,42 @@
   position: relative;
   /* A caixa não encolhe a meio do nível: o tabuleiro perde peças, não âncora. */
   flex: none;
+  transition: opacity var(--t-ui) linear;
+}
+
+/*
+ * O foco do teclado está na grelha, mas o que se desenha é o **cursor** — a
+ * peça onde o Enter vai tocar. Um anel à volta do tabuleiro inteiro diria que o
+ * tabuleiro tem o foco, que é verdade e não serve para nada.
+ *
+ * Contorno e não sombra: a sombra já é o anel da seleção e o da dica, e um
+ * terceiro anel do mesmo tipo seria uma terceira coisa a distinguir por
+ * espessura. O contorno fica **fora** da peça, com folga — nunca se sobrepõe
+ * ao anel de seleção, e lê-se sobre qualquer face.
+ */
+.tabuleiro:focus-visible {
+  outline: none;
+}
+
+.tabuleiro:focus-visible .peca.cursor {
+  outline: 2.5px solid var(--ink);
+  outline-offset: 3px;
+  z-index: 3;
+}
+
+/*
+ * Nível acabado: o tabuleiro recua e deixa de receber toques, e o painel de fim
+ * fica sozinho no palco. Na campanha o tabuleiro já está vazio; no
+ * Contra-Relógio é o tabuleiro que o relógio deixou por acabar.
+ */
+.palco.terminado .tabuleiro {
+  opacity: 0.25;
+  pointer-events: none;
+}
+
+.ecra[data-estado="fim"] .linha-selecao,
+.ecra[data-estado="fim"] .rodape > .soma {
+  visibility: hidden;
 }
 
 .peca {
@@ -404,10 +491,20 @@
   align-items: center;
 }
 
-/* Os dois de corrigir andam juntos, e o espaço menor diz que são um par. */
+/*
+ * Os dois de corrigir andam juntos, e o espaço menor diz que são um par. Com o
+ * dedo o espaço cresce um pouco: dois alvos de 44 encostados a 6px são dois
+ * alvos onde o polegar acerta nos dois.
+ */
 .grupo-acoes {
   display: flex;
   gap: 6px;
+}
+
+@media (pointer: coarse) {
+  .grupo-acoes {
+    gap: 10px;
+  }
 }
 
 .btn {
@@ -415,7 +512,7 @@
   font-size: 14px;
   font-weight: 500;
   padding: 8px 16px;
-  min-height: 40px;
+  min-height: var(--alvo);
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface);
@@ -426,8 +523,29 @@
     border-color var(--t-ui) linear;
 }
 
-.btn:hover:not(:disabled) {
-  border-color: var(--ink-muted);
+/*
+ * O realce de passagem só onde há passagem.
+ *
+ * Num ecrã tátil o `:hover` fica colado ao último botão tocado até se tocar
+ * noutro sítio — e um botão que continua realçado depois de o dedo sair lê-se
+ * como um botão que ficou premido.
+ */
+@media (hover: hover) {
+  .btn:hover:not(:disabled) {
+    border-color: var(--ink-muted);
+  }
+}
+
+/*
+ * O toque afunda o botão um píxel. É a confirmação de que o dedo acertou, e
+ * chega antes de qualquer consequência — no telemóvel, antes da vibração ser
+ * sequer percebida. Um píxel e sem transição: é contacto, não animação.
+ */
+.btn:active:not(:disabled),
+.home-modo:active,
+.banda:active,
+.nivel:active {
+  translate: 0 1px;
 }
 
 .btn:disabled {
@@ -469,8 +587,8 @@
  * ficasse mais estreito do que o dedo ao perder a palavra.
  */
 .btn.so-icone {
-  width: 40px;
-  min-width: 40px;
+  width: var(--alvo);
+  min-width: var(--alvo);
   padding: 0;
   display: grid;
   place-items: center;
@@ -492,26 +610,116 @@
 
 /* ─── Fim de nível ────────────────────────────────────────────────────────── */
 
+/*
+ * O painel de fim, a meio do palco.
+ *
+ * Entra como o pop-up do beco — 8px e 200ms, sem ressalto — porque é a mesma
+ * coisa: uma mudança de estado a explicar-se. Não há fanfarra, nem confetes,
+ * nem escala; o selo e o tempo chegam, e há um botão para o nível seguinte
+ * (desenho §9).
+ *
+ * `translate` centra e a animação usa `transform`: as duas propriedades
+ * compõem-se, e a entrada não desfaz a centragem.
+ */
 .fim {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  z-index: 6;
+  width: min(360px, calc(100% - 24px));
+  max-height: calc(100% - 16px);
+  overflow-y: auto;
+
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  align-items: flex-start;
-  padding: 14px 16px;
+  align-items: center;
+  gap: 4px;
+  padding: 20px 20px 18px;
+  text-align: center;
+
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--raio);
+  border-radius: calc(var(--raio) + 4px);
+  box-shadow: var(--sombra);
+  animation: entrar-popup 200ms var(--suavizacao) backwards;
+}
+
+.fim-cabeca {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/*
+ * O glifo do selo, com a cor que tem na grelha: só o perfeito ganha a cor de
+ * destaque. É a única cor do painel, e está no único sítio que a merece.
+ */
+.fim-glifo {
+  font-size: 20px;
+  line-height: 1;
+  color: var(--ink-muted);
+}
+
+.fim-glifo[data-selo="perfect"] {
+  color: var(--accent);
 }
 
 .fim .selo {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+/* O número da partida — o tempo na campanha, os pontos no Contra-Relógio. */
+.fim-tempo {
+  font-size: 36px;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  font-variant-numeric: tabular-nums;
 }
 
 .fim .detalhe {
   color: var(--ink-muted);
   font-size: 14px;
   font-variant-numeric: tabular-nums;
+}
+
+.fim-numeros {
+  display: flex;
+  justify-content: center;
+  gap: 22px;
+  margin-top: 6px;
+}
+
+.fim-numero {
+  display: grid;
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.fim-numero b {
+  font-size: 17px;
+  font-weight: 650;
+  color: var(--ink);
+}
+
+.fim-acoes {
+  width: 100%;
+  margin-top: 14px;
+  flex-wrap: nowrap;
+}
+
+/* Os dois botões dividem a largura: nenhum deles é um link escondido. */
+.fim-acoes > .btn {
+  flex: 1 1 0;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.fim .recorde:not([hidden]) {
+  margin-top: 6px;
 }
 
 /* ─── Beco sem saída ──────────────────────────────────────────────────────── */
@@ -570,7 +778,8 @@
 
 .popup-titulo {
   margin: 0;
-  padding-right: 32px;
+  /* Espaço para o `✕`, que é um alvo de toque inteiro no canto. */
+  padding-right: calc(var(--alvo) - 4px);
   font-size: 20px;
   font-weight: 700;
   letter-spacing: -0.01em;
@@ -609,7 +818,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .popup[open],
-  .popup[open]::backdrop {
+  .popup[open]::backdrop,
+  .fim {
     animation: none;
   }
 }
@@ -657,8 +867,10 @@
   transition: background var(--t-ui) linear;
 }
 
-.joker-opcao:hover {
-  background: var(--surface-alt);
+@media (hover: hover) {
+  .joker-opcao:hover {
+    background: var(--surface-alt);
+  }
 }
 
 .joker-opcao[aria-current="true"] {
@@ -844,23 +1056,47 @@
 /*
  * O `‹` de voltar e o `?` da ajuda. Ficam no topo e não no rodapé porque não são
  * ações de jogo — não pertencem à mesma família que Desfazer e Dica.
+ *
+ * Grelha e não texto centrado: o conteúdo é um ícone SVG (ou o `?`), e um SVG
+ * em linha assenta na linha de base e fica dois píxeis acima do centro.
  */
 .btn.redondo {
-  width: 40px;
+  width: var(--alvo);
+  height: var(--alvo);
+  flex: none;
+  display: inline-grid;
+  place-items: center;
   padding: 0;
   border-radius: 50%;
-  font-size: 20px;
+  font-size: 19px;
+  font-weight: 600;
   line-height: 1;
   color: var(--ink-muted);
 }
 
+.btn.redondo .icone {
+  width: 20px;
+  height: 20px;
+}
+
 /* ─── Home ────────────────────────────────────────────────────────────────── */
 
+/*
+ * Quatro faixas: a barra com as definições, a marca, os modos, e uma folga no
+ * fundo. A marca fica com o espaço que sobra por cima, e os modos descem para o
+ * terço de baixo do ecrã — que num telemóvel é onde o polegar chega sem esticar.
+ */
 .ecra.home {
-  grid-template-rows: 1fr auto auto auto;
-  place-items: center;
-  gap: 24px;
+  grid-template-rows: auto minmax(0, 1fr) auto minmax(16px, 0.3fr);
+  justify-items: center;
+  gap: 20px;
   text-align: center;
+}
+
+.home-barra {
+  justify-self: stretch;
+  display: flex;
+  justify-content: flex-end;
 }
 
 .home-marca {
@@ -901,17 +1137,27 @@
 .home-modos {
   display: grid;
   gap: 10px;
-  width: min(340px, 100%);
+  width: min(380px, 100%);
 }
 
+/*
+ * Um cartão de modo: ícone, texto e seta, numa linha.
+ *
+ * O ícone vai numa placa própria, e é o que faz os três cartões lerem-se como
+ * três sítios diferentes antes de se ler uma palavra. A seta à direita diz que
+ * o cartão leva a outro ecrã.
+ */
 .home-modo {
   display: grid;
-  gap: 2px;
-  padding: 16px 20px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  min-height: 68px;
+  padding: 12px 14px 12px 12px;
   font: inherit;
   text-align: left;
   border: 1px solid var(--line);
-  border-radius: var(--raio);
+  border-radius: calc(var(--raio) + 4px);
   background: var(--surface);
   color: var(--ink);
   cursor: pointer;
@@ -920,8 +1166,10 @@
     border-color var(--t-ui) linear;
 }
 
-.home-modo:hover {
-  border-color: var(--ink-muted);
+@media (hover: hover) {
+  .home-modo:hover {
+    border-color: var(--ink-muted);
+  }
 }
 
 .home-modo.primario {
@@ -930,30 +1178,92 @@
   color: var(--on-accent);
 }
 
+.home-modo-icone {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--raio);
+  background: var(--surface-alt);
+  color: var(--accent);
+}
+
+.home-modo.primario .home-modo-icone {
+  background: rgb(255 255 255 / 0.14);
+  color: inherit;
+}
+
+.home-modo-icone .icone {
+  width: 24px;
+  height: 24px;
+}
+
+.home-modo > .icone-seguir {
+  color: var(--ink-muted);
+}
+
+.home-modo.primario > .icone-seguir {
+  color: inherit;
+  opacity: 0.75;
+}
+
+.home-modo-texto {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.home-modo-cabeca {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+}
+
 .home-modo-titulo {
-  font-size: 18px;
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+/*
+ * O número de quem volta. Na cor de destaque, porque é a única coisa do cartão
+ * que mudou desde a última vez que o jogador o viu.
+ */
+.home-modo-estado {
+  font-size: 13px;
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--accent);
+}
+
+.home-modo.primario .home-modo-estado {
+  color: inherit;
+  opacity: 0.85;
+}
+
+/*
+ * Uma corrida à espera é a única coisa da Home que pede ação, e é a única
+ * etiqueta cheia. Diz que tocar no cartão retoma em vez de começar.
+ */
+.home-modo-estado[data-a-meio="sim"] {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
 }
 
 .home-modo-legenda {
   font-size: 13px;
-  opacity: 0.75;
-}
-
-.home-resumo {
-  display: grid;
-  gap: 2px;
-  font-size: 13px;
+  line-height: 1.35;
   color: var(--ink-muted);
-  font-variant-numeric: tabular-nums;
 }
 
-.home-resumo p {
-  margin: 0;
-}
-
-.home-rodape {
-  align-self: start;
+.home-modo.primario .home-modo-legenda {
+  color: inherit;
+  opacity: 0.8;
 }
 
 /* ─── Lista de bandas ─────────────────────────────────────────────────────── */
@@ -967,9 +1277,9 @@
 .banda {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 14px 16px;
+  gap: 14px;
+  min-height: 64px;
+  padding: 12px 14px 12px 16px;
   font: inherit;
   text-align: left;
   border: 1px solid var(--line);
@@ -980,14 +1290,34 @@
   transition: border-color var(--t-ui) linear;
 }
 
-.banda:hover {
-  border-color: var(--ink-muted);
+@media (hover: hover) {
+  .banda:hover {
+    border-color: var(--ink-muted);
+  }
+}
+
+/*
+ * O capítulo em curso é para onde o jogador provavelmente vai, e é o único com
+ * o contorno em destaque. Um capítulo acabado lê-se pelo número.
+ */
+.banda[data-estado="em-curso"] {
+  border-color: var(--accent);
+}
+
+.banda[data-estado="completo"] .banda-conta {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.banda > .icone-seguir {
+  color: var(--ink-muted);
 }
 
 .banda-texto {
   display: grid;
   gap: 2px;
   min-width: 0;
+  flex: 1;
 }
 
 .banda-nome {
@@ -1043,14 +1373,28 @@
     background var(--t-ui) linear;
 }
 
-.nivel:hover {
-  border-color: var(--ink-muted);
+@media (hover: hover) {
+  .nivel:hover {
+    border-color: var(--ink-muted);
+  }
 }
 
 /* Um nível jogado lê-se antes de se ler o número. */
 .nivel[data-selo] {
   color: var(--ink);
   background: var(--surface-alt);
+}
+
+/*
+ * O nível a seguir: contorno duplo na cor de destaque e o número a cheio. É a
+ * única célula da grelha que se destaca sem selo, e é por isso que se encontra
+ * à primeira. Não pulsa nem brilha — está à espera, não a chamar.
+ */
+.nivel[data-seguinte="sim"] {
+  color: var(--accent);
+  font-weight: 700;
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
 }
 
 .nivel[data-selo="perfect"] {
@@ -1102,11 +1446,12 @@
   border-radius: 10px;
 }
 
+/* A pista do segmentado leva 2px de cada lado: por dentro, o alvo inteiro. */
 .btn.segmento {
   border: 0;
   background: transparent;
   border-radius: 8px;
-  min-height: 34px;
+  min-height: calc(var(--alvo) - 4px);
   color: var(--ink-muted);
 }
 
@@ -1126,8 +1471,10 @@
   font-weight: 600;
 }
 
-.btn.perigo:hover:not(:disabled) {
-  background: var(--surface-alt);
+@media (hover: hover) {
+  .btn.perigo:hover:not(:disabled) {
+    background: var(--surface-alt);
+  }
 }
 
 /* ─── Modo tempo ──────────────────────────────────────────────────────────── */
@@ -1148,10 +1495,6 @@
   min-width: 3ch;
 }
 
-.relogio.a-acabar {
-  color: var(--accent);
-}
-
 /*
  * Na campanha o relógio é discreto, e é a diferença entre os dois modos escrita
  * em CSS: no modo tempo o relógio **é** o jogo e domina o cabeçalho; aqui é um
@@ -1164,6 +1507,59 @@
   color: var(--ink-muted);
   min-width: 4.5ch;
   text-align: right;
+}
+
+/*
+ * ── O relógio do Contra-Relógio ──
+ *
+ * A regra de cima é da campanha, e apanhava este também: `.topo > .relogio`
+ * tem mais especificidade do que `.relogio`, e o relógio que devia dominar o
+ * cabeçalho saía a 15px e em cinzento — mais pequeno do que o título de um
+ * nível. Esta regra devolve-lhe o lugar, e centra-o como o do Survival: dois
+ * modos com relógio, o relógio no mesmo sítio.
+ *
+ * Nos últimos dez segundos passa ao vermelho do teto. É o mesmo vermelho que no
+ * Survival diz «o tabuleiro vai subir» — a mesma ameaça, a acabar-se o tempo,
+ * dita com a mesma cor. Antes mudava para a cor de destaque, que é a cor do
+ * primário e do perfeito: um aviso na cor de «está tudo bem».
+ */
+/*
+ * Os cabeçalhos dos dois modos com relógio são uma grelha de três colunas iguais
+ * nas pontas, e não uma linha flexível: com `margin-inline: auto` no relógio e
+ * `margin-left: auto` na meta, o espaço livre repartia-se por três margens e o
+ * relógio ficava a um terço do ecrã, e não ao meio. Com a grelha, o meio é o
+ * meio, seja qual for a largura da meta.
+ */
+.tempo-topo,
+.survival-topo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+}
+
+.tempo-topo > .meta,
+.survival-topo > .meta {
+  justify-self: end;
+}
+
+.tempo-topo > .relogio {
+  min-width: 3ch;
+  font-size: clamp(30px, 8vw, 40px);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  text-align: center;
+  color: var(--ink);
+  transition: color var(--t-ui) linear;
+}
+
+.tempo-topo > .relogio.a-acabar {
+  color: var(--fogo);
+}
+
+.tempo-topo .meta span:first-child {
+  color: var(--ink);
+  font-weight: 600;
 }
 
 /* O prémio sobe do sítio onde foi ganho, e desvanece. */
@@ -1231,16 +1627,25 @@
     padding: 6px;
   }
 
+  /*
+   * O cabeçalho aperta os espaços e não os alvos: com os botões a 44px, o
+   * `gap` de secretária fazia «Avançado 12 · relógio · peças · ?» quebrar em
+   * duas linhas num ecrã de 375 — e cada linha de cabeçalho é tabuleiro a menos.
+   */
+  .topo {
+    gap: 8px;
+  }
+
   .topo h1 {
-    font-size: 15px;
+    font-size: 16px;
   }
 
   .topo .meta {
     font-size: 13px;
-    gap: 10px;
+    gap: 0 10px;
   }
 
-  /* Os botões continuam nos 40px de altura: são eles o piso de toque do rodapé. */
+  /* Os botões continuam no `--alvo` de altura: são eles o piso de toque do rodapé. */
   .btn {
     padding: 8px 12px;
   }
@@ -1264,13 +1669,10 @@
   }
 
   /*
-   * O relógio do Contra-Relógio encolhe, mas continua a ser a coisa maior do
-   * ecrã. É o único elemento que o jogador tem de vigiar sem parar de olhar para
-   * o tabuleiro.
+   * O relógio do Contra-Relógio encolhe com o `clamp` da sua regra, mas
+   * continua a ser a coisa maior do ecrã. É o único elemento que o jogador tem
+   * de vigiar sem parar de olhar para o tabuleiro.
    */
-  .relogio {
-    font-size: 26px;
-  }
 }
 
 /* ─── Survival ────────────────────────────────────────────────────────────── */
@@ -1291,10 +1693,22 @@
   color: var(--ink);
 }
 
-.survival-topo .meta[data-aperto="aviso"] { color: var(--face-5); }
-.survival-topo .meta[data-aperto="critico"] {
-  color: var(--face-joker);
+/*
+ * A folga fala a língua da linha de fogo, que diz o mesmo no tabuleiro.
+ *
+ * Antes o aviso era verde (`--face-5`) e o crítico cinzento (`--face-joker`):
+ * verde lê-se como «está bem» e cinzento como «desativado», e nenhuma das duas
+ * é uma ameaça. Agora o aviso ganha peso e o crítico ganha o vermelho do teto
+ * — a cor que o jogo reserva para o perigo, e mais nada.
+ */
+.survival-topo .meta[data-aperto="aviso"] {
+  color: var(--ink);
   font-weight: 600;
+}
+
+.survival-topo .meta[data-aperto="critico"] {
+  color: var(--fogo);
+  font-weight: 700;
 }
 
 /* ─── A linha de fogo ─────────────────────────────────────────────────────── */
@@ -1572,11 +1986,30 @@
   font-weight: 600;
 }
 
-/* Sem jogadas, puxar deixa de ser opção e passa a ser a única saída. */
+/*
+ * Sem jogadas, puxar deixa de ser opção e passa a ser a única saída.
+ *
+ * O botão continua na cor do primário, e ganha um anel à volta. Antes passava a
+ * cinzento — e um botão cinzento lê-se como desativado, precisamente no momento
+ * em que é o único que faz alguma coisa.
+ */
 .survival .btn[data-urgente="sim"] {
-  background: var(--face-joker);
-  border-color: var(--face-joker);
-  color: var(--on-accent);
+  box-shadow:
+    0 0 0 2px var(--ground),
+    0 0 0 4px var(--accent);
+}
+
+/*
+ * Puxar é a ação do modo, e fica com a largura que sobra: é o alvo maior do
+ * rodapé, onde o polegar o encontra sem olhar. Recomeçar encosta à direita, do
+ * tamanho do nome — é raro, e pergunta antes.
+ */
+.survival .rodape .acoes {
+  flex-wrap: nowrap;
+}
+
+.survival .rodape .acoes > .primario {
+  flex: 1 1 auto;
 }
 
 @media (max-width: 480px) {
@@ -1587,4 +2020,172 @@
 /* Quatro faixas em vez de três: a fila entra entre o topo e o tabuleiro. */
 .ecra.survival {
   grid-template-rows: auto auto 1fr auto;
+}
+
+/* ─── Paisagem num ecrã baixo ─────────────────────────────────────────────── */
+
+/*
+ * ── O telemóvel deitado muda de composição, não de tamanho ──
+ *
+ * Com o cabeçalho em cima e o rodapé em baixo, um telemóvel em paisagem ficava
+ * com 200px de altura para o tabuleiro — e os tabuleiros são mais altos do que
+ * largos. Medido a 812×375: peças de **14px** num Médio de nove linhas, e de
+ * **12px** no Survival. Um terço do piso de toque; o jogo não se jogava.
+ *
+ * Encolher tudo não resolve, porque o que falta é altura e o que sobra é
+ * largura. Por isso o cromado **muda de sítio**: o cabeçalho passa a uma calha
+ * à esquerda, o rodapé a uma calha à direita, e o tabuleiro fica com a altura
+ * toda. O mesmo Médio passa a peças de 35px; um 7×7, a 46px.
+ *
+ * As ações ficam na calha **da direita, em baixo**: com o telemóvel deitado, os
+ * polegares estão nos lados e na metade de baixo, e é aí que tocam sem largar o
+ * aparelho.
+ *
+ * A condição é a altura, não o aparelho: uma janela de computador baixa e larga
+ * ganha a mesma composição, pela mesma razão.
+ */
+@media (orientation: landscape) and (max-height: 560px) {
+  .ecra.jogo {
+    max-width: none;
+    grid-template-columns: var(--calha) minmax(0, 1fr) var(--calha);
+    grid-template-rows: minmax(0, 1fr);
+    grid-template-areas: "topo palco rodape";
+    gap: 10px;
+    padding: 8px 12px;
+  }
+
+  .ecra.jogo > .topo {
+    grid-area: topo;
+    /* Os cabeçalhos com relógio são grelha em retrato; na calha, todos são coluna. */
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: flex-start;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  /* Na calha a meta lê-se de cima para baixo, alinhada à esquerda. */
+  .ecra.jogo > .topo .meta {
+    margin-left: 0;
+    flex-direction: column;
+    gap: 2px;
+    text-align: left;
+  }
+
+  .ecra.jogo > .topo > .relogio {
+    margin-inline: 0;
+    text-align: left;
+  }
+
+  /* Na calha há altura de sobra e largura de menos: o título quebra em vez de cortar. */
+  .ecra.jogo > .topo h1 {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .ecra.jogo > .palco {
+    grid-area: palco;
+    padding: 6px;
+  }
+
+  .ecra.jogo > .rodape {
+    grid-area: rodape;
+    justify-content: flex-end;
+    min-width: 0;
+  }
+
+  /* As ações empilham-se: a calha é estreita, e cada uma fica com a largura toda. */
+  .ecra.jogo .rodape .acoes {
+    flex-direction: column;
+    align-items: stretch;
+    flex-wrap: nowrap;
+  }
+
+  .ecra.jogo .acoes-jogo .btn.com-icone {
+    justify-content: center;
+  }
+
+  /* Desfazer e reiniciar dividem a largura da calha: alvos maiores, o mesmo par. */
+  .ecra.jogo .grupo-acoes > .btn {
+    flex: 1 1 0;
+    width: auto;
+  }
+
+  .ecra.jogo .linha-selecao {
+    min-height: 0;
+  }
+
+  /*
+   * O Survival tem a fila por cima do tabuleiro, e continua a tê-la: é de lá
+   * que as peças caem, e a queda é vertical. Fica na coluna do meio, em cima.
+   */
+  .ecra.survival {
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas:
+      "topo fila rodape"
+      "topo palco rodape";
+  }
+
+  .ecra.survival > .fila {
+    grid-area: fila;
+    padding: 4px;
+  }
+
+  .ecra.survival .fila .peca.na-fila {
+    --lado-real: 22px;
+  }
+
+  .survival-topo .relogio,
+  .tempo-topo > .relogio {
+    font-size: 28px;
+  }
+
+  .survival .rodape .acoes > .primario {
+    flex: none;
+  }
+
+  /*
+   * A Home deitada: a marca à esquerda, os modos à direita. Empilhadas, as duas
+   * partes pediam 650px de altura, e os modos — que são a única coisa para
+   * tocar — ficavam abaixo da dobra.
+   */
+  .ecra.home {
+    max-width: 880px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas:
+      "barra barra"
+      "marca modos";
+    align-items: center;
+    gap: 4px 28px;
+    padding: 8px 16px;
+  }
+
+  .home-barra {
+    grid-area: barra;
+  }
+
+  .home-marca {
+    grid-area: marca;
+    align-self: center;
+  }
+
+  .home-modos {
+    grid-area: modos;
+  }
+
+  .home-simbolo {
+    width: 64px;
+    margin-bottom: 8px;
+  }
+
+  .home-titulo {
+    font-size: 30px;
+  }
+
+  .home-modo {
+    min-height: 60px;
+    padding-block: 8px;
+  }
 }
