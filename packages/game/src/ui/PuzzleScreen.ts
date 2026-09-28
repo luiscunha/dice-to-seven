@@ -51,6 +51,7 @@ import {
   vibrarVitoria,
 } from "../plataforma/nativo";
 import { confirmar } from "./dom";
+import { iconeDesfazer, iconeDica, iconeReiniciar } from "./icones";
 import { BoardView } from "./BoardView";
 import { JokerPicker } from "./JokerPicker";
 
@@ -94,6 +95,33 @@ export interface OpcoesPuzzleScreen {
    * motivo para o bater: acabou-se de jogar e o botão de reiniciar está ali.
    */
   readonly melhorTempoMs?: number;
+
+  /**
+   * O nome do nível, como o jogador o conhece: `"Médio 23"`, `"Perito 07"`.
+   *
+   * Sem isto o cabeçalho mostrava o `id` do pack — `meio-joker-000072` — que é
+   * identidade de ficheiro e não nome de coisa. Pior do que feio: o `id` traz a
+   * **banda** à frente, e a banda é uma receita de geração que o jogador não
+   * conhece; `meio-joker` no cabeçalho de um capítulo chamado Médio contava-lhe
+   * de um sítio onde ele não está.
+   *
+   * Vem de fora porque o número é a **posição no capítulo**, e um capítulo é
+   * duas bandas intercaladas (`capitulos.ts`): o ecrã tem o nível, mas só o
+   * `main.ts` sabe em que lugar da série ele caiu.
+   */
+  readonly titulo?: string;
+
+  /**
+   * A linha da soma por baixo do tabuleiro — `3 + ✳4 = 7`, e o `faltam 3`.
+   *
+   * **Desligada por omissão, e ligada só no Tutorial.** É um andaime: faz a
+   * conta que o jogo pede ao jogador, e quem a tem à frente deixa de a fazer de
+   * cabeça. O sítio dela é onde se está a aprender a regra.
+   *
+   * Os avisos de recusa ficam sempre — ver `pintarAviso`. Explicar porque é que
+   * um toque não entrou não é fazer a conta por ninguém.
+   */
+  readonly mostrarSoma?: boolean;
 }
 
 export class PuzzleScreen {
@@ -188,7 +216,18 @@ export class PuzzleScreen {
     rodape.className = "rodape";
 
     const linha = document.createElement("div");
-    linha.className = "linha-selecao";
+    /*
+     * A linha continua a existir mesmo sem a soma, e continua a reservar altura:
+     * é dela que sai o aviso de recusa, e deixá-la encolher a zero fazia o
+     * tabuleiro saltar meia linha de cada vez que um toque não entrava.
+     *
+     * Sem a soma reserva menos, porque só lá cabe uma linha de aviso — e num
+     * telemóvel cada faixa que não é tabuleiro é peça mais pequena.
+     */
+    linha.className =
+      opcoes.mostrarSoma === true
+        ? "linha-selecao"
+        : "linha-selecao sem-soma";
 
     this.elSoma = document.createElement("div");
     this.elSoma.className = "soma";
@@ -198,14 +237,34 @@ export class PuzzleScreen {
 
     linha.append(this.elSoma, this.elAviso);
 
+    /*
+     * ── Os três botões ──
+     *
+     * Dois grupos, e a divisão diz o que cada um é. À esquerda o que **corrige**
+     * — desfazer e reiniciar, ícones sem palavra, encostados um ao outro porque
+     * são a mesma família e quem procura um procura o outro. À direita, sozinha,
+     * a dica: é a única que **gasta** algo, tem o contador a dizer quantas
+     * restam, e por isso é a única que se anuncia pelo nome.
+     *
+     * Ícones nas duas primeiras porque são gestos universais e o polegar acerta
+     * num alvo quadrado melhor do que numa palavra; texto na terceira porque uma
+     * lâmpada sozinha não diz que custa uma dica das que ainda há.
+     *
+     * Cada ícone leva `aria-label` **e** `title`: o primeiro para quem ouve o
+     * ecrã, o segundo para quem passa o rato e não reconheceu o desenho.
+     */
     const acoes = document.createElement("div");
-    acoes.className = "acoes";
+    acoes.className = "acoes acoes-jogo";
 
-    this.btDesfazer = botao("Desfazer");
-    this.btReiniciar = botao("Reiniciar");
-    this.btDica = botao("Dica");
+    this.btDesfazer = botaoIcone(iconeDesfazer(), "Desfazer");
+    this.btReiniciar = botaoIcone(iconeReiniciar(), "Reiniciar");
+    this.btDica = botao("Dica", "com-icone");
 
-    acoes.append(this.btDesfazer, this.btReiniciar, this.btDica);
+    const corrigir = document.createElement("div");
+    corrigir.className = "grupo-acoes";
+    corrigir.append(this.btDesfazer, this.btReiniciar);
+
+    acoes.append(corrigir, this.btDica);
 
     this.elFim = document.createElement("div");
     this.elFim.className = "fim";
@@ -430,15 +489,34 @@ export class PuzzleScreen {
     const jogo = this.estado.game;
     const nivel = jogo.level;
 
-    this.elTitulo.textContent = nivel.id;
+    this.elTitulo.textContent = this.opcoes.titulo ?? nivel.id;
 
     const restantes = jogo.board.reduce((n, col) => n + col.length, 0);
     const total = nivel.metrics?.pieces ?? restantes;
 
+    /*
+     * As peças ficam **em último**, encostadas à direita, e a contagem de
+     * jogadas saiu.
+     *
+     * O número de jogadas não era informação nenhuma: cada jogada tira
+     * exatamente 7, portanto `jogadas` é `soma/7` menos o que falta — o mesmo
+     * que as peças já dizem, contado por outro lado. Era a última sobra do
+     * `bestMoves`, que morreu pela mesma razão.
+     *
+     * O andaime da soma das faces vai antes, para que o par que sobra acabe na
+     * margem: com ele depois, as peças ficavam a meio da linha.
+     */
+    /*
+     * Cada entrada num `<span>` próprio, e não em nós de texto soltos.
+     *
+     * Um nó de texto **não é um item de flex** — vai para uma caixa anónima, e o
+     * `gap: 14px` da `.meta` nunca lhe chegava. Era o que colava `faces somam 62`
+     * a `26/26 peças` numa só palavra; passou despercebido enquanto a terceira
+     * entrada empurrava as outras.
+     */
     this.elMeta.replaceChildren(
-      texto(`${String(restantes)}/${String(total)} peças`),
       ...this.andaime(),
-      texto(`${String(jogo.moves)} jogadas`),
+      spanMeta(`${String(restantes)}/${String(total)} peças`),
     );
 
     this.pintarRelogio();
@@ -453,8 +531,9 @@ export class PuzzleScreen {
     this.btDica.disabled = this.estado.hintsLeft <= 0 || isFinished(jogo);
 
     this.btDica.replaceChildren(
+      iconeDica(),
       texto("Dica"),
-      spanContador(` ${String(this.estado.hintsLeft)}`),
+      spanContador(String(this.estado.hintsLeft)),
     );
 
     this.pintarFim();
@@ -476,11 +555,23 @@ export class PuzzleScreen {
     const { board } = this.estado.game;
     if (jokerAt(board) === undefined) return [];
 
-    return [texto(`faces somam ${String(totalSum(board))}`)];
+    return [spanMeta(`faces somam ${String(totalSum(board))}`)];
   }
 
   private pintarSelecao(): void {
     const jogo = this.estado.game;
+
+    /*
+     * Sem andaime, a linha da soma não existe — nem vazia. O `pintarAviso`
+     * continua a correr, porque uma recusa tem de aparecer em todos os
+     * capítulos: o que saiu foi a conta, não a explicação.
+     */
+    if (this.opcoes.mostrarSoma !== true) {
+      this.elSoma.replaceChildren();
+      this.elSoma.hidden = true;
+      this.pintarAviso();
+      return;
+    }
 
     if (jogo.selection.length === 0) {
       this.elSoma.replaceChildren(texto("Toca nas peças para somar 7"));
@@ -550,7 +641,17 @@ export class PuzzleScreen {
       return;
     }
 
-    const falta = remainingToTarget(jogo);
+    /*
+     * O `faltam N` é a mesma conta da linha da soma, dita por outras palavras, e
+     * sai com ela: fora do Tutorial ninguém diz ao jogador quanto falta.
+     *
+     * Também não faria sentido sozinho — sem seleção `faltam 7` é o alvo do
+     * jogo escrito em permanência.
+     */
+    const falta =
+      this.opcoes.mostrarSoma === true && jogo.selection.length > 0
+        ? remainingToTarget(jogo)
+        : 0;
 
     if (falta > 0) {
       this.elAviso.dataset["tipo"] = "convite";
@@ -738,7 +839,32 @@ function botao(rotulo: string, extra?: string): HTMLButtonElement {
   return b;
 }
 
+/**
+ * Um botão que é só o ícone.
+ *
+ * O nome não desaparece — muda de sítio. Vai para `aria-label`, que é o que um
+ * leitor de ecrã lê, e para `title`, que é o que aparece a quem passa o rato e
+ * não reconheceu o desenho. Um botão de ícone sem nenhum dos dois é um botão que
+ * só quem já sabe consegue usar.
+ */
+function botaoIcone(glifo: SVGElement, nome: string): HTMLButtonElement {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.className = "btn so-icone";
+  b.setAttribute("aria-label", nome);
+  b.title = nome;
+  b.appendChild(glifo);
+  return b;
+}
+
 const texto = (s: string): Text => document.createTextNode(s);
+
+/** Uma entrada da meta. Ver `pintar`: em texto solto, o `gap` não lhe chega. */
+function spanMeta(s: string): HTMLElement {
+  const el = document.createElement("span");
+  el.textContent = s;
+  return el;
+}
 
 function marca(s: string): HTMLElement {
   const el = document.createElement("span");

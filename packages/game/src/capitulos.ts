@@ -36,6 +36,20 @@ export interface Capitulo {
   readonly base: string;
   /** A banda com joker que se intercala, se houver. */
   readonly joker?: string;
+
+  /**
+   * Quantos níveis o capítulo mostra, no máximo. Ausente = todos os que houver.
+   *
+   * Existe por causa do Tutorial. A banda tem 30 níveis como todas as outras,
+   * porque o pipeline gera 30 por banda — mas um tutorial de 30 níveis de pares
+   * não ensina nada nos últimos 20: a regra aprende-se aos três, e o resto é a
+   * mesma jogada repetida antes de o jogo começar.
+   *
+   * **Corta na apresentação, não no pack.** Os níveis continuam lá, válidos e
+   * verificados, e o destino deles é o puzzle diário (desenho §8, passo 10).
+   * Tirá-los do pack era perder trabalho de geração para arrumar uma lista.
+   */
+  readonly maximo?: number;
 }
 
 export const CAPITULOS: readonly Capitulo[] = [
@@ -44,6 +58,7 @@ export const CAPITULOS: readonly Capitulo[] = [
     nome: "Tutorial",
     descricao: "Só pares. Impossível bloquear",
     base: "tutorial",
+    maximo: 10,
   },
   {
     id: "iniciado",
@@ -125,7 +140,18 @@ export function montarCapitulo(
   const base = niveisDe(capitulo.base);
   const joker = niveisDe(capitulo.joker);
 
-  if (joker.length === 0) return base;
+  /*
+   * O corte aplica-se **no fim**, à série já montada, e não à banda base.
+   * Cortar a base primeiro mudava a cadência do joker no último nível do
+   * capítulo, e um capítulo com `maximo` ficaria com uma série diferente da que
+   * teria sem ele — o mesmo nível na posição 9 hoje e na 10 amanhã.
+   */
+  const cortar = (
+    serie: readonly NivelDoCapitulo[],
+  ): readonly NivelDoCapitulo[] =>
+    capitulo.maximo === undefined ? serie : serie.slice(0, capitulo.maximo);
+
+  if (joker.length === 0) return cortar(base);
 
   const fora: NivelDoCapitulo[] = [];
   let proximoBase = 0;
@@ -153,5 +179,5 @@ export function montarCapitulo(
     fora.push(seguinte);
   }
 
-  return fora;
+  return cortar(fora);
 }

@@ -45,6 +45,11 @@
   margin: 0;
 }
 
+/*
+ * A meta encosta à direita por `margin-left: auto` e não só pela ordem: quando o
+ * cabeçalho quebra de linha num ecrã estreito, o `.espaco` vai com a primeira
+ * linha e deixava a contagem de peças à esquerda na segunda.
+ */
 .topo .meta {
   color: var(--ink-muted);
   font-size: 14px;
@@ -52,6 +57,8 @@
   display: flex;
   gap: 14px;
   flex-wrap: wrap;
+  margin-left: auto;
+  text-align: right;
 }
 
 .topo .espaco {
@@ -303,6 +310,26 @@
   pointer-events: none;
 }
 
+/*
+ * ── A peça que cai do topo (Survival) ──
+ *
+ * Transição própria, e não a da gravidade: mais lenta, com atraso por coluna, e
+ * por cima de tudo o resto enquanto viaja.
+ *
+ * O `z-index` não é enfeite — a peça parte de **fora** da caixa do tabuleiro,
+ * por cima da faixa da fila, e sem ele passava por trás dela. Era metade da
+ * razão para a linha injetada parecer aparecer do nada.
+ *
+ * O `--atraso` vem do JS, uma vez por coluna. Ver `injetarLinha`.
+ */
+.peca.a-cair {
+  transition-property: transform;
+  transition-duration: var(--t-queda);
+  transition-delay: var(--atraso, 0ms);
+  transition-timing-function: cubic-bezier(0.34, 0.01, 0.3, 1);
+  z-index: 4;
+}
+
 /* Abaixo do piso de toque: assinala-se para não passar despercebido. */
 .tabuleiro.apertado .peca {
   cursor: pointer;
@@ -323,6 +350,10 @@
   flex-wrap: wrap;
   min-height: 34px;
   font-variant-numeric: tabular-nums;
+}
+
+.linha-selecao.sem-soma {
+  min-height: 22px;
 }
 
 .soma {
@@ -356,6 +387,27 @@
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+/*
+ * ── Os botões do jogo ──
+ *
+ * Corrigir à esquerda, gastar à direita. A separação não é estética: o desfazer
+ * é grátis e prime-se sem pensar, a dica tem um contador e acaba — e num rodapé
+ * onde os três estavam encostados, o dedo que ia ao desfazer acertava na dica.
+ *
+ * `space-between` em vez de um `.espaco`: são só dois grupos, e um elemento
+ * vazio para os separar é estrutura a fazer o trabalho do layout.
+ */
+.acoes-jogo {
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Os dois de corrigir andam juntos, e o espaço menor diz que são um par. */
+.grupo-acoes {
+  display: flex;
+  gap: 6px;
 }
 
 .btn {
@@ -393,6 +445,44 @@
 .btn .contador {
   color: var(--ink-muted);
   font-variant-numeric: tabular-nums;
+}
+
+/* ─── Ícones nos botões ───────────────────────────────────────────────────── */
+
+/*
+ * O ícone herda a cor pelo `currentColor`, portanto acompanha o tema e esmorece
+ * com o `:disabled` sem uma única regra a repetir cores.
+ *
+ * `flex-shrink: 0` porque num botão apertado o texto cede primeiro — um ícone
+ * amassado deixa de ser reconhecível, e é o reconhecimento que o justifica.
+ */
+.icone {
+  width: 18px;
+  height: 18px;
+  display: block;
+  flex-shrink: 0;
+}
+
+/*
+ * O botão de ícone é **quadrado e do tamanho do alvo de toque**, não um botão de
+ * texto com o texto tirado: 40px de lado é o piso de toque, e é o que impede que
+ * ficasse mais estreito do que o dedo ao perder a palavra.
+ */
+.btn.so-icone {
+  width: 40px;
+  min-width: 40px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+}
+
+/* Com ícone e palavra na mesma linha, o espaço entre eles é do layout. Classe
+ * explícita e não `:has(> .icone)`: a regra teria de valer numa WebView antiga
+ * tanto como no Chrome, e um botão que perde o espaçamento é um botão torto. */
+.btn.com-icone {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .btn.primario .contador {
@@ -1205,6 +1295,84 @@
 .survival-topo .meta[data-aperto="critico"] {
   color: var(--face-joker);
   font-weight: 600;
+}
+
+/* ─── A linha de fogo ─────────────────────────────────────────────────────── */
+
+/*
+ * O teto do tabuleiro, desenhado.
+ *
+ * Fica no topo da caixa — que é literalmente o limite, porque a caixa é
+ * dimensionada para `alturaMaxima` linhas — e **está sempre lá**. Um aviso que
+ * só aparece quando o tabuleiro já transbordou não é aviso nenhum.
+ *
+ * Três intensidades, as mesmas do texto da folga. Discreta enquanto há espaço,
+ * porque uma linha vermelha a berrar durante uma corrida inteira deixa de se
+ * ver ao fim de meio minuto — que é o mesmo que não existir, só que mais feio.
+ *
+ * O brilho desce para dentro do tabuleiro em vez de subir: é para dentro que as
+ * peças vêm, e é a zona de perigo que se quer assinalada, não o ar por cima.
+ */
+.linha-fogo {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(var(--gap-peca) * -0.5);
+  height: 2px;
+  z-index: 3;
+  pointer-events: none;
+  border-radius: 2px;
+  background: var(--fogo);
+  opacity: var(--fogo-forca);
+  transition:
+    opacity var(--t-ui) linear,
+    box-shadow var(--t-ui) linear;
+}
+
+/* O rescaldo: um véu que desce para dentro do tabuleiro. */
+.linha-fogo::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: calc(var(--lado, 48px) * 0.55);
+  background: linear-gradient(to bottom, var(--fogo-veu), transparent);
+  pointer-events: none;
+}
+
+.linha-fogo[data-grau="folgado"] {
+  --fogo-forca: 0.3;
+}
+
+.linha-fogo[data-grau="aviso"] {
+  --fogo-forca: 0.7;
+  height: 3px;
+}
+
+/*
+ * Uma linha de folga. A pulsação é o único movimento do ecrã que não vem de uma
+ * jogada — e é por isso que se nota sem ser preciso estar a olhar para ela.
+ */
+.linha-fogo[data-grau="critico"] {
+  --fogo-forca: 1;
+  height: 3px;
+  animation: brasa 1.1s ease-in-out infinite;
+}
+
+@keyframes brasa {
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* A pulsação é aviso, não informação: sem ela a linha continua lá, e vermelha. */
+@media (prefers-reduced-motion: reduce) {
+  .linha-fogo[data-grau="critico"] {
+    animation: none;
+  }
 }
 
 .survival .multiplicador {

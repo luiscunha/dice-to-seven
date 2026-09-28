@@ -458,8 +458,17 @@ export class SurvivalScreen {
     this.elMeta.replaceChildren(
       texto(espaco === 1 ? "1 linha de folga" : `${String(espaco)} linhas de folga`),
     );
-    this.elMeta.dataset["aperto"] =
-      espaco <= 1 ? "critico" : espaco <= 2 ? "aviso" : "folgado";
+    const aperto = espaco <= 1 ? "critico" : espaco <= 2 ? "aviso" : "folgado";
+    this.elMeta.dataset["aperto"] = aperto;
+
+    /*
+     * A linha de fogo diz a mesma coisa que o texto, no sítio onde ela acontece.
+     *
+     * As duas leituras não são redundantes: o número diz **quanto** falta, a
+     * linha diz **onde**. Quem está a decidir se puxa mais uma linha precisa das
+     * duas, e nenhuma delas pode chegar só no fim.
+     */
+    this.view.marcarTeto(aperto);
   }
 
   /**
