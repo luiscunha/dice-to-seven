@@ -450,6 +450,7 @@ describe("onde é que eu ia", () => {
       aoEscolherTempo: () => undefined,
       aoEscolherSurvival: () => undefined,
       aoEscolherDefinicoes: () => undefined,
+      aoEscolherComoJogar: () => undefined,
     });
 
   it("a Home não mostra zeros a quem ainda não jogou", () => {

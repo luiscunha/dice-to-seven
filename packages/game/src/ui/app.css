@@ -265,6 +265,19 @@
 .peca[data-valor="6"] { background: var(--face-6); --tinta: var(--ink-6); }
 .peca[data-valor="0"] { background: var(--face-joker); --tinta: var(--ink-joker); }
 
+/*
+ * A peça fora do tabuleiro — na Home e nas regras (`pecaDeAmostra`, `dice.ts`).
+ *
+ * Perde as duas coisas que só fazem sentido dentro da grelha: a posição
+ * absoluta e o transform que a coloca em `(c, r)`. Fica a mesma face, com a
+ * mesma cor e o mesmo rebordo, a assentar no fluxo do texto à volta.
+ */
+.peca.amostra {
+  position: static;
+  transform: none;
+  cursor: default;
+}
+
 .pinta {
   align-self: center;
   justify-self: center;
@@ -1133,100 +1146,180 @@
 /* ─── Home ────────────────────────────────────────────────────────────────── */
 
 /*
- * Quatro faixas: a barra com as definições, a marca, os modos, e uma folga no
- * fundo. A marca fica com o espaço que sobra por cima, e os modos descem para o
- * terço de baixo do ecrã — que num telemóvel é onde o polegar chega sem esticar.
+ * Quatro faixas: a barra da marca, o lema, os modos, e o cartão das regras.
+ *
+ * Só os modos têm faixa elástica (`minmax(0, 1fr)`): é a única que pode crescer
+ * num ecrã alto e a única que tem de ficar ao alcance do polegar. As outras três
+ * medem-se pelo conteúdo, e num ecrã baixo é o espaço entre elas que cede —
+ * nunca um cartão.
+ *
+ * A Home é mais estreita do que os outros ecrãs. `.ecra` dá 920px porque um
+ * tabuleiro grande precisa deles; quatro cartões esticados a 920px num monitor
+ * liam-se como uma página de definições.
  */
 .ecra.home {
-  grid-template-rows: auto minmax(0, 1fr) auto minmax(16px, 0.3fr);
-  justify-items: center;
-  gap: 20px;
-  text-align: center;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  gap: 14px;
+  max-width: 460px;
 }
 
+/*
+ * A barra: a marca à esquerda, as definições à direita.
+ *
+ * A marca era um bloco centrado com o símbolo grande, o nome e o lema, e ficava
+ * com o terço de cima do ecrã a dizer ao jogador o nome da aplicação que ele
+ * acabou de abrir. Numa barra diz o mesmo em 40px, e o que sobra é dos modos.
+ */
 .home-barra {
-  justify-self: stretch;
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  min-height: var(--alvo);
 }
 
 .home-marca {
-  align-self: end;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  /* Empurra as definições para a direita sem um separador vazio pelo meio. */
+  margin-right: auto;
 }
 
-/*
- * O símbolo. Encolhe com o ecrã porque é a única coisa da Home que pode ceder
- * espaço sem custo — os dois modos e o rodapé não podem.
- */
 .home-simbolo {
   display: block;
-  width: clamp(72px, 21vw, 104px);
-  height: auto;
-  margin: 0 auto 12px;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
 }
 
 /*
- * O tamanho mínimo é para o nome, e o nome tem onze letras.
- *
- * Com o mínimo em 34px, "DiceToSeven" ocupava 304 de 320 e ficava a tocar nas
- * margens num iPhone SE. É a diferença entre um título e um título entalado.
+ * O nome, à medida do símbolo ao lado. Corta com reticências em vez de quebrar:
+ * "DiceToSeven" numa segunda linha desalinhava a barra inteira.
  */
 .home-titulo {
   margin: 0;
-  font-size: clamp(28px, 8.5vw, 48px);
+  font-size: 22px;
   font-weight: 700;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
   color: var(--accent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .home-lema {
-  margin: 6px 0 0;
-  font-size: 15px;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.4;
   color: var(--ink-muted);
 }
 
+/*
+ * Os modos: um cartão largo em cima, dois mosaicos por baixo.
+ *
+ * `align-content: center` porque a faixa é elástica — num ecrã alto os modos
+ * ficam ao meio do espaço que lhes sobra, e não encostados ao lema.
+ */
 .home-modos {
   display: grid;
+  align-content: center;
   gap: 10px;
-  width: min(380px, 100%);
+}
+
+.home-mosaico {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
 }
 
 /*
- * Um cartão de modo: ícone, texto e seta, numa linha.
+ * Um cartão de modo **é uma face**: a cor e a tinta vêm da rampa das peças (ver
+ * "Os três modos" em `theme.css`), e o aro de 1px é o mesmo que impede a face 1
+ * de se dissolver no papel — sem ele o mosaico do Survival, que é claro, não
+ * tinha limite contra o fundo claro.
  *
- * O ícone vai numa placa própria, e é o que faz os três cartões lerem-se como
- * três sítios diferentes antes de se ler uma palavra. A seta à direita diz que
- * o cartão leva a outro ecrã.
+ * `--cor`, `--tinta-modo` e `--placa` ficam declaradas no cartão para que tudo
+ * lá dentro — a placa do ícone, a etiqueta do estado — se sirva delas sem
+ * repetir uma cor.
  */
 .home-modo {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 14px;
-  min-height: 68px;
-  padding: 12px 14px 12px 12px;
   font: inherit;
   text-align: left;
-  border: 1px solid var(--line);
-  border-radius: calc(var(--raio) + 4px);
-  background: var(--surface);
-  color: var(--ink);
+  border: 0;
+  border-radius: calc(var(--raio) + 6px);
+  background: var(--cor);
+  color: var(--tinta-modo);
+  box-shadow: inset 0 0 0 1px var(--aro);
   cursor: pointer;
-  transition:
-    background var(--t-ui) linear,
-    border-color var(--t-ui) linear;
+  transition: box-shadow var(--t-ui) linear;
 }
 
+.home-modo[data-modo="puzzles"] {
+  --cor: var(--modo-puzzles);
+  --tinta-modo: var(--modo-puzzles-tinta);
+  --placa: var(--modo-puzzles-placa);
+}
+
+.home-modo[data-modo="tempo"] {
+  --cor: var(--modo-tempo);
+  --tinta-modo: var(--modo-tempo-tinta);
+  --placa: var(--modo-tempo-placa);
+}
+
+.home-modo[data-modo="survival"] {
+  --cor: var(--modo-survival);
+  --tinta-modo: var(--modo-survival-tinta);
+  --placa: var(--modo-survival-placa);
+}
+
+/* O realce de passagem levanta o cartão. Uma borda mudava-lhe a silhueta. */
 @media (hover: hover) {
   .home-modo:hover {
-    border-color: var(--ink-muted);
+    box-shadow:
+      inset 0 0 0 1px var(--aro),
+      var(--sombra);
   }
 }
 
+/*
+ * O cartão largo: ícone, texto e seta, numa linha.
+ *
+ * É largo porque os Puzzles são a campanha — 143 níveis e progresso para
+ * contar — e a diferença de tamanho é a hierarquia. Quem abre o jogo pela
+ * primeira vez vai por aqui, e a Home tem de o dizer sem uma palavra.
+ */
 .home-modo.primario {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--on-accent);
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  /*
+   * A altura acompanha o ecrã, com um piso e um teto.
+   *
+   * Fixa, a Home ficava com 200px de vazio por cima e por baixo dos modos num
+   * telemóvel alto, e os cartões pareciam pequenos ao meio do nada. Em `vh`
+   * sozinho, num monitor de 1400px cada cartão virava um painel. O `clamp` dá o
+   * que há sem deixar a Home crescer para fora da sua escala.
+   */
+  min-height: clamp(72px, 13vh, 112px);
+  padding: 12px 14px 12px 12px;
+}
+
+/*
+ * O mosaico: o ícone em cima, o nome em baixo, o estado por último.
+ *
+ * De cima para baixo e não numa linha, porque a coluna tem metade da largura —
+ * "Contra-Relógio" ao lado de um ícone de 44px não cabia em 375px sem hifenizar.
+ * E é a ordem em que se lê: o desenho encontra o modo, o nome confirma-o, o
+ * número é para quem voltou.
+ */
+.home-modo.compacto {
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  min-height: clamp(128px, 24vh, 200px);
+  padding: 12px;
 }
 
 .home-modo-icone {
@@ -1235,12 +1328,7 @@
   width: 44px;
   height: 44px;
   border-radius: var(--raio);
-  background: var(--surface-alt);
-  color: var(--accent);
-}
-
-.home-modo.primario .home-modo-icone {
-  background: rgb(255 255 255 / 0.14);
+  background: var(--placa);
   color: inherit;
 }
 
@@ -1250,18 +1338,15 @@
 }
 
 .home-modo > .icone-seguir {
-  color: var(--ink-muted);
-}
-
-.home-modo.primario > .icone-seguir {
   color: inherit;
-  opacity: 0.75;
+  opacity: 0.7;
 }
 
 .home-modo-texto {
   display: grid;
   gap: 2px;
   min-width: 0;
+  align-content: center;
 }
 
 .home-modo-cabeca {
@@ -1278,43 +1363,299 @@
   letter-spacing: -0.01em;
 }
 
+.home-modo.compacto .home-modo-titulo {
+  font-size: 16px;
+  align-self: end;
+}
+
 /*
- * O número de quem volta. Na cor de destaque, porque é a única coisa do cartão
- * que mudou desde a última vez que o jogador o viu.
+ * O número de quem volta: quanto já fez, qual é o recorde, se ficou alguma
+ * coisa a meio. É a única coisa do cartão que mudou desde a última vez.
  */
 .home-modo-estado {
   font-size: 13px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-  color: var(--accent);
-}
-
-.home-modo.primario .home-modo-estado {
   color: inherit;
   opacity: 0.85;
+}
+
+/* No mosaico é uma etiqueta, e não um número solto no fundo de uma caixa. */
+.home-modo.compacto .home-modo-estado {
+  justify-self: start;
+  max-width: 100%;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--placa);
+  opacity: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /*
  * Uma corrida à espera é a única coisa da Home que pede ação, e é a única
  * etiqueta cheia. Diz que tocar no cartão retoma em vez de começar.
  */
-.home-modo-estado[data-a-meio="sim"] {
-  padding: 1px 8px;
-  border-radius: 999px;
-  background: var(--accent);
-  color: var(--on-accent);
+.home-modo.compacto .home-modo-estado[data-a-meio="sim"] {
+  background: var(--tinta-modo);
+  color: var(--cor);
 }
 
 .home-modo-legenda {
   font-size: 13px;
   line-height: 1.35;
+  color: inherit;
+  opacity: 0.78;
+}
+
+/* ─── Home: o cartão das regras ───────────────────────────────────────────── */
+
+/*
+ * A regra inteira está impressa no cartão, em peças: um 3, um 4 e o 7 que eles
+ * fazem. É o jogo todo numa linha, e quem a percebe aqui já não precisa de
+ * entrar — o melhor desfecho possível para um botão de ajuda.
+ *
+ * A superfície é neutra, com borda, e a cor vem só das peças, do número e do
+ * título. A alternativa que se recusou foi um painel escuro com dados a brilhar:
+ * a direção de arte não tem néon, e um cartão que grita ao lado dos modos
+ * rouba-lhes o olho para a única coisa da Home que não é jogar.
+ */
+.home-ajuda {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 14px 16px 16px;
+  border: 1px solid var(--line);
+  border-radius: calc(var(--raio) + 6px);
+  background: var(--surface);
+  text-align: center;
+}
+
+.home-ajuda-conta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 2px;
+}
+
+.home-ajuda-conta .peca {
+  --lado: 30px;
+}
+
+.home-ajuda-sinal {
+  font-size: 15px;
+  font-weight: 600;
   color: var(--ink-muted);
 }
 
-.home-modo.primario .home-modo-legenda {
-  color: inherit;
-  opacity: 0.8;
+.home-ajuda-sete {
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--accent);
+}
+
+.home-ajuda-titulo {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  color: var(--accent);
+}
+
+.home-ajuda-texto {
+  margin: 0 0 4px;
+  max-width: 36ch;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ink-muted);
+}
+
+/* ─── Como jogar ──────────────────────────────────────────────────────────── */
+
+/*
+ * A página das regras. Um texto que se lê de cima a baixo, com as peças do jogo
+ * a fazer os exemplos.
+ *
+ * `max-width` em `ch` e não em píxeis: o que limita a largura de um parágrafo é
+ * quantos caracteres a linha tem, e 68 é o topo do que se lê sem perder a linha
+ * seguinte. Num telemóvel não muda nada; num monitor é o que impede a página de
+ * esticar para 900px de texto corrido.
+ */
+.regras {
+  max-width: 68ch;
+  padding-bottom: 16px;
+}
+
+.regra {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.regra:last-child {
+  border-bottom: 0;
+}
+
+.regra h2 {
+  margin: 0 0 6px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+/* A regra em si, numa frase. O resto da secção é a explicação dela. */
+.regra-chamada {
+  margin: 0 0 10px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--accent);
+}
+
+.regra-texto {
+  margin: 0 0 10px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink-muted);
+}
+
+.regra > :last-child {
+  margin-bottom: 0;
+}
+
+/* `3 + 4 = 7`, com as peças a sério. */
+.regras-conta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0 0 12px;
+}
+
+.regras-conta .peca {
+  --lado: 36px;
+}
+
+.regras-sinal {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+
+.regras-sete {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--accent);
+}
+
+.regras-conta-nota {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink-muted);
+}
+
+/*
+ * Os dois exemplos da adjacência, lado a lado.
+ *
+ * As casas vazias contam: sem elas, duas peças em diagonal leem-se como duas
+ * peças soltas, e o que se quer mostrar é precisamente que estão **no
+ * tabuleiro** e mesmo assim não ligam.
+ */
+.regras-exemplos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  margin: 0 0 14px;
+}
+
+.regras-exemplo {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  margin: 0;
+}
+
+.regras-exemplo figcaption {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+  max-width: 22ch;
+}
+
+.regras-exemplo[data-veredito="vale"] figcaption {
+  color: var(--accent);
+}
+
+.regras-exemplo[data-veredito="nao"] figcaption {
+  color: var(--ink-muted);
+}
+
+.regras-grelha {
+  --lado: 34px;
+
+  display: grid;
+  grid-template-columns: repeat(2, var(--lado));
+  gap: var(--gap-peca);
+  padding: var(--gap-peca);
+  border-radius: var(--raio);
+  background: var(--tray);
+}
+
+.regras-vazio {
+  width: var(--lado);
+  height: var(--lado);
+  border-radius: calc(var(--lado) * var(--raio-peca));
+  background: var(--surface-alt);
+}
+
+.regras-selos,
+.regras-modos {
+  margin: 0 0 10px;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 10px;
+}
+
+.regras-selos li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+}
+
+/*
+ * O glifo do selo, do tamanho a que se vê na grelha de níveis. É o mesmo
+ * símbolo, e tem de se reconhecer daqui para lá sem tradução.
+ */
+.regras-selo-glifo {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--surface-alt);
+  color: var(--accent);
+  font-size: 15px;
+  line-height: 1;
+}
+
+.regras-selos b,
+.regras-modos b {
+  display: block;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.regras-selo-texto,
+.regras-modos span {
+  display: block;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-muted);
 }
 
 /* ─── Lista de bandas ─────────────────────────────────────────────────────── */
@@ -2206,19 +2547,22 @@
   }
 
   /*
-   * A Home deitada: a marca à esquerda, os modos à direita. Empilhadas, as duas
-   * partes pediam 650px de altura, e os modos — que são a única coisa para
-   * tocar — ficavam abaixo da dobra.
+   * A Home deitada: os modos à esquerda, o lema e as regras à direita.
+   *
+   * Empilhadas, as quatro faixas pediam 620px de altura e o cartão das regras
+   * ficava abaixo da dobra — com ele, os mosaicos. A barra atravessa as duas
+   * colunas porque é a única coisa que pertence ao ecrã inteiro.
    */
   .ecra.home {
     max-width: 880px;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr);
     grid-template-areas:
       "barra barra"
-      "marca modos";
-    align-items: center;
-    gap: 4px 28px;
+      "modos lema"
+      "modos ajuda";
+    align-items: start;
+    gap: 10px 24px;
     padding: 8px 16px;
   }
 
@@ -2226,26 +2570,27 @@
     grid-area: barra;
   }
 
-  .home-marca {
-    grid-area: marca;
-    align-self: center;
+  .home-lema {
+    grid-area: lema;
   }
 
   .home-modos {
     grid-area: modos;
+    align-content: start;
   }
 
-  .home-simbolo {
-    width: 64px;
-    margin-bottom: 8px;
+  .home-ajuda {
+    grid-area: ajuda;
+    padding: 12px 14px 14px;
   }
 
-  .home-titulo {
-    font-size: 30px;
-  }
-
-  .home-modo {
+  /* Há metade da altura: os cartões perdem a folga, não o conteúdo. */
+  .ecra.home .home-modo.primario {
     min-height: 60px;
     padding-block: 8px;
+  }
+
+  .ecra.home .home-modo.compacto {
+    min-height: 104px;
   }
 }

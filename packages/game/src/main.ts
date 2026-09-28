@@ -44,6 +44,7 @@ import {
 import { mostraSomaDasFaces } from "./session/tutorial";
 import type { CapituloNaLista } from "./ui/CapitulosScreen";
 import { CapitulosScreen } from "./ui/CapitulosScreen";
+import { ComoJogarScreen } from "./ui/ComoJogarScreen";
 import { DefinicoesScreen } from "./ui/DefinicoesScreen";
 import { elemento } from "./ui/dom";
 import { HomeScreen } from "./ui/HomeScreen";
@@ -220,6 +221,22 @@ async function mostrar(rota: Rota): Promise<void> {
         aoEscolherTempo: voltarA({ ecra: "tempo" }),
         aoEscolherSurvival: voltarA({ ecra: "survival" }),
         aoEscolherDefinicoes: voltarA({ ecra: "definicoes" }),
+        aoEscolherComoJogar: voltarA({ ecra: "regras" }),
+      });
+      return;
+
+    case "regras":
+      atual = new ComoJogarScreen(app as HTMLElement, {
+        aoVoltar: voltarA({ ecra: "home" }),
+        /*
+         * O tutorial do joker abre-se **por cima** das regras, em revisão — e
+         * não numa rota própria. É um tabuleiro a sério com estado a meio; dar-
+         * lhe endereço era prometer que recarregar a página o devolvia onde
+         * estava, e não devolve.
+         */
+        aoVerTutorialDoJoker: () => {
+          abrirTutorial(true);
+        },
       });
       return;
 
