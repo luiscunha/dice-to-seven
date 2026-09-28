@@ -1490,18 +1490,16 @@
 }
 
 /*
- * A fila fica **entre o topo e o tabuleiro**, que é de onde as peças vêm. Pô-la
+ * A fila fica **entre o topo e o tabuleiro**, que é de onde as peças caem. Pô-la
  * ao lado ou no rodapé obrigava a ligar mentalmente duas zonas do ecrã que não
  * têm relação espacial nenhuma com a injeção.
- */
-/*
- * A fila fica **entre o topo e o tabuleiro**, que é de onde as peças caem.
  *
  * As peças são as mesmas do tabuleiro — mesma fábrica, mesmas pintas, mesmas
  * cores — só que mais pequenas e sem toque. Uma fila com números obrigava a
  * traduzir entre dois alfabetos a cada linha.
  */
 .fila {
+  position: relative;
   display: flex;
   gap: var(--gap-peca);
   justify-content: center;
@@ -1509,6 +1507,45 @@
   padding: 6px;
   border-radius: var(--raio);
   background: var(--tray);
+  overflow: hidden;
+}
+
+/*
+ * A contagem para a linha seguinte.
+ *
+ * Um pseudo-elemento e não um filho: `pintarFila` troca os filhos a cada
+ * repintura, e uma barra que vivesse lá dentro desaparecia a cada linha nova —
+ * precisamente no instante em que ela tem mais a dizer.
+ *
+ * `scaleX` e não `width`: a transformação corre no compositor, e isto repinta
+ * dez vezes por segundo durante a corrida inteira. A transição dura exatamente
+ * um passo do relógio, o que transforma os saltos de décimo em movimento
+ * contínuo sem nunca ficar atrás do que mostra.
+ */
+.fila::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: var(--accent);
+  transform: scaleX(var(--conta, 1));
+  transform-origin: left center;
+  transition: transform var(--t-ui) linear;
+  pointer-events: none;
+}
+
+/*
+ * Os últimos cinco segundos ganham a cor do teto.
+ *
+ * É o mesmo vermelho da linha de fogo, e é de propósito: as duas coisas dizem
+ * a mesma ameaça — o tabuleiro vai subir — e uma segunda cor de alarme obrigava
+ * a aprender dois vocabulários para o mesmo perigo.
+ */
+.fila[data-urgente="sim"]::after {
+  height: 4px;
+  background: var(--fogo);
 }
 
 .fila .peca.na-fila {

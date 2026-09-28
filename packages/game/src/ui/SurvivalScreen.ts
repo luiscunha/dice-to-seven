@@ -24,7 +24,14 @@
  * sem jogadas não é morrer**: é o momento de puxar uma linha. A mesma deteção do
  * beco sem saída da campanha, com o sentido ao contrário.
  *
- * O relógio do sistema entra aqui e só aqui. A `SurvivalSession` não o conhece.
+ * O relógio do sistema entra aqui e só aqui — e agora manda no modo, porque é
+ * ele que faz cair as linhas. A `SurvivalSession` continua a não o conhecer:
+ * recebe o decorrido e decide, o que mantém as regras testáveis sem esperar por
+ * tempo real.
+ *
+ * **A barra da fila é a contagem.** Um prazo invisível é uma armadilha, e um
+ * número a descer obriga a fazer a conta; uma barra a esvaziar por baixo das
+ * peças que estão prestes a cair diz *quando* e *o quê* no mesmo sítio.
  */
 
 import type { Cell, Packed } from "@dicetoseven/engine";
@@ -38,7 +45,10 @@ import type {
 } from "../session/SurvivalSession";
 import {
   DEFAULT_SURVIVAL,
+  avancarRelogio,
+  faltaParaLinha,
   folga,
+  fracaoParaLinha,
   proximaLinha,
   puxarLinha,
   restoParaLimpar,
@@ -113,6 +123,19 @@ export class SurvivalScreen {
   private inicioMs: number | undefined;
   private fimMs: number | undefined;
   private cronometro: ReturnType<typeof setInterval> | undefined;
+
+  /**
+   * O instante em que a corrida ficou em pausa, ou `undefined` se corre.
+   *
+   * Passar a app para segundo plano tem de parar o relógio. Enquanto as linhas
+   * caíam por jogadas isto era uma questão de justiça; agora é de vida ou
+   * morte, porque voltar de dois minutos noutra aplicação significaria oito
+   * linhas em dívida e o tabuleiro cheio antes de o jogador ver o ecrã.
+   */
+  private pausaMs: number | undefined;
+
+  /** O último segundo inteiro anunciado, para não repetir o mesmo aria-label. */
+  private ultimoSegundo = -1;
   private readonly aoEsconder: () => void;
 
   constructor(host: HTMLElement, opcoes: OpcoesSurvival) {
@@ -128,7 +151,7 @@ export class SurvivalScreen {
     if (opcoes.retomar !== undefined && opcoes.retomar.decorridoMs > 0) {
       this.inicioMs = Date.now() - opcoes.retomar.decorridoMs;
       this.cronometro = setInterval(() => {
-        this.pintarRelogio();
+        this.tique();
       }, PASSO_RELOGIO);
     }
 
@@ -157,6 +180,7 @@ export class SurvivalScreen {
     /* ── a próxima linha, entre o topo e o tabuleiro: é de lá que ela cai ── */
     this.elFila = elemento("div", "fila");
     this.elFila.setAttribute("aria-label", "próxima linha");
+    this.elFila.setAttribute("role", "timer");
 
     const palco = elemento("div", "palco");
 
@@ -220,7 +244,14 @@ export class SurvivalScreen {
      * navegação — que é precisamente o caso mais comum a jogar com o telemóvel.
      */
     this.aoEsconder = () => {
-      if (document.visibilityState === "hidden") this.guardar();
+      if (document.visibilityState === "hidden") {
+        // Guardar **antes** de pausar: `guardar` lê o decorrido, e o decorrido
+        // congela no instante da pausa.
+        this.guardar();
+        this.pausar();
+      } else {
+        this.despausar();
+      }
     };
     document.addEventListener("visibilitychange", this.aoEsconder);
   }
@@ -244,7 +275,7 @@ export class SurvivalScreen {
 
     this.inicioMs = Date.now();
     this.cronometro = setInterval(() => {
-      this.pintarRelogio();
+      this.tique();
     }, PASSO_RELOGIO);
   }
 
@@ -253,9 +284,79 @@ export class SurvivalScreen {
     this.cronometro = undefined;
   }
 
+  /**
+   * Um décimo de segundo: repinta o mostrador e vê se há linha vencida.
+   *
+   * A verificação vive aqui e não num temporizador próprio de propósito. Dois
+   * temporizadores a correr sobre o mesmo estado teriam de concordar sobre que
+   * horas são, e o que se vê no relógio deixaria de explicar o que acontece no
+   * tabuleiro.
+   */
+  private tique(): void {
+    this.pintarRelogio();
+    void this.verificarLinha();
+  }
+
+  /** Congela o decorrido. Ver `pausaMs`. */
+  private pausar(): void {
+    if (this.inicioMs === undefined || this.terminado) return;
+    if (this.pausaMs !== undefined) return;
+
+    this.pausaMs = Date.now();
+    this.parar();
+  }
+
+  /** Desloca o início para a frente pelo tempo parado, e o relógio continua. */
+  private despausar(): void {
+    if (this.pausaMs === undefined || this.inicioMs === undefined) return;
+    if (this.terminado) return;
+
+    this.inicioMs += Date.now() - this.pausaMs;
+    this.pausaMs = undefined;
+    this.cronometro ??= setInterval(() => {
+      this.tique();
+    }, PASSO_RELOGIO);
+  }
+
   private decorridoMs(): number {
     if (this.inicioMs === undefined) return 0;
-    return (this.fimMs ?? Date.now()) - this.inicioMs;
+    return (this.fimMs ?? this.pausaMs ?? Date.now()) - this.inicioMs;
+  }
+
+  /**
+   * O relógio venceu: faz cair o que estiver em dívida.
+   *
+   * Sai de mãos vazias enquanto o ecrã estiver ocupado a animar. Não se perde
+   * nada com isso — o prazo é absoluto e continua vencido, portanto o tique
+   * seguinte trata dele. Injetar por cima de uma animação a meio era pôr peças
+   * a entrar e a sair ao mesmo tempo, que foi o que se decidiu nunca fazer.
+   */
+  private async verificarLinha(): Promise<void> {
+    if (this.terminado || this.ocupado) return;
+
+    const r = avancarRelogio(this.estado, this.decorridoMs(), this.config);
+    if (!r.caiu) return;
+
+    this.ocupado = true;
+
+    /*
+     * A escolha do joker morre com a linha. A injeção limpa a seleção, e um
+     * seletor aberto por cima de um tabuleiro que já mudou escolhia um valor
+     * para uma jogada que deixou de existir.
+     */
+    this.picker.fechar();
+    this.jokerPendente = undefined;
+
+    try {
+      this.estado = r.state;
+      await this.view.injetarLinha(this.estado.game.board);
+    } finally {
+      this.view.montar(this.estado.game.board);
+      this.ocupado = false;
+    }
+
+    this.pintar();
+    this.verificarFim();
   }
 
   /* ─── jogar ─────────────────────────────────────────────────────────────── */
@@ -297,10 +398,6 @@ export class SurvivalScreen {
        */
       try {
         await this.view.aplicarJogada(grupo);
-
-        // A linha automática cai **depois** da jogada, e cai a sério: peças a
-        // sair e peças a entrar ao mesmo tempo não se distinguiam.
-        if (r.injected) await this.view.injetarLinha(this.estado.game.board);
       } finally {
         this.view.montar(this.estado.game.board);
         this.ocupado = false;
@@ -359,7 +456,7 @@ export class SurvivalScreen {
     this.ocupado = true;
 
     try {
-      this.estado = puxarLinha(this.estado, this.config);
+      this.estado = puxarLinha(this.estado, this.config, this.decorridoMs());
       await this.view.injetarLinha(this.estado.game.board);
     } finally {
       this.view.montar(this.estado.game.board);
@@ -461,6 +558,8 @@ export class SurvivalScreen {
     const aperto = espaco <= 1 ? "critico" : espaco <= 2 ? "aviso" : "folgado";
     this.elMeta.dataset["aperto"] = aperto;
 
+    this.pintarContagem();
+
     /*
      * A linha de fogo diz a mesma coisa que o texto, no sítio onde ela acontece.
      *
@@ -469,6 +568,34 @@ export class SurvivalScreen {
      * duas, e nenhuma delas pode chegar só no fim.
      */
     this.view.marcarTeto(aperto);
+  }
+
+  /**
+   * A contagem para a próxima linha, desenhada por baixo da fila.
+   *
+   * Uma barra e não um número: o número obriga a fazer a conta entre o que
+   * falta e o que se consegue jogar nesse tempo, e essa conta é exatamente o
+   * que se quer que o jogador faça de relance. A barra fica **por baixo das
+   * peças que vão cair**, portanto o «quando» e o «o quê» leem-se de uma vez.
+   *
+   * O `aria-label` só muda ao segundo inteiro. A cada décimo, um leitor de ecrã
+   * ficaria a anunciar a contagem em vez de deixar jogar.
+   */
+  private pintarContagem(): void {
+    const agora = this.decorridoMs();
+    const fracao = fracaoParaLinha(this.estado, agora, this.config);
+    const segundos = Math.ceil(faltaParaLinha(this.estado, agora) / 1000);
+
+    this.elFila.style.setProperty("--conta", String(fracao));
+    this.elFila.dataset["urgente"] = segundos <= 5 ? "sim" : "nao";
+
+    if (segundos !== this.ultimoSegundo) {
+      this.ultimoSegundo = segundos;
+      this.elFila.setAttribute(
+        "aria-label",
+        `próxima linha em ${String(segundos)} segundos`,
+      );
+    }
   }
 
   /**

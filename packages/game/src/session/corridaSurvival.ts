@@ -24,7 +24,7 @@ export const CORRIDA_KEY = "dicetoseven.survival";
  * Uma versão que não se reconheça descarta a corrida em vez de tentar migrar:
  * são partidas a meio, não progresso conquistado.
  */
-const CORRIDA_VERSION = 1;
+const CORRIDA_VERSION = 2;
 
 export interface CorridaGuardada {
   readonly estado: SurvivalState;
@@ -120,6 +120,13 @@ export function lerCorrida(
 
   if (!Number.isFinite(estado.seed)) return undefined;
   if (!Number.isFinite(corrida.decorridoMs)) return undefined;
+  /*
+   * O prazo da próxima linha é agora parte do estado, e é o que impede a
+   * corrida retomada de injetar de imediato. Sem ele — ou com lixo lá dentro —
+   * a comparação em `avancarRelogio` dava sempre vencido e o tabuleiro
+   * transbordava no instante em que o jogador voltasse.
+   */
+  if (!Number.isFinite(estado.proximaLinhaMs)) return undefined;
 
   // Uma corrida já terminada não é uma corrida por retomar.
   if (estado.morto === true || estado.limpo === true) return undefined;
