@@ -16,10 +16,16 @@
  * seria igualmente barato de escrever e uma confusão a jogar: o colapso já
  * empurra colunas para a esquerda, e ficavam dois movimentos laterais a competir.
  *
- * **A linha entra à largura cheia.** Se seguisse a largura atual, limpar uma
- * coluna encolhia a área de jogo para sempre e o jogador era punido por jogar
- * bem. À largura cheia, o colapso é alívio: as peças que caem sobre o vazio
- * descem à base pela gravidade normal, e a largura repõe-se.
+ * **A linha entra à largura cheia.** Se seguisse a largura do tabuleiro, limpar
+ * uma coluna encolhia a área de jogo para sempre e o jogador era punido por
+ * jogar bem. À largura cheia, o colapso é alívio: as peças que caem sobre o
+ * vazio descem à base pela gravidade normal, e a largura repõe-se.
+ *
+ * Cheia quer dizer a largura **daquele ponto da corrida**, não sete: ver
+ * `larguraNoIndice`. O tabuleiro arranca com cinco colunas e ganha uma a cada
+ * quatro linhas caídas, até sete. Com cinco colunas a peça mede 69px num
+ * telemóvel de 375px e com sete mede 46px — é assim que a corrida começa com
+ * peças grandes e as vai encolhendo até caber o 7×7.
  *
  * **Puxar a linha paga.** Um botão que só faz mal nunca é premido, e seria UI
  * morta. Puxar de vontade própria rende um multiplicador proporcional ao espaço
@@ -83,8 +89,26 @@ import { DEFAULT_SCORING, moveScore } from "./scoring";
 export type Linha = readonly (Cell | null)[];
 
 export interface SurvivalConfig {
-  /** Largura da linha injetada, e portanto a largura a que o tabuleiro volta. */
+  /**
+   * A largura máxima, e o alvo para onde a corrida cresce.
+   *
+   * Já não é a largura de todas as linhas: é o teto de `larguraNoIndice`.
+   */
   readonly largura: number;
+
+  /**
+   * A largura com que a corrida arranca.
+   *
+   * **É o que decide o tamanho da peça.** A peça é medida pelo menor de
+   * «palco a dividir pelas colunas» e «palco a dividir pelas linhas», e num
+   * telemóvel quem manda é sempre a largura: a 375px, sete colunas dão 46px e
+   * cinco dão 69px. Começar estreito é começar com peças grandes, e alargar é
+   * encolhê-las — até ao 7×7, que é onde param nos 46px.
+   */
+  readonly larguraInicial: number;
+
+  /** Linhas caídas até o tabuleiro ganhar mais uma coluna. */
+  readonly linhasPorColuna: number;
   /** Linhas no arranque. Poucas: o jogador tem de ver o tabuleiro a encher. */
   readonly alturaInicial: number;
   /**
@@ -183,6 +207,8 @@ export interface SurvivalConfig {
 
 export const DEFAULT_SURVIVAL: SurvivalConfig = {
   largura: 7,
+  larguraInicial: 5,
+  linhasPorColuna: 4,
   alturaInicial: 5,
   alturaMaxima: 7,
   msPorLinha: 30_000,
@@ -242,6 +268,27 @@ export interface SurvivalState {
  * o que acontecer ao tabuleiro entretanto. Sem isto a previsão era decorativa —
  * e a previsão é a razão de ser do modo.
  */
+/**
+ * Quantas colunas tem a linha número `i`.
+ *
+ * **Pura em `i`, como a própria linha.** A largura tem de sair do índice da
+ * fila e não do estado: se saísse do tabuleiro, a linha que o jogador vê na
+ * previsão podia entrar com outra largura, e a promessa do modo — o que se vê é
+ * o que se recebe — deixava de valer.
+ *
+ * As linhas do arranque contam todas como largura inicial, e é por isso que se
+ * desconta `alturaInicial`: são o tabuleiro de partida, não crescimento.
+ */
+export const larguraNoIndice = (
+  i: number,
+  config: SurvivalConfig = DEFAULT_SURVIVAL,
+): number =>
+  Math.min(
+    config.largura,
+    config.larguraInicial +
+      Math.floor(Math.max(0, i - config.alturaInicial) / config.linhasPorColuna),
+  );
+
 export function linhaDe(
   seed: number,
   i: number,
@@ -249,13 +296,14 @@ export function linhaDe(
   comJoker = false,
 ): readonly Cell[] {
   const rng = mulberry32(deriveSeed(seed, i));
+  const largura = larguraNoIndice(i, config);
   const linha: Cell[] = [];
-  for (let c = 0; c < config.largura; c++) {
+  for (let c = 0; c < largura; c++) {
     linha.push((weightedIndex(rng, config.pesos) + 1) as Cell);
   }
 
   // O joker toma o lugar de uma face, em coluna sorteada pela mesma seed.
-  if (comJoker) linha[randInt(rng, config.largura)] = JOKER;
+  if (comJoker) linha[randInt(rng, largura)] = JOKER;
 
   return linha;
 }
@@ -283,6 +331,18 @@ export const proximaLinha = (
   linhaDe(s.seed, s.linhasInjetadas, config, trazJoker(s, config));
 
 /* ─── Leituras ────────────────────────────────────────────────────────────── */
+
+/**
+ * A largura do tabuleiro agora — o alvo, não o que o colapso deixou.
+ *
+ * É por ela que o ecrã dimensiona a peça e a caixa. Lê-se de `linhasInjetadas`
+ * porque esse é o índice da próxima linha, e é a largura dela que manda: a
+ * caixa tem de ter o tamanho do que aí vem, senão a linha entra fora dela.
+ */
+export const larguraAtual = (
+  s: SurvivalState,
+  config: SurvivalConfig = DEFAULT_SURVIVAL,
+): number => larguraNoIndice(s.linhasInjetadas, config);
 
 /** Linhas de folga entre a coluna mais alta e o teto. Zero é estar a morrer. */
 export const folga = (
@@ -426,8 +486,14 @@ export function injectRow(
     ...comTabuleiro(s, board),
     ...bonus,
     linhasInjetadas: s.linhasInjetadas + 1,
-    // O contador reinicia quando o joker cai, e acumula quando não cai.
-    pecasDesdeJoker: comJoker ? 0 : s.pecasDesdeJoker + config.largura,
+    /*
+     * O contador reinicia quando o joker cai, e acumula quando não cai. Conta
+     * as peças que **esta** linha trouxe, que já não são sempre as mesmas — o
+     * tabuleiro alarga durante a corrida.
+     */
+    pecasDesdeJoker: comJoker
+      ? 0
+      : s.pecasDesdeJoker + larguraNoIndice(s.linhasInjetadas, config),
     morto: tallestColumn(board) > config.alturaMaxima,
     proximaLinhaMs: s.proximaLinhaMs,
   };

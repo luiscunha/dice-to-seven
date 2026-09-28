@@ -171,20 +171,25 @@ export class TimeAttackScreen {
     });
 
     /*
-     * **Dimensiona uma vez, para o maior tabuleiro da corrida.**
+     * **A peça mede-se pelo maior tabuleiro da corrida; a caixa segue o do
+     * momento.** São duas coisas, e confundi-las estraga uma delas.
      *
-     * Redimensionar a cada tabuleiro parecia o óbvio e destruía a funcionalidade
-     * inteira: com a peça a encolher à medida que o tabuleiro cresce, um de dez
-     * peças e um de vinte ocupam exatamente a mesma largura no ecrã, e o jogador
+     * Medir a peça pelo tabuleiro do momento destruía a funcionalidade inteira:
+     * com a peça a encolher à medida que o tabuleiro cresce, um de dez peças e
+     * um de vinte ocupam exatamente a mesma largura no ecrã, e o jogador
      * **nunca vê o tabuleiro crescer**. A escada existia nos números e em mais
      * lado nenhum.
      *
-     * Com a peça fixa, crescer lê-se como crescer. É a mesma razão do Survival,
-     * onde a caixa é dimensionada para a altura máxima e não para a atual —
-     * ali para o tabuleiro não saltar debaixo do dedo, aqui para o crescimento
-     * ter onde acontecer.
+     * Mas fixar também a **caixa** no máximo deixava um tabuleiro de quatro
+     * colunas encostado ao canto de um enquadramento feito para sete. As peças
+     * ancoram à coluna 0 e isso não se negoceia — é para lá que o colapso
+     * empurra as colunas, e centrá-las fazia cada colapso mexer no tabuleiro
+     * todo em vez de só à direita do buraco. O que se centra é a caixa, e para
+     * isso ela tem de ter o tamanho do tabuleiro que lá está.
      */
-    this.view.dimensionarPara(maiorTabuleiro(opcoes.niveis));
+    this.view.dimensionarPara(maiorTabuleiro(opcoes.niveis), {
+      caixaPorTabuleiro: true,
+    });
     this.view.montar(primeiro.board);
 
     this.cronometro = setInterval(() => {

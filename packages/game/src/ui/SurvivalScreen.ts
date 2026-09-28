@@ -49,6 +49,7 @@ import {
   faltaParaLinha,
   folga,
   fracaoParaLinha,
+  larguraAtual,
   proximaLinha,
   puxarLinha,
   restoParaLimpar,
@@ -223,16 +224,7 @@ export class SurvivalScreen {
      */
     this.pintar();
 
-    /*
-     * Dimensiona para o tabuleiro **no seu tamanho máximo**, não no atual. O
-     * tabuleiro cresce durante a corrida, e redimensionar a peça a cada linha
-     * fazia o jogo inteiro saltar debaixo do dedo.
-     */
-    this.view.dimensionarPara(
-      Array.from({ length: this.config.largura }, () =>
-        Array.from({ length: this.config.alturaMaxima }, () => 1 as Cell),
-      ),
-    );
+    this.dimensionar();
     this.view.montar(this.estado.game.board);
 
     /*
@@ -281,6 +273,31 @@ export class SurvivalScreen {
     }
     this.view.destruir();
     this.raiz.remove();
+  }
+
+  /**
+   * A caixa: a largura daquele ponto da corrida, e **sempre** a altura máxima.
+   *
+   * As duas dimensões não se tratam da mesma maneira, e é de propósito.
+   *
+   * A **altura** é fixa porque o topo da caixa é o teto: é lá que a linha de
+   * fogo mora, e um teto que subisse com o tabuleiro não era teto nenhum. As
+   * linhas de folga que se veem por cima das peças são a margem que resta, e é
+   * essa a leitura que o modo inteiro precisa de dar.
+   *
+   * A **largura** acompanha `larguraAtual`, e é isso que faz a peça começar
+   * grande e ir encolhendo: num telemóvel quem manda no tamanho da peça é
+   * sempre a largura. Cinco colunas dão 69px a 375px, sete dão 46px.
+   *
+   * Chamar isto a cada pintura é barato — o `BoardView` só repõe o CSS quando
+   * os números mudam de facto, e eles mudam uma vez a cada quatro linhas.
+   */
+  private dimensionar(): void {
+    this.view.dimensionarPara(
+      Array.from({ length: larguraAtual(this.estado, this.config) }, () =>
+        Array.from({ length: this.config.alturaMaxima }, () => 1 as Cell),
+      ),
+    );
   }
 
   /* ─── cronómetro ────────────────────────────────────────────────────────── */
@@ -552,6 +569,9 @@ export class SurvivalScreen {
   /* ─── desenho ───────────────────────────────────────────────────────────── */
 
   private pintar(): void {
+    // Antes de tudo: a largura pode ter mudado com a última linha, e o resto
+    // desta pintura desenha-se dentro da caixa que isto fixa.
+    this.dimensionar();
     this.pintarRelogio();
     this.pintarFila();
     this.pintarRodape();

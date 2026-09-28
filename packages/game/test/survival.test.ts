@@ -28,6 +28,8 @@ import {
   avancarRelogio,
   cadencia,
   injectRow,
+  larguraAtual,
+  larguraNoIndice,
   linhaDe,
   multiplicadorAoPuxar,
   proximaLinha,
@@ -52,9 +54,9 @@ describe("a fila", () => {
     expect(linhaDe(SEED, 0)).not.toEqual(linhaDe(SEED + 1, 0));
   });
 
-  it("tem a largura configurada e só faces jogáveis", () => {
+  it("tem a largura daquele ponto da corrida e só faces jogáveis", () => {
     const linha = linhaDe(SEED, 3);
-    expect(linha).toHaveLength(DEFAULT_SURVIVAL.largura);
+    expect(linha).toHaveLength(DEFAULT_SURVIVAL.larguraInicial);
     for (const v of linha) expect(v).toBeGreaterThanOrEqual(1);
     for (const v of linha) expect(v).toBeLessThanOrEqual(6);
   });
@@ -97,9 +99,83 @@ describe("o arranque", () => {
   it("começa com folga e sem joker", () => {
     const s = startSurvival(SEED);
     expect(tallestColumn(s.game.board)).toBe(DEFAULT_SURVIVAL.alturaInicial);
-    expect(width(s.game.board)).toBe(DEFAULT_SURVIVAL.largura);
+    expect(width(s.game.board)).toBe(DEFAULT_SURVIVAL.larguraInicial);
     expect(s.game.board.flat()).not.toContain(0);
     expect(s.morto).toBe(false);
+  });
+});
+
+/*
+ * A largura cresce para a peça poder começar grande.
+ *
+ * Num telemóvel quem manda no tamanho da peça é sempre a largura — a 375px,
+ * sete colunas dão 46px e cinco dão 69px. Alargar o tabuleiro é encolher a
+ * peça, e é assim que a corrida começa com peças grandes e acaba no 7×7.
+ */
+describe("a largura cresce com a corrida", () => {
+  const { alturaInicial, larguraInicial, linhasPorColuna, largura } =
+    DEFAULT_SURVIVAL;
+
+  it("as linhas do arranque são todas à largura inicial", () => {
+    for (let i = 0; i < alturaInicial; i++) {
+      expect(linhaDe(SEED, i)).toHaveLength(larguraInicial);
+    }
+  });
+
+  it("ganha uma coluna a cada degrau, e pára no máximo", () => {
+    const em = (caidas: number): number =>
+      larguraNoIndice(alturaInicial + caidas);
+
+    expect(em(0)).toBe(larguraInicial);
+    expect(em(linhasPorColuna - 1)).toBe(larguraInicial);
+    expect(em(linhasPorColuna)).toBe(larguraInicial + 1);
+    expect(em(linhasPorColuna * 2)).toBe(larguraInicial + 2);
+    expect(em(9999)).toBe(largura);
+  });
+
+  it("nunca encolhe", () => {
+    let anterior = 0;
+    for (let i = 0; i < 200; i++) {
+      const w = larguraNoIndice(i);
+      expect(w).toBeGreaterThanOrEqual(anterior);
+      anterior = w;
+    }
+  });
+
+  /*
+   * A largura sai do **índice da fila**, não do tabuleiro. Se saísse do
+   * tabuleiro, a linha vista na previsão podia entrar com outra largura, e a
+   * promessa do modo — o que se vê é o que se recebe — deixava de valer.
+   */
+  it("**a linha que se vê tem a largura com que entra**, seja qual for o tabuleiro", () => {
+    const i = alturaInicial + linhasPorColuna;
+    const base = startSurvival(SEED);
+
+    const antes = proximaLinha({ ...base, linhasInjetadas: i });
+    const noitrocado = proximaLinha({
+      ...base,
+      linhasInjetadas: i,
+      game: { ...base.game, board: [[3]] },
+    });
+
+    expect(antes).toEqual(noitrocado);
+    expect(antes).toHaveLength(larguraInicial + 1);
+  });
+
+  it("o tabuleiro alarga no instante em que a linha mais larga entra", () => {
+    // O índice em que a largura sobe, com um tabuleiro baixo para não morrer.
+    const degrau = alturaInicial + linhasPorColuna;
+    const base = startSurvival(SEED);
+    const antes: SurvivalState = {
+      ...base,
+      linhasInjetadas: degrau,
+      game: { ...base.game, board: [[1], [2], [3], [4], [5]] },
+    };
+
+    expect(width(antes.game.board)).toBe(larguraInicial);
+    expect(larguraAtual(antes)).toBe(larguraInicial + 1);
+
+    expect(width(injectRow(antes, false).game.board)).toBe(larguraInicial + 1);
   });
 });
 
@@ -112,7 +188,7 @@ describe("a injeção", () => {
       tallestColumn(s.game.board) + 1,
     );
     expect(pieceCount(depois.game.board)).toBe(
-      pieceCount(s.game.board) + DEFAULT_SURVIVAL.largura,
+      pieceCount(s.game.board) + larguraNoIndice(s.linhasInjetadas),
     );
   });
 
@@ -129,7 +205,7 @@ describe("a injeção", () => {
 
     expect(width(estreito.game.board)).toBe(1);
     const depois = injectRow(estreito, false);
-    expect(width(depois.game.board)).toBe(DEFAULT_SURVIVAL.largura);
+    expect(width(depois.game.board)).toBe(larguraNoIndice(0));
 
     // As colunas novas têm uma célula só: caíram até à base.
     expect(depois.game.board.slice(1).every((col) => col.length === 1)).toBe(true);
