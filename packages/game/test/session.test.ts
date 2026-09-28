@@ -10,7 +10,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { Board, Group, Level } from "@dicetoseven/engine";
-import { boardKey, packed } from "@dicetoseven/engine";
+import { boardKey, mulberry32, packed } from "@dicetoseven/engine";
 
 import {
   clearSelection,
@@ -33,8 +33,11 @@ import {
 } from "../src/session/PuzzleSession";
 import {
   DEFAULT_TIME_ATTACK,
+  DEGRAUS,
   JokerInTimeAttackError,
   boardReward,
+  escadaDeTamanho,
+  nivelDoTabuleiro,
   isOver,
   nextBoard,
   remainingMs,
@@ -590,6 +593,103 @@ describe("TimeAttackSession (plano §6.3)", () => {
   it("o prémio por tabuleiro decresce, e tem piso", () => {
     expect(boardReward(0)).toBeGreaterThan(boardReward(1));
     expect(boardReward(999)).toBe(DEFAULT_TIME_ATTACK.minPerBoardMs);
+  });
+
+  /*
+   * O decaimento e a escada de tamanho aterram no mesmo tabuleiro: o prémio
+   * chega ao piso quando o tabuleiro para de crescer. Não é coincidência nem
+   * afinação — é a relação que dá sentido aos dois, e um teste é o único sítio
+   * onde ela não se perde quando alguém mexer num dos números.
+   */
+  it("**o piso do prémio chega no último degrau da escada**, nem antes nem depois", () => {
+    expect(boardReward(DEGRAUS - 2)).toBeGreaterThan(
+      DEFAULT_TIME_ATTACK.minPerBoardMs,
+    );
+    expect(boardReward(DEGRAUS - 1)).toBe(DEFAULT_TIME_ATTACK.minPerBoardMs);
+  });
+});
+
+describe("a escada de tamanho do modo tempo", () => {
+  /** Níveis com contagens de peças distintas, por ordem baralhada. */
+  const escadote = (contagens: readonly number[]): readonly Level[] =>
+    contagens.map((n, i) => ({
+      id: `t-${String(i)}`,
+      seed: i,
+      // Uma coluna de `n` uns: o que importa aqui é o número de peças.
+      board: [Array.from({ length: n }, () => 1 as const)],
+      solution: [] as never,
+    }));
+
+  const pecas = (l: Level): number => l.board[0]?.length ?? 0;
+
+  it("**um tabuleiro por degrau**, do mais pequeno ao maior", () => {
+    const niveis = escadote([24, 10, 18, 12, 22, 14, 20, 16, 11]);
+    const e = escadaDeTamanho(niveis, mulberry32(1), 9);
+
+    expect(e.ordem).toHaveLength(9);
+
+    const tamanhos = e.ordem.map(pecas);
+    expect([...tamanhos].sort((a, b) => a - b)).toEqual(tamanhos);
+  });
+
+  /*
+   * Era este o erro a evitar. Com cinco níveis por degrau, jogar todos antes de
+   * subir fazia o jogador ver cinco tabuleiros de dez peças seguidos — e a
+   * corrida acabava-lhe antes de chegar a ver um tabuleiro grande.
+   */
+  it("com vários níveis por degrau, ainda assim sobe a cada tabuleiro", () => {
+    // Cinco níveis em cada um de três tamanhos.
+    const niveis = escadote([10, 10, 10, 10, 10, 20, 20, 20, 20, 20, 30, 30, 30, 30, 30]);
+    const e = escadaDeTamanho(niveis, mulberry32(7), 3);
+
+    expect(e.ordem.map(pecas)).toEqual([10, 20, 30]);
+  });
+
+  /*
+   * Depois do último degrau o jogo continua, e continua **em cima**. O
+   * `% ordem.length` antigo devolvia o jogador ao primeiro tabuleiro: a
+   * dificuldade descia no momento em que ele mais tinha provado merecer que
+   * subisse.
+   */
+  it("**depois da escada nunca se volta ao princípio** — sai sempre do cume", () => {
+    const niveis = escadote([10, 12, 14, 16, 18, 20, 22, 24, 26, 28]);
+    const rng = mulberry32(3);
+    const e = escadaDeTamanho(niveis, rng, 5);
+
+    const maior = Math.max(...niveis.map(pecas));
+    const menor = Math.min(...niveis.map(pecas));
+
+    for (let n = e.ordem.length; n < e.ordem.length + 30; n++) {
+      const seguinte = nivelDoTabuleiro(e, n, rng);
+      expect(seguinte).toBeDefined();
+      expect(pecas(seguinte as Level)).toBeGreaterThan(menor);
+      expect(pecas(seguinte as Level)).toBeLessThanOrEqual(maior);
+      expect(e.cume).toContain(seguinte);
+    }
+  });
+
+  it("baralha dentro do degrau — duas corridas não dão a mesma sequência", () => {
+    const niveis = escadote(Array.from({ length: 45 }, (_, i) => 10 + Math.floor(i / 5)));
+
+    const a = escadaDeTamanho(niveis, mulberry32(1)).ordem.map((l) => l.id);
+    const b = escadaDeTamanho(niveis, mulberry32(2)).ordem.map((l) => l.id);
+
+    expect(a).not.toEqual(b);
+  });
+
+  it("aguenta um pack mais curto do que a escada sem degraus vazios", () => {
+    const e = escadaDeTamanho(escadote([10, 20, 30]), mulberry32(1), 9);
+
+    expect(e.ordem.length).toBeGreaterThan(0);
+    expect(e.ordem.every((l) => l !== undefined)).toBe(true);
+    expect(e.cume.length).toBeGreaterThan(0);
+  });
+
+  it("sem níveis nenhuns não rebenta", () => {
+    const e = escadaDeTamanho([], mulberry32(1));
+
+    expect(e.ordem).toEqual([]);
+    expect(nivelDoTabuleiro(e, 0, mulberry32(1))).toBeUndefined();
   });
 
   it("depois do fim do tempo, nada mais conta", () => {

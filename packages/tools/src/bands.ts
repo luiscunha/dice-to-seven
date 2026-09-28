@@ -90,6 +90,23 @@ export interface BandSpec {
   readonly formas?: readonly Forma[];
 
   /**
+   * Janelas de tamanho, cada uma com quota igual. **É o que dá degraus.**
+   *
+   * Sem isto, `pieces` é um intervalo e o tamanho de cada candidato sai
+   * uniforme dele — mas a aceitação não é uniforme nenhuma: um tabuleiro de 10
+   * peças passa o filtro de sobrevivência muitas vezes mais do que um de 24. O
+   * pack saía encostado ao fundo do intervalo, e a escada de tamanho do modo
+   * tempo ficava sem os degraus de cima.
+   *
+   * Com janelas, cada faixa de tamanho gasta o seu próprio orçamento de
+   * candidatos e entrega a sua própria quota. O pack deixa de ser o que foi
+   * fácil gerar e passa a ser o que foi pedido.
+   *
+   * Exclui-se com `formas`: pedir uma forma já é pedir um tamanho.
+   */
+  readonly janelas?: readonly (readonly [number, number])[];
+
+  /**
    * Todos os níveis saem das `formas`, sem a metade de forma livre.
    *
    * Só o `perito` o usa, e é uma decisão de desenho e não de geração: é a banda
@@ -338,12 +355,72 @@ export const BANDS: readonly BandSpec[] = [
     ],
     accept: { survival: [0.03, 0.2], fairnessDepth: 2, fairnessSkipsJoker: true },
   },
+  /*
+   * ── Porque é que o modo tempo não chega a 7×7 ──
+   *
+   * A banda exige sobrevivência **1,00** e greedy-safe: nenhuma sequência de
+   * jogadas gulosas pode bloquear. É essa exigência que sustenta o «sem undo»
+   * do modo — não há nada a desfazer porque não há como ficar preso.
+   *
+   * Essa exigência tem um teto de tamanho, e o teto foi medido (2026-09-28,
+   * candidatos avaliados por configuração entre 2 e 4 mil):
+   *
+   * | peças | composições | aceitação | sobrevivência p90 |
+   * |---|---|---|---|
+   * | 16–28 | até 7 | 5,2% | 1,00 |
+   * | 19–20 | até 4 | 0,1% | 0,93 |
+   * | 21 | até 4 | **0%** em 16 320 | 0,88 |
+   * | 23–24 | até 4 | **0%** em 16 320 | 0,86 |
+   * | 19–32 | até 3 | **0%** | 0,57 |
+   * | 29–42 | até 7 | **0%** | 0,94 |
+   * | 40–49 | até 7 | **0%** | 0,86 |
+   *
+   * Um 7×7 são 49 peças. A 40–49 peças não saiu **um único** tabuleiro em 1984
+   * candidatos, e a distribuição diz porquê: o p90 é 0,86, longe do 1,00 que a
+   * banda pede. Não é orçamento de computação que falta — um tabuleiro de 49
+   * peças onde nenhuma sequência gulosa bloqueia é raro por natureza.
+   *
+   * Chegar a 7×7 obriga a largar a sobrevivência 1,00, e largá-la obriga a dar
+   * ao jogador uma saída para o beco: undo, ou saltar o tabuleiro a troco de
+   * tempo. É uma decisão de desenho do modo, não de afinação desta banda.
+   *
+   * ── O que mudou, e o que custou ──
+   *
+   * As composições passaram de «até 3 peças» para «até 4». É isso, e só isso,
+   * que levanta o teto de 15 para 20 peças: com grupos até 3 a banda não aceita
+   * **nada** acima de 18 peças, e o pack antigo parava nas 15.
+   *
+   * **Vinte peças é onde a parede está com grupos até 4**, e está medida: 21,
+   * 22 e 23–24 peças deram zero aceites em 16 320 candidatos cada. Subir mais
+   * obriga a largar o limite das composições — livres até 7, a banda aceita 5,2%
+   * e chega às 23–24 peças —, ao preço de grupos que já não se veem de relance,
+   * que é exatamente o que este modo pede aos olhos. Fica como decisão de
+   * desenho por tomar, e não como afinação em falta.
+   */
   {
     id: "tempo",
-    label: "Modo tempo — greedy-safe, sem joker",
+    label: "Modo tempo — greedy-safe, sem joker, com escada de tamanho",
     modo: "tempo",
-    params: { compositionWeights: ateNPecas(3), newColumnProbability: 0.45 },
-    pieces: [10, 18],
+    params: { compositionWeights: ateNPecas(4), newColumnProbability: 0.45 },
+    pieces: [10, 20],
+    /*
+     * Seis janelas, uma por degrau da escada do modo — e seis é o mesmo número
+     * que leva o prémio de tempo de 30s ao piso de 10s, a 4s por tabuleiro. Os
+     * dois eixos aterram juntos de propósito: o tabuleiro para de crescer no
+     * mesmo tabuleiro em que o prémio para de encolher. `DEGRAUS`, no jogo,
+     * tem de ser este número, e há um teste que o exige.
+     *
+     * São seis e não nove porque as janelas de 21, 22 e 23–24 peças deram zero
+     * aceites em 16 320 candidatos cada. A escada acaba onde a garantia acaba.
+     */
+    janelas: [
+      [10, 11],
+      [12, 13],
+      [14, 15],
+      [16, 17],
+      [18, 18],
+      [19, 20],
+    ],
     accept: { survival: [1, 1], requireGreedySafe: true, fairnessDepth: 0 },
   },
 ];
