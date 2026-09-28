@@ -120,6 +120,16 @@
   --sombra: 0 1px 2px rgb(18 63 58 / 0.1), 0 6px 18px rgb(18 63 58 / 0.07);
 
   /*
+   * A folga entre a bandeja do tabuleiro e o próprio tabuleiro — ver
+   * `.tabuleiro` em `app.css`. Um só valor porque dois consumidores lêem dele:
+   * o `padding` do palco, que é o que `BoardView.redimensionar` desconta ao
+   * espaço disponível, e a sombra do tabuleiro, que pinta a bandeja exatamente
+   * até onde esse espaço foi descontado. Divergirem um pixel bastava para abrir
+   * uma fresta entre as duas.
+   */
+  --moldura: clamp(8px, 2vw, 20px);
+
+  /*
    * O lado de um alvo de toque do cromado — os botões redondos do cabeçalho e
    * os de ícone do rodapé. 40px chega a um rato; a um dedo não, e sobe mais
    * abaixo para quem joga com ele.
@@ -168,6 +178,7 @@
 @media (max-width: 480px) {
   :root {
     --gap-peca: 4px;
+    --moldura: 6px;
   }
 }
 

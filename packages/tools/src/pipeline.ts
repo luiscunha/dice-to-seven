@@ -79,8 +79,12 @@ export interface Passagem {
  */
 export function passagensDe(band: BandSpec, alvo: number): readonly Passagem[] {
   const formas = band.formas;
+  const janelas = band.janelas;
 
   if (formas === undefined || formas.length === 0) {
+    if (janelas !== undefined && janelas.length > 0) {
+      return passagensPorJanela(band, alvo, janelas);
+    }
     return [{ rotulo: band.id, band, alvo, seedInicial: 0 }];
   }
 
@@ -117,6 +121,40 @@ export function passagensDe(band: BandSpec, alvo: number): readonly Passagem[] {
   });
 
   return passagens;
+}
+
+/**
+ * Uma passagem por janela de tamanho, com quota igual.
+ *
+ * Cada janela leva o seu próprio orçamento de candidatos, o que é o ponto todo:
+ * as janelas de cima são uma ordem de grandeza mais caras do que as de baixo, e
+ * um orçamento comum era sempre gasto pelas baratas primeiro.
+ *
+ * A seed inicial separa-se por janela para que duas janelas vizinhas não
+ * percorram a mesma sequência de candidatos — o mesmo motivo por que as formas
+ * o fazem.
+ */
+function passagensPorJanela(
+  band: BandSpec,
+  alvo: number,
+  janelas: readonly (readonly [number, number])[],
+): readonly Passagem[] {
+  const porJanela = Math.floor(alvo / janelas.length);
+
+  return janelas
+    .map((janela, i) => {
+      // A última leva o resto da divisão, para a soma fechar em `alvo`.
+      const ultima = i === janelas.length - 1;
+      const quota = ultima ? alvo - porJanela * (janelas.length - 1) : porJanela;
+
+      return {
+        rotulo: `${band.id} ${String(janela[0])}-${String(janela[1])}pc`,
+        band: { ...band, pieces: janela },
+        alvo: quota,
+        seedInicial: (i + 1) * 1_000_000,
+      };
+    })
+    .filter((p) => p.alvo > 0);
 }
 
 export async function construirBanda(

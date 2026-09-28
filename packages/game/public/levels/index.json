@@ -1303,187 +1303,187 @@
  },
  {
   "id": "tempo",
-  "label": "Modo tempo — greedy-safe, sem joker",
+  "label": "Modo tempo — greedy-safe, sem joker, com escada de tamanho",
   "modo": "tempo",
   "niveis": [
    {
-    "id": "tempo-000002",
+    "id": "tempo-1000000",
+    "pieces": 10,
+    "colunas": 3,
+    "joker": false
+   },
+   {
+    "id": "tempo-1000001",
     "pieces": 11,
     "colunas": 4,
     "joker": false
    },
    {
-    "id": "tempo-000004",
+    "id": "tempo-1000002",
+    "pieces": 10,
+    "colunas": 3,
+    "joker": false
+   },
+   {
+    "id": "tempo-1000003",
+    "pieces": 11,
+    "colunas": 4,
+    "joker": false
+   },
+   {
+    "id": "tempo-1000006",
+    "pieces": 10,
+    "colunas": 4,
+    "joker": false
+   },
+   {
+    "id": "tempo-2000004",
     "pieces": 12,
-    "colunas": 4,
-    "joker": false
-   },
-   {
-    "id": "tempo-000008",
-    "pieces": 10,
-    "colunas": 3,
-    "joker": false
-   },
-   {
-    "id": "tempo-000040",
-    "pieces": 10,
-    "colunas": 3,
-    "joker": false
-   },
-   {
-    "id": "tempo-000048",
-    "pieces": 10,
-    "colunas": 4,
-    "joker": false
-   },
-   {
-    "id": "tempo-000071",
-    "pieces": 13,
-    "colunas": 5,
-    "joker": false
-   },
-   {
-    "id": "tempo-000093",
-    "pieces": 10,
-    "colunas": 3,
-    "joker": false
-   },
-   {
-    "id": "tempo-000133",
-    "pieces": 10,
-    "colunas": 5,
-    "joker": false
-   },
-   {
-    "id": "tempo-000135",
-    "pieces": 11,
-    "colunas": 5,
-    "joker": false
-   },
-   {
-    "id": "tempo-000145",
-    "pieces": 12,
-    "colunas": 5,
-    "joker": false
-   },
-   {
-    "id": "tempo-000147",
-    "pieces": 11,
     "colunas": 6,
     "joker": false
    },
    {
-    "id": "tempo-000149",
-    "pieces": 10,
-    "colunas": 3,
-    "joker": false
-   },
-   {
-    "id": "tempo-000189",
-    "pieces": 10,
-    "colunas": 4,
-    "joker": false
-   },
-   {
-    "id": "tempo-000270",
+    "id": "tempo-2000006",
     "pieces": 12,
     "colunas": 4,
     "joker": false
    },
    {
-    "id": "tempo-000282",
-    "pieces": 10,
-    "colunas": 4,
+    "id": "tempo-2000010",
+    "pieces": 12,
+    "colunas": 5,
     "joker": false
    },
    {
-    "id": "tempo-000288",
-    "pieces": 11,
-    "colunas": 4,
-    "joker": false
-   },
-   {
-    "id": "tempo-000306",
-    "pieces": 10,
+    "id": "tempo-2000011",
+    "pieces": 13,
     "colunas": 3,
     "joker": false
    },
    {
-    "id": "tempo-000309",
+    "id": "tempo-2000012",
+    "pieces": 12,
+    "colunas": 5,
+    "joker": false
+   },
+   {
+    "id": "tempo-3000033",
     "pieces": 15,
     "colunas": 4,
     "joker": false
    },
    {
-    "id": "tempo-000322",
-    "pieces": 10,
-    "colunas": 3,
-    "joker": false
-   },
-   {
-    "id": "tempo-000346",
-    "pieces": 10,
-    "colunas": 3,
-    "joker": false
-   },
-   {
-    "id": "tempo-000351",
-    "pieces": 14,
-    "colunas": 6,
-    "joker": false
-   },
-   {
-    "id": "tempo-000362",
-    "pieces": 10,
-    "colunas": 3,
-    "joker": false
-   },
-   {
-    "id": "tempo-000377",
-    "pieces": 13,
-    "colunas": 3,
-    "joker": false
-   },
-   {
-    "id": "tempo-000382",
-    "pieces": 12,
-    "colunas": 4,
-    "joker": false
-   },
-   {
-    "id": "tempo-000385",
-    "pieces": 13,
-    "colunas": 3,
-    "joker": false
-   },
-   {
-    "id": "tempo-000386",
-    "pieces": 10,
-    "colunas": 3,
-    "joker": false
-   },
-   {
-    "id": "tempo-000390",
-    "pieces": 12,
-    "colunas": 4,
-    "joker": false
-   },
-   {
-    "id": "tempo-000391",
+    "id": "tempo-3000038",
     "pieces": 14,
     "colunas": 4,
     "joker": false
    },
    {
-    "id": "tempo-000417",
-    "pieces": 13,
+    "id": "tempo-3000124",
+    "pieces": 14,
+    "colunas": 4,
+    "joker": false
+   },
+   {
+    "id": "tempo-3000210",
+    "pieces": 14,
+    "colunas": 5,
+    "joker": false
+   },
+   {
+    "id": "tempo-3000229",
+    "pieces": 15,
+    "colunas": 4,
+    "joker": false
+   },
+   {
+    "id": "tempo-4000050",
+    "pieces": 16,
+    "colunas": 5,
+    "joker": false
+   },
+   {
+    "id": "tempo-4000074",
+    "pieces": 16,
     "colunas": 6,
     "joker": false
    },
    {
-    "id": "tempo-000431",
-    "pieces": 10,
-    "colunas": 3,
+    "id": "tempo-4000143",
+    "pieces": 17,
+    "colunas": 5,
+    "joker": false
+   },
+   {
+    "id": "tempo-4000314",
+    "pieces": 16,
+    "colunas": 4,
+    "joker": false
+   },
+   {
+    "id": "tempo-4000354",
+    "pieces": 16,
+    "colunas": 5,
+    "joker": false
+   },
+   {
+    "id": "tempo-5000576",
+    "pieces": 18,
+    "colunas": 5,
+    "joker": false
+   },
+   {
+    "id": "tempo-5000601",
+    "pieces": 18,
+    "colunas": 7,
+    "joker": false
+   },
+   {
+    "id": "tempo-5000818",
+    "pieces": 18,
+    "colunas": 5,
+    "joker": false
+   },
+   {
+    "id": "tempo-5000975",
+    "pieces": 18,
+    "colunas": 7,
+    "joker": false
+   },
+   {
+    "id": "tempo-5001015",
+    "pieces": 18,
+    "colunas": 5,
+    "joker": false
+   },
+   {
+    "id": "tempo-6000210",
+    "pieces": 19,
+    "colunas": 7,
+    "joker": false
+   },
+   {
+    "id": "tempo-6003173",
+    "pieces": 20,
+    "colunas": 9,
+    "joker": false
+   },
+   {
+    "id": "tempo-6003210",
+    "pieces": 19,
+    "colunas": 5,
+    "joker": false
+   },
+   {
+    "id": "tempo-6004178",
+    "pieces": 19,
+    "colunas": 6,
+    "joker": false
+   },
+   {
+    "id": "tempo-6005585",
+    "pieces": 20,
+    "colunas": 6,
     "joker": false
    }
   ]

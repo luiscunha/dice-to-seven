@@ -16,18 +16,21 @@
  * por parâmetro — é o que a torna testável — e é este ecrã que lho dá.
  */
 
-import type { Level, Packed } from "@dicetoseven/engine";
-import { colOf, mulberry32, rowOf, shuffled } from "@dicetoseven/engine";
+import type { Board, Cell, Level, Packed, Rng } from "@dicetoseven/engine";
+import { colOf, mulberry32, rowOf } from "@dicetoseven/engine";
 
 import { selectionTotal } from "../session/GameSession";
 import type {
+  Escada,
   TimeAttackConfig,
   TimeAttackState,
 } from "../session/TimeAttackSession";
 import {
   DEFAULT_TIME_ATTACK,
+  escadaDeTamanho,
   isOver,
   nextBoard,
+  nivelDoTabuleiro,
   remainingMs,
   startTimeAttack,
   tapTimeAttack,
@@ -60,6 +63,27 @@ export interface OpcoesTimeAttack {
   readonly tempoInicial: number;
 }
 
+/**
+ * Um retângulo do tamanho do maior tabuleiro que a corrida pode mostrar.
+ *
+ * Largura e altura medidas **em separado**, e não as do mesmo nível: o
+ * tabuleiro mais largo do pack não é o mais alto, e dimensionar pelo mais largo
+ * deixava o mais alto a transbordar o palco.
+ */
+function maiorTabuleiro(niveis: readonly Level[]): Board {
+  let largura = 1;
+  let altura = 1;
+
+  for (const n of niveis) {
+    largura = Math.max(largura, n.board.length);
+    for (const col of n.board) altura = Math.max(altura, col.length);
+  }
+
+  return Array.from({ length: largura }, () =>
+    Array.from({ length: altura }, () => 1 as Cell),
+  );
+}
+
 export class TimeAttackScreen {
   private readonly raiz: HTMLElement;
   private readonly view: BoardView;
@@ -73,7 +97,8 @@ export class TimeAttackScreen {
 
   private estado: TimeAttackState;
   private readonly config: TimeAttackConfig;
-  private ordem: readonly Level[];
+  private readonly escada: Escada;
+  private readonly rng: Rng;
   private indice = 0;
   private cronometro: ReturnType<typeof setInterval> | undefined;
   private readonly aoVoltarAoEcra: () => void;
@@ -83,13 +108,20 @@ export class TimeAttackScreen {
     this.opcoes = opcoes;
 
     /*
-     * A ordem muda a cada corrida — jogar duas vezes seguidas os mesmos
-     * tabuleiros pela mesma ordem transformava o modo num exercício de memória.
-     * A seed vem do relógio: aqui não há nada a reproduzir.
+     * **Os tabuleiros crescem com a corrida.** Um por degrau, do mais pequeno
+     * ao maior, e depois do último degrau sai sempre do cume — ver
+     * `escadaDeTamanho`. Antes era um baralhar puro de todos os níveis: o
+     * quinto tabuleiro podia ser menor do que o primeiro, e a única coisa que
+     * endurecia durante a corrida era o relógio.
+     *
+     * Dentro de cada degrau o nível é sorteado, e a seed vem do relógio: duas
+     * corridas seguidas não dão a mesma sequência, que é o que impedia o modo
+     * de virar um exercício de memória. Aqui não há nada a reproduzir.
      */
-    this.ordem = shuffled(mulberry32(Date.now() >>> 0), opcoes.niveis);
+    this.rng = mulberry32(Date.now() >>> 0);
+    this.escada = escadaDeTamanho(opcoes.niveis, this.rng);
 
-    const primeiro = this.ordem[0];
+    const primeiro = this.escada.ordem[0];
     if (primeiro === undefined) throw new Error("não há níveis para o modo tempo");
 
     this.config = {
@@ -137,7 +169,22 @@ export class TimeAttackScreen {
     this.view = new BoardView(this.palco, {
       aoTocar: (p) => void this.tocar(p),
     });
-    this.view.dimensionarPara(primeiro.board);
+
+    /*
+     * **Dimensiona uma vez, para o maior tabuleiro da corrida.**
+     *
+     * Redimensionar a cada tabuleiro parecia o óbvio e destruía a funcionalidade
+     * inteira: com a peça a encolher à medida que o tabuleiro cresce, um de dez
+     * peças e um de vinte ocupam exatamente a mesma largura no ecrã, e o jogador
+     * **nunca vê o tabuleiro crescer**. A escada existia nos números e em mais
+     * lado nenhum.
+     *
+     * Com a peça fixa, crescer lê-se como crescer. É a mesma razão do Survival,
+     * onde a caixa é dimensionada para a altura máxima e não para a atual —
+     * ali para o tabuleiro não saltar debaixo do dedo, aqui para o crescimento
+     * ter onde acontecer.
+     */
+    this.view.dimensionarPara(maiorTabuleiro(opcoes.niveis));
     this.view.montar(primeiro.board);
 
     this.cronometro = setInterval(() => {
@@ -231,13 +278,14 @@ export class TimeAttackScreen {
   }
 
   private avancarTabuleiro(): void {
-    this.indice = (this.indice + 1) % this.ordem.length;
+    this.indice += 1;
 
-    const seguinte = this.ordem[this.indice];
+    const seguinte = nivelDoTabuleiro(this.escada, this.indice, this.rng);
     if (seguinte === undefined) return;
 
+    // Sem `dimensionarPara`: a peça foi fixada no arranque, e é isso que deixa
+    // o tabuleiro crescer à vista. Ver o construtor.
     this.estado = nextBoard(this.estado, seguinte);
-    this.view.dimensionarPara(seguinte.board);
     this.view.montar(seguinte.board);
   }
 

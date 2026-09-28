@@ -15,6 +15,10 @@ import { avaliar } from "../src/candidate";
 import { avaliarEmParalelo } from "../src/pool";
 import { construirBanda, passagensDe } from "../src/pipeline";
 
+// O jogo e o pipeline não se importam um com o outro — este import existe só
+// para que o desencontro entre os dois tenha onde rebentar. Ver o teste no fim.
+import { DEGRAUS } from "../../game/src/session/TimeAttackSession";
+
 const TUTORIAL = bandById("tutorial");
 const DENSO = bandById("denso");
 
@@ -275,7 +279,7 @@ describe("formas cheias", () => {
     expect(porForma).toBeGreaterThan(0);
   }, 60_000);
 
-  it("uma banda sem formas continua a ter uma passagem só", () => {
+  it("uma banda sem formas nem janelas continua a ter uma passagem só", () => {
     const tutorial = bandById("tutorial");
     if (tutorial === undefined) throw new Error("sem tutorial");
 
@@ -284,6 +288,57 @@ describe("formas cheias", () => {
     expect(passagens).toHaveLength(1);
     expect(passagens[0]?.alvo).toBe(30);
     expect(passagens[0]?.band.formas).toBeUndefined();
+  });
+
+  /*
+   * As janelas existem porque a aceitação **não** é uniforme no intervalo de
+   * tamanhos: um tabuleiro de 10 peças passa o filtro de sobrevivência muitas
+   * vezes mais do que um de 24. Com um orçamento comum, as janelas de baixo
+   * gastavam-no antes de as de cima chegarem a ser tentadas, e o pack saía sem
+   * os degraus grandes — que são precisamente os que a escada do modo tempo
+   * precisa de ter.
+   */
+  it("uma banda com janelas dá uma passagem por janela, com o seu tamanho", () => {
+    const tempo = bandById("tempo");
+    if (tempo?.janelas === undefined) throw new Error("sem janelas no tempo");
+
+    const passagens = passagensDe(tempo, 45);
+
+    expect(passagens).toHaveLength(tempo.janelas.length);
+    expect(passagens.map((p) => p.band.pieces)).toEqual([...tempo.janelas]);
+    expect(passagens.reduce((n, p) => n + p.alvo, 0)).toBe(45);
+  });
+
+  it("as janelas cobrem o intervalo da banda, sem buracos nem saltos", () => {
+    const tempo = bandById("tempo");
+    const janelas = tempo?.janelas;
+    if (tempo === undefined || janelas === undefined) {
+      throw new Error("sem janelas no tempo");
+    }
+
+    expect(janelas[0]?.[0]).toBe(tempo.pieces[0]);
+    expect(janelas[janelas.length - 1]?.[1]).toBe(tempo.pieces[1]);
+
+    for (const [inicio, fim] of janelas) expect(inicio).toBeLessThanOrEqual(fim);
+
+    // Contíguas: cada janela começa onde a anterior acabou, mais um.
+    for (let i = 1; i < janelas.length; i++) {
+      expect(janelas[i]?.[0]).toBe((janelas[i - 1]?.[1] ?? 0) + 1);
+    }
+  });
+
+  /*
+   * O comprimento da escada do modo tempo é o mesmo em três sítios: as janelas
+   * do pack, os degraus do jogo e os passos que o prémio de tempo leva a chegar
+   * ao piso. Este teste é o que impede que mexer num deles desalinhe os outros
+   * em silêncio — o jogo e o pipeline não se importam um com o outro, e sem
+   * isto ninguém dava pelo desencontro até jogar.
+   */
+  it("**as janelas do pack são tantas quantos os degraus do jogo**", () => {
+    const tempo = bandById("tempo");
+    if (tempo?.janelas === undefined) throw new Error("sem janelas no tempo");
+
+    expect(tempo.janelas).toHaveLength(DEGRAUS);
   });
 
   it("as quotas somam o alvo, e a parte cheia é a que a banda pediu", () => {
