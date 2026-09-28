@@ -243,6 +243,21 @@ export class BoardView {
       this.linhas = Math.max(this.linhas, altura);
     }
 
+    /*
+     * **Antes de criar as peças, não depois.**
+     *
+     * `--lado` vive na grelha e a peça tem `var(--lado, 48px)`. Criada antes de
+     * ele estar posto, a peça nasce com o fallback — e desde que `width` passou
+     * a transitar, a transição de 48px para o valor certo ficava presa no valor
+     * de partida. Media-se 48px numa peça cujo `--lado-real` dizia 46, com o
+     * desalinhamento a acumular coluna a coluna.
+     *
+     * Com o lado posto primeiro, a peça nasce do tamanho certo e não há
+     * transição nenhuma a correr na montagem. A transição fica para o que ela
+     * existe: o Survival a encolher as peças quando o tabuleiro ganha colunas.
+     */
+    this.redimensionar();
+
     for (let c = 0; c < board.length; c++) {
       const coluna = board[c];
       if (coluna === undefined) continue;
