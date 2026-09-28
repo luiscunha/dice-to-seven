@@ -103,6 +103,28 @@
 
 /* ─── Tabuleiro ───────────────────────────────────────────────────────────── */
 
+/*
+ * ── O tabuleiro assenta no chão do palco ──
+ *
+ * O palco tem quase sempre mais altura do que o tabuleiro precisa: o lado da
+ * peça está travado em `LADO_MAX`, e em muitos níveis é a **largura** que
+ * manda, portanto sobra altura. Centrado, esse excesso era repartido em dois —
+ * metade por cima, metade por baixo — e as duas metades não valem o mesmo.
+ *
+ * A de baixo é a que custa: afasta as peças do polegar, que num telemóvel está
+ * no canto de baixo. Medido a 375×812 num Iniciado de cinco linhas, eram 182px
+ * de folga de cada lado; encostar ao chão traz as peças esses 182px para baixo
+ * sem lhes mexer no tamanho.
+ *
+ * A de cima passa a ser uma só faixa vazia, e uma faixa contínua é espaço que
+ * se pode usar: é onde o seletor do joker abre sem tapar o tabuleiro, onde cabe
+ * uma mensagem, e é a folga que um nível mais alto gasta a crescer — porque é
+ * para cima que o tabuleiro cresce, quando cresce.
+ *
+ * Só a âncora muda. O tabuleiro continua a ser dimensionado para o palco
+ * inteiro (`BoardView.redimensionar`), portanto nenhuma peça fica mais pequena
+ * por causa disto.
+ */
 .palco {
   /*
    * Contexto de posicionamento do seletor do joker, que ancora à peça, e do
@@ -110,7 +132,7 @@
    */
   position: relative;
   display: grid;
-  place-items: center;
+  place-items: end center;
   min-height: 0;
   min-width: 0;
   /*
@@ -124,15 +146,35 @@
    * ver de ponta a ponta.
    */
   overflow-x: clip;
-  background: var(--tray);
-  border-radius: var(--raio);
-  padding: clamp(8px, 2vw, 20px);
+  /*
+   * Sem cor própria: o fundo é o da página (`--ground`, em `theme.css`). A
+   * bandeja é do tabuleiro — ver a nota aí.
+   */
+  padding: var(--moldura);
 }
 
+/*
+ * ── A bandeja é do tabuleiro, não do palco ──
+ *
+ * Antes a cor `--tray` pintava o `.palco` inteiro: com o tabuleiro encostado
+ * ao chão, isso deixava uma bandeja vazia do tamanho da folga toda — no
+ * Iniciado de cinco linhas a 375×812, mais de 300px de retângulo colorido sem
+ * uma peça lá dentro.
+ *
+ * `box-shadow` sem desfoque, só espalhamento, pinta a bandeja **à volta do
+ * tabuleiro e mais nada**: o `--moldura` do espalhamento é o mesmo do
+ * `padding` do palco, portanto a bandeja acaba exatamente onde
+ * `BoardView.redimensionar` já reservava espaço para ela — sem fresta, sem
+ * sobreposição, e sem o `BoardView` saber que isto existe. Uma sombra não é
+ * layout: o tabuleiro continua a ser dimensionado pelas mesmas contas de
+ * sempre, só o que se vê à volta dele é que mudou.
+ */
 .tabuleiro {
   position: relative;
   /* A caixa não encolhe a meio do nível: o tabuleiro perde peças, não âncora. */
   flex: none;
+  border-radius: var(--raio);
+  box-shadow: 0 0 0 var(--moldura) var(--tray);
   transition: opacity var(--t-ui) linear;
 }
 
@@ -1623,11 +1665,10 @@
     padding: 8px 8px 10px;
   }
 
-  .palco {
-    padding: 6px;
-  }
-
   /*
+   * A folga do palco e a bandeja do tabuleiro apertam sozinhas: as duas leem
+   * `--moldura`, que `theme.css` já aperta para 6px neste breakpoint.
+   *
    * O cabeçalho aperta os espaços e não os alvos: com os botões a 44px, o
    * `gap` de secretária fazia «Avançado 12 · relógio · peças · ?» quebrar em
    * duas linhas num ecrã de 375 — e cada linha de cabeçalho é tabuleiro a menos.
@@ -2045,6 +2086,17 @@
  * ganha a mesma composição, pela mesma razão.
  */
 @media (orientation: landscape) and (max-height: 560px) {
+  /*
+   * Aperta o mesmo token que o retrato estreito aperta, e pela mesma razão:
+   * altura é o que falta aqui. `--moldura` alimenta o `padding` do palco e a
+   * sombra do tabuleiro ao mesmo tempo — divergir um dos dois abria uma
+   * fresta ou um transbordo entre a bandeja e o rebordo que o `BoardView`
+   * reservou para ela.
+   */
+  :root {
+    --moldura: 6px;
+  }
+
   .ecra.jogo {
     max-width: none;
     grid-template-columns: var(--calha) minmax(0, 1fr) var(--calha);
@@ -2086,7 +2138,6 @@
 
   .ecra.jogo > .palco {
     grid-area: palco;
-    padding: 6px;
   }
 
   .ecra.jogo > .rodape {
