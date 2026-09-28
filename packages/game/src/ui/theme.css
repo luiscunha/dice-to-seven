@@ -120,6 +120,20 @@
   --sombra: 0 1px 2px rgb(18 63 58 / 0.1), 0 6px 18px rgb(18 63 58 / 0.07);
 
   /*
+   * O lado de um alvo de toque do cromado — os botões redondos do cabeçalho e
+   * os de ícone do rodapé. 40px chega a um rato; a um dedo não, e sobe mais
+   * abaixo para quem joga com ele.
+   */
+  --alvo: 40px;
+
+  /*
+   * A largura das calhas laterais, na composição de paisagem. Ver o fim de
+   * `app.css`: o cabeçalho e o rodapé passam para os lados, e o tabuleiro
+   * fica com a altura toda.
+   */
+  --calha: clamp(118px, 19vw, 190px);
+
+  /*
    * ─── Movimento ────────────────────────────────────────────────────────
    *
    * Estes quatro números são o que se afina a jogar. Achar o colapso brusco é
@@ -154,6 +168,20 @@
 @media (max-width: 480px) {
   :root {
     --gap-peca: 4px;
+  }
+}
+
+/*
+ * Um dedo precisa de mais do que um rato.
+ *
+ * `pointer: coarse` e não a largura do ecrã: um portátil com a janela estreita
+ * continua a ter rato, e um tablet largo continua a ter dedos. 44px é o piso
+ * que o jogo já usa para as peças (`LADO_MIN_TOQUE`), e o cromado não pode
+ * pedir menos precisão do que o tabuleiro.
+ */
+@media (pointer: coarse) {
+  :root {
+    --alvo: 44px;
   }
 }
 
@@ -236,6 +264,13 @@
 html,
 body {
   height: 100%;
+  /*
+   * Sem puxar para recarregar. No Chrome para Android, arrastar o dedo para
+   * baixo no topo da página recarrega-a — e num jogo em que se toca no
+   * tabuleiro de cima a baixo, um toque que escorrega deitava fora o nível.
+   * As listas continuam a rolar: isto só trava o gesto da página inteira.
+   */
+  overscroll-behavior: none;
 }
 
 body {

@@ -54,6 +54,7 @@ import type { Rota } from "./ui/rotas";
 import { deHash, paraHash, rotaAcima, rotaLegada } from "./ui/rotas";
 import { abrirArmazenamento } from "./plataforma/armazenamento";
 import {
+  ajustarBarras,
   aplicacaoPronta,
   definirVibracao,
   ligarBotaoDeVoltar,
@@ -93,9 +94,21 @@ let idsComJoker: readonly string[] = [];
 const niveisDoCapitulo = (id: string): readonly NivelDoCapitulo[] =>
   campanha.find((c) => c.capitulo.id === id)?.niveis ?? [];
 
-/** O ecrã montado. Só um de cada vez, e é sempre este que se destrói. */
-let atual: { destruir: () => void } | undefined;
+/**
+ * O ecrã montado. Só um de cada vez, e é sempre este que se destrói.
+ *
+ * `interceptarVoltar` é a pergunta que o botão «para trás» do Android faz ao
+ * ecrã antes de navegar: um seletor aberto fecha-se, uma partida a meio pede
+ * confirmação. Só os ecrãs de jogo a têm — os de lista não guardam nada que se
+ * perca ao subir.
+ */
+let atual:
+  | { readonly destruir: () => void; readonly interceptarVoltar?: () => boolean }
+  | undefined;
 let tutorial: JokerTutorial | undefined;
+
+/** O tutorial aberto pelo `?`, que se pode fechar — ao contrário do primeiro. */
+let tutorialEmRevisao = false;
 
 /**
  * A corrida de Survival a meio.
@@ -152,10 +165,20 @@ function resolver(): void {
 function subirUmNivel(): boolean {
   const aberta = document.querySelector<HTMLDialogElement>("dialog[open]");
   if (aberta !== null) {
+    // Uma confirmação remove-se sozinha ao fechar — ver `confirmar`, em `dom.ts`.
     if (typeof aberta.close === "function") aberta.close();
     else aberta.open = false;
     return true;
   }
+
+  // O tutorial relido pelo `?` fecha-se, e o nível continua por trás dele. O
+  // primeiro, o obrigatório, não: sair dele é sair do nível.
+  if (tutorial !== undefined && tutorialEmRevisao) {
+    fecharTutorial();
+    return true;
+  }
+
+  if (atual?.interceptarVoltar?.() === true) return true;
 
   const rota = deHash(location.hash);
 
@@ -185,6 +208,14 @@ async function mostrar(rota: Rota): Promise<void> {
         perfil,
         totalNiveis: campanha.reduce((n, c) => n + c.niveis.length, 0),
         melhorTempoSurvival: relogio(perfil.bestSurvivalMs),
+        /*
+         * Só conta como «a meio» uma corrida que chegou a começar. Entrar no
+         * modo e sair sem tocar também grava — é o mesmo tabuleiro de partida,
+         * e anunciá-lo como uma corrida à espera era prometer o que não há.
+         */
+        ...(corridaSurvival !== undefined && corridaSurvival.decorridoMs > 0
+          ? { corridaAMeio: relogio(corridaSurvival.decorridoMs) }
+          : {}),
         aoEscolherNiveis: voltarA({ ecra: "bandas" }),
         aoEscolherTempo: voltarA({ ecra: "tempo" }),
         aoEscolherSurvival: voltarA({ ecra: "survival" }),
@@ -209,6 +240,7 @@ async function mostrar(rota: Rota): Promise<void> {
         aoMudarTema: (tema: Tema) => {
           preferencias = { ...preferencias, tema };
           aplicarTema(document.documentElement, tema);
+          sincronizarCromado();
           guardarPreferencias();
         },
         tempoInicial: preferencias.tempoInicial,
@@ -334,9 +366,19 @@ async function mostrarJogo(id: string, indice: number): Promise<void> {
       else ir({ ecra: "jogo", banda: seguinte.banda, nivel: seguinte.indice });
     },
     aoVoltar: voltarA(paraALista),
-    aoPedirAjuda: () => {
-      abrirTutorial(true);
-    },
+    /*
+     * O `?` só depois de o joker aparecer: num nível com ele, ou em qualquer
+     * nível depois do tutorial. Antes disso abria a explicação de uma peça que
+     * o jogador nunca viu — e a grelha esconde de propósito quais os níveis
+     * com joker, para que ele seja um encontro e não um aviso.
+     */
+    ...(temJoker || perfil.sawJokerTutorial
+      ? {
+          aoPedirAjuda: () => {
+            abrirTutorial(true);
+          },
+        }
+      : {}),
     mostrarSomaDasFaces: temJoker && mostraSomaDasFaces(feitos),
   });
 
@@ -373,6 +415,13 @@ async function mostrarTempo(): Promise<void> {
       guardarPerfil();
     },
     aoSair: voltarA({ ecra: "home" }),
+    /*
+     * Outra corrida é o mesmo ecrã montado de novo. Não passa pelo `ir`: a rota
+     * não muda, e sem mudança de rota não há `hashchange` que o monte.
+     */
+    aoRecomecar: () => {
+      void mostrar({ ecra: "tempo" });
+    },
   });
 }
 
@@ -424,17 +473,68 @@ function mostrarSurvival(seed: number | undefined): void {
 function abrirTutorial(revisao: boolean): void {
   tutorial?.destruir();
 
+  tutorialEmRevisao = revisao;
   tutorial = new JokerTutorial(app as HTMLElement, {
     revisao,
-    aoFechar: () => {
-      tutorial?.destruir();
-      tutorial = undefined;
-
-      perfil = markJokerTutorialSeen(perfil);
-      guardarPerfil();
-    },
+    aoFechar: fecharTutorial,
   });
 }
+
+function fecharTutorial(): void {
+  tutorial?.destruir();
+  tutorial = undefined;
+  tutorialEmRevisao = false;
+
+  perfil = markJokerTutorialSeen(perfil);
+  guardarPerfil();
+}
+
+/*
+ * ── O cromado do sistema segue o tema ──
+ *
+ * Três coisas fora do documento dependem de o jogo estar claro ou escuro, e
+ * nenhuma o sabia depois do arranque:
+ *
+ * - **As barras do Android** (`ajustarBarras`). Com a aplicação de ponta a
+ *   ponta, os ícones da barra de estado desenham-se sobre o `--ground`, e têm
+ *   de mudar de tinta com ele.
+ * - **O `theme-color`**, que pinta a barra do browser no telemóvel. As duas
+ *   entradas do `index.html` seguem o sistema; com o tema forçado nas
+ *   Definições, a barra ficava da cor do outro tema.
+ * - **O `color-scheme`**, que decide a cor das barras de rolagem das listas.
+ *
+ * Corre ao arrancar, ao mudar o tema nas Definições, e quando o sistema muda de
+ * claro para escuro com o tema em «Sistema».
+ */
+const sistemaEscuro =
+  typeof window.matchMedia === "function"
+    ? window.matchMedia("(prefers-color-scheme: dark)")
+    : undefined;
+
+function temaEscuro(): boolean {
+  if (preferencias.tema === "sistema") return sistemaEscuro?.matches ?? false;
+  return preferencias.tema === "escuro";
+}
+
+function sincronizarCromado(): void {
+  const escuro = temaEscuro();
+  const raiz = document.documentElement;
+
+  raiz.style.colorScheme = escuro ? "dark" : "light";
+
+  const fundo = getComputedStyle(raiz).getPropertyValue("--ground").trim();
+  if (fundo !== "") {
+    for (const meta of document.querySelectorAll('meta[name="theme-color"]')) {
+      meta.setAttribute("content", fundo);
+    }
+  }
+
+  void ajustarBarras(escuro);
+}
+
+sistemaEscuro?.addEventListener("change", () => {
+  if (preferencias.tema === "sistema") sincronizarCromado();
+});
 
 function mostrarMensagem(texto: string): void {
   const el = elemento("div", "ecra", texto);
@@ -456,6 +556,7 @@ async function arrancar(): Promise<void> {
   }
 
   aplicarTema(document.documentElement, preferencias.tema);
+  sincronizarCromado();
   definirVibracao(preferencias.vibracao);
   ligarBotaoDeVoltar(subirUmNivel);
 
@@ -489,7 +590,7 @@ async function arrancar(): Promise<void> {
      * carregam. Senão a aplicação ficava tapada por ele e nem a mensagem de
      * erro se via — que é o pior desfecho possível.
      */
-    void aplicacaoPronta(document.documentElement.dataset["tema"] === "escuro");
+    void aplicacaoPronta(temaEscuro());
   }
 }
 

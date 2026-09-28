@@ -75,6 +75,13 @@ const ATRASO_POR_COLUNA = 28;
  */
 const MARGEM_DA_QUEDA = 60;
 
+/**
+ * Contador dos `id` das peças. Global ao módulo porque o tutorial do joker abre
+ * um segundo tabuleiro por cima do nível, e dois `id` iguais no mesmo
+ * documento fariam o leitor de ecrã anunciar a peça errada.
+ */
+let idsDePeca = 0;
+
 export interface OpcoesBoardView {
   readonly aoTocar: (p: Packed) => void;
   readonly modoFace?: ModoFace;
@@ -110,6 +117,15 @@ export class BoardView {
   /** A linha de fogo, quando o modo a pede. Ver `marcarTeto`. */
   private teto: HTMLElement | undefined;
 
+  /**
+   * O cursor do teclado: a peça onde o Enter toca.
+   *
+   * Guarda-se a **posição**, não o elemento. Depois de uma jogada a peça
+   * debaixo do cursor saiu ou caiu, e o que o jogador espera é que o cursor
+   * fique onde estava no tabuleiro — em cima da peça que ocupou o lugar.
+   */
+  private cursor: Packed | undefined;
+
   private geracao = 0;
   private readonly observador: ResizeObserver | undefined;
 
@@ -122,6 +138,15 @@ export class BoardView {
     this.grelha.className = "tabuleiro";
     this.grelha.setAttribute("role", "grid");
     this.grelha.setAttribute("aria-label", "tabuleiro");
+    /*
+     * ── O tabuleiro joga-se por teclado ──
+     *
+     * Um só ponto de tabulação para o tabuleiro inteiro, e as setas lá dentro:
+     * cinquenta peças na ordem do Tab seriam cinquenta paragens até chegar ao
+     * desfazer. É o desenho do §7 — setas movem, Enter ou espaço tocam — e sai
+     * de graça das coordenadas, porque a vizinhança é a do próprio jogo.
+     */
+    this.grelha.tabIndex = 0;
     this.host.appendChild(this.grelha);
 
     this.grelha.addEventListener("click", (ev) => {
@@ -131,7 +156,18 @@ export class BoardView {
       const chave = alvo.dataset["pos"];
       if (chave === undefined) return;
 
+      // Um clique também leva o cursor: quem alterna entre rato e teclado
+      // continua do sítio onde tocou.
+      this.moverCursor(Number(chave) as Packed);
       this.aoTocar(Number(chave) as Packed);
+    });
+
+    this.grelha.addEventListener("keydown", (ev) => {
+      this.teclar(ev);
+    });
+
+    this.grelha.addEventListener("focus", () => {
+      this.moverCursor(this.cursor ?? packed(0, 0));
     });
 
     this.observador =
@@ -180,7 +216,7 @@ export class BoardView {
         if (valor === undefined) continue;
 
         const p = packed(c, r);
-        const el = criarPeca(valor, this.modo);
+        const el = this.novaPeca(valor);
         el.dataset["pos"] = String(p);
         this.posicionar(el, p);
 
@@ -201,6 +237,7 @@ export class BoardView {
     // tabuleiro, não da montagem: volta, e volta por cima das peças.
     if (this.teto !== undefined) this.grelha.appendChild(this.teto);
 
+    this.moverCursor(this.cursor);
     this.redimensionar();
   }
 
@@ -246,6 +283,7 @@ export class BoardView {
     // O estado lógico avança já — ver a nota no topo do ficheiro.
     this.reindexar(t.moved);
     this.board = depois;
+    this.moverCursor(this.cursor);
 
     this.fecharAnimacao = () => {
       this.fecharAnimacao = undefined;
@@ -304,7 +342,7 @@ export class BoardView {
         if (valor === undefined) continue;
 
         const p = packed(c, r);
-        const el = criarPeca(valor, this.modo);
+        const el = this.novaPeca(valor);
         el.dataset["pos"] = String(p);
 
         /*
@@ -328,6 +366,7 @@ export class BoardView {
 
     if (novas.length === 0) return;
 
+    this.moverCursor(this.cursor);
     this.redimensionar();
 
     // Força o layout, para que a posição de partida conte como valor anterior.
@@ -502,6 +541,97 @@ export class BoardView {
 
   private valorEm(p: Packed): Cell | undefined {
     return this.board[colOf(p)]?.[rowOf(p)];
+  }
+
+  /**
+   * Uma peça do tabuleiro, com `id` próprio.
+   *
+   * O `id` é o que o `aria-activedescendant` aponta: com o foco preso na
+   * grelha, é assim que um leitor de ecrã anuncia a peça debaixo do cursor. É
+   * da **peça** e não da posição, porque a peça muda de posição a cada jogada
+   * e o `id` tem de viajar com ela.
+   */
+  private novaPeca(valor: Cell): HTMLElement {
+    const el = criarPeca(valor, this.modo);
+    el.id = `peca-${String(++idsDePeca)}`;
+    return el;
+  }
+
+  /** A posição válida mais próxima de `p` no tabuleiro atual. */
+  private dentro(p: Packed): Packed | undefined {
+    const largura = this.board.length;
+    if (largura === 0) return undefined;
+
+    const c = Math.min(colOf(p), largura - 1);
+    const altura = this.board[c]?.length ?? 0;
+    if (altura === 0) return undefined;
+
+    return packed(c, Math.min(rowOf(p), altura - 1));
+  }
+
+  /**
+   * Põe o cursor em `p`, ou na peça mais próxima se `p` já não existir.
+   *
+   * Corre depois de cada mudança do tabuleiro: uma coluna que desapareceu no
+   * colapso não pode deixar o cursor a apontar para o vazio.
+   */
+  private moverCursor(p: Packed | undefined): void {
+    this.grelha.querySelector(".peca.cursor")?.classList.remove("cursor");
+
+    const alvo = p === undefined ? undefined : this.dentro(p);
+    const el = alvo === undefined ? undefined : this.pecas.get(alvo);
+
+    if (alvo === undefined || el === undefined) {
+      this.grelha.removeAttribute("aria-activedescendant");
+      return;
+    }
+
+    this.cursor = alvo;
+    el.classList.add("cursor");
+    this.grelha.setAttribute("aria-activedescendant", el.id);
+  }
+
+  /**
+   * Setas movem, Enter e espaço tocam.
+   *
+   * Cima e baixo andam **dentro da coluna**, e as linhas contam-se da base —
+   * é a mesma geometria da adjacência. Esquerda e direita mudam de coluna à
+   * mesma altura, e descem até ao topo da coluna de chegada se ela for mais
+   * baixa: numa silhueta, ir para o lado nunca pode cair no vazio.
+   */
+  private teclar(ev: KeyboardEvent): void {
+    const atual = this.dentro(this.cursor ?? packed(0, 0));
+    if (atual === undefined) return;
+
+    const c = colOf(atual);
+    const r = rowOf(atual);
+    let destino: Packed;
+
+    switch (ev.key) {
+      case "ArrowLeft":
+        destino = packed(Math.max(0, c - 1), r);
+        break;
+      case "ArrowRight":
+        destino = packed(c + 1, r);
+        break;
+      case "ArrowUp":
+        destino = packed(c, Math.min(r + 1, 63));
+        break;
+      case "ArrowDown":
+        destino = packed(c, Math.max(0, r - 1));
+        break;
+      case "Enter":
+      case " ":
+        ev.preventDefault();
+        this.moverCursor(atual);
+        this.aoTocar(atual);
+        return;
+      default:
+        return;
+    }
+
+    ev.preventDefault();
+    this.moverCursor(destino);
   }
 
   private posicionar(el: HTMLElement, p: Packed): void {

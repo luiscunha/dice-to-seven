@@ -36,6 +36,13 @@ export class JokerPicker {
   private readonly aoClicarFora: (ev: MouseEvent) => void;
   private aberto = false;
 
+  /**
+   * Quem tinha o foco antes de o seletor abrir — o tabuleiro, quando se joga
+   * por teclado. Fechar devolve-lho; sem isso o foco caía no `body` e a
+   * jogada seguinte começava com um Tab até ao tabuleiro.
+   */
+  private focoAnterior: HTMLElement | undefined;
+
   constructor(host: HTMLElement, opcoes: OpcoesJokerPicker) {
     this.opcoes = opcoes;
 
@@ -78,6 +85,8 @@ export class JokerPicker {
 
   /** Abre junto da peça, sem sair do tabuleiro. */
   abrir(ancora: DOMRect, atual?: JokerValue): void {
+    this.focoAnterior =
+      document.activeElement instanceof HTMLElement ? document.activeElement : undefined;
     this.desenhar(atual);
 
     this.el.hidden = false;
@@ -102,8 +111,15 @@ export class JokerPicker {
   }
 
   fechar(): void {
+    const tinhaFoco = this.el.contains(document.activeElement);
+
     this.aberto = false;
     this.el.hidden = true;
+
+    if (tinhaFoco && this.focoAnterior?.isConnected === true) {
+      this.focoAnterior.focus({ preventScroll: true });
+    }
+    this.focoAnterior = undefined;
   }
 
   destruir(): void {

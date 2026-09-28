@@ -6,6 +6,8 @@
  * na Fase 7.
  */
 
+import { iconeVoltar } from "./icones";
+
 export const texto = (s: string): Text => document.createTextNode(s);
 
 export function botao(
@@ -46,13 +48,31 @@ export function cabecalho(
 ): { readonly el: HTMLElement; readonly elTitulo: HTMLElement } {
   const el = elemento("header", "topo");
 
-  const voltar = botao("‹", "redondo", aoVoltar);
-  voltar.setAttribute("aria-label", "voltar");
+  const voltar = botaoRedondo(iconeVoltar(), "voltar", aoVoltar);
 
   const elTitulo = elemento("h1", undefined, titulo);
 
   el.append(voltar, elTitulo);
   return { el, elTitulo };
+}
+
+/**
+ * O botão redondo do cabeçalho, com um ícone lá dentro.
+ *
+ * O nome vai para `aria-label` e para `title` — o mesmo contrato dos botões de
+ * ícone do rodapé: quem ouve o ecrã ouve o nome, e quem passa o rato e não
+ * reconheceu o desenho lê-o.
+ */
+export function botaoRedondo(
+  glifo: SVGElement,
+  nome: string,
+  aoClicar?: () => void,
+): HTMLButtonElement {
+  const b = botao("", "redondo", aoClicar);
+  b.setAttribute("aria-label", nome);
+  b.title = nome;
+  b.appendChild(glifo);
+  return b;
 }
 
 /**
@@ -112,6 +132,15 @@ export function confirmar(
   // Tocar fora cancela: é o gesto de quem percebeu que se enganou.
   d.addEventListener("click", (e) => {
     if (e.target === d) fechar();
+  });
+
+  /*
+   * O `Esc` do teclado e o botão «para trás» do Android fecham o diálogo sem
+   * passar pelos botões. Sem isto a caixa fechada ficava na árvore, e cada
+   * confirmação seguinte empilhava-se por cima das mortas.
+   */
+  d.addEventListener("close", () => {
+    d.remove();
   });
 
   d.appendChild(corpo);

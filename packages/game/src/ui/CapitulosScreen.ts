@@ -16,6 +16,7 @@
 import type { Capitulo, NivelDoCapitulo } from "../capitulos";
 import type { Profile } from "../session/progress";
 import { cabecalho, elemento } from "./dom";
+import { iconeSeguir } from "./icones";
 
 export interface CapituloNaLista {
   readonly capitulo: Capitulo;
@@ -68,6 +69,17 @@ export class CapitulosScreen {
     const b = document.createElement("button");
     b.type = "button";
     b.className = "banda";
+    /*
+     * Três estados, e só o do meio se destaca: um capítulo começado e por
+     * acabar é o sítio para onde o jogador provavelmente vai. Um acabado lê-se
+     * pelo número em cor de destaque; um por começar fica neutro.
+     */
+    b.dataset["estado"] =
+      feitos === 0
+        ? "novo"
+        : feitos >= entrada.niveis.length
+          ? "completo"
+          : "em-curso";
 
     const texto = elemento("span", "banda-texto");
     texto.append(
@@ -87,7 +99,9 @@ export class CapitulosScreen {
       );
     }
 
-    b.append(texto, conta);
+    // A seta diz que a linha leva a outro ecrã — sem ela, uma linha com um
+    // número à direita lê-se como uma tabela, não como um caminho.
+    b.append(texto, conta, iconeSeguir());
     b.addEventListener("click", () => {
       opcoes.aoEscolher(entrada.capitulo.id);
     });

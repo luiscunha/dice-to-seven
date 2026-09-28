@@ -45,11 +45,34 @@ export class NiveisScreen {
 
     const { el: topo } = cabecalho(opcoes.capitulo.nome, opcoes.aoVoltar);
 
+    /*
+     * ── O nível a seguir ──
+     *
+     * A grelha existe para responder a «onde é que eu ia», e até aqui só o
+     * respondia por eliminação: o jogador procurava a primeira célula sem selo.
+     * Agora essa célula diz que é ela. É o primeiro nível por jogar **na ordem
+     * do capítulo** — quem saltou para a frente continua a ver o buraco que
+     * deixou para trás, que é o que a grelha deve mostrar.
+     *
+     * Não é um cadeado: todos os níveis continuam abertos.
+     */
+    const seguinte = opcoes.niveis.findIndex(
+      (n) => opcoes.perfil.levels[n.id] === undefined,
+    );
+
     const grelha = elemento("div", "grelha-niveis");
+    let celulaSeguinte: HTMLElement | undefined;
+
     opcoes.niveis.forEach((nivel, i) => {
-      grelha.appendChild(
-        this.celula(i, nivel, opcoes.perfil.levels[nivel.id]?.seal, opcoes),
+      const el = this.celula(
+        i,
+        nivel,
+        opcoes.perfil.levels[nivel.id]?.seal,
+        i === seguinte,
+        opcoes,
       );
+      if (i === seguinte) celulaSeguinte = el;
+      grelha.appendChild(el);
     });
 
     const rolo = elemento("div", "rolo");
@@ -57,6 +80,12 @@ export class NiveisScreen {
 
     this.raiz.append(topo, rolo);
     host.replaceChildren(this.raiz);
+
+    // Num capítulo de 45 níveis num telemóvel, o seguinte pode estar fora do
+    // ecrã. Rola até ele, sem animação: é a posição de partida, não um evento.
+    if (typeof celulaSeguinte?.scrollIntoView === "function") {
+      celulaSeguinte.scrollIntoView({ block: "nearest" });
+    }
   }
 
   destruir(): void {
@@ -67,12 +96,14 @@ export class NiveisScreen {
     posicao: number,
     nivel: NivelDoCapitulo,
     selo: Seal | undefined,
+    seguinte: boolean,
     opcoes: OpcoesNiveis,
   ): HTMLElement {
     const b = document.createElement("button");
     b.type = "button";
     b.className = "nivel";
     if (selo !== undefined) b.dataset["selo"] = selo;
+    if (seguinte) b.dataset["seguinte"] = "sim";
 
     const numero = String(posicao + 1);
     b.appendChild(elemento("span", "nivel-numero", numero));
@@ -83,9 +114,11 @@ export class NiveisScreen {
 
     b.setAttribute(
       "aria-label",
-      selo === undefined
-        ? `nível ${numero}, por jogar`
-        : `nível ${numero}, ${SELO[selo].nome}`,
+      selo !== undefined
+        ? `nível ${numero}, ${SELO[selo].nome}`
+        : seguinte
+          ? `nível ${numero}, a seguir`
+          : `nível ${numero}, por jogar`,
     );
 
     b.addEventListener("click", () => {
