@@ -106,15 +106,24 @@ describe("o arranque", () => {
 });
 
 /*
- * A largura cresce para a peça poder começar grande.
+ * A largura é sete, do primeiro instante ao último.
  *
- * Num telemóvel quem manda no tamanho da peça é sempre a largura — a 375px,
- * sete colunas dão 46px e cinco dão 69px. Alargar o tabuleiro é encolher a
- * peça, e é assim que a corrida começa com peças grandes e acaba no 7×7.
+ * Cresceu, em tempos: arrancava em cinco e ganhava uma coluna a cada quatro
+ * linhas caídas, para a peça poder começar grande — num telemóvel quem manda no
+ * tamanho da peça é a largura, e a 375px sete colunas dão 46px contra 69px de
+ * cinco. Custava a área de jogo mudar de tamanho por baixo das mãos, e trocou-se
+ * o tamanho da peça pela estabilidade do tabuleiro.
+ *
+ * O mecanismo ficou montado e continua testado aqui — `larguraInicial` é que
+ * passou a valer o mesmo que o teto. É o que faz de voltar atrás uma linha.
  */
-describe("a largura cresce com a corrida", () => {
+describe("a largura é constante durante a corrida", () => {
   const { alturaInicial, larguraInicial, linhasPorColuna, largura } =
     DEFAULT_SURVIVAL;
+
+  it("arranca no máximo, e é lá que fica", () => {
+    expect(larguraInicial).toBe(largura);
+  });
 
   it("as linhas do arranque são todas à largura inicial", () => {
     for (let i = 0; i < alturaInicial; i++) {
@@ -122,14 +131,14 @@ describe("a largura cresce com a corrida", () => {
     }
   });
 
-  it("ganha uma coluna a cada degrau, e pára no máximo", () => {
+  /* Com o arranque no teto, nenhum degrau tem para onde subir. */
+  it("nenhuma linha entra mais larga do que a primeira", () => {
     const em = (caidas: number): number =>
       larguraNoIndice(alturaInicial + caidas);
 
-    expect(em(0)).toBe(larguraInicial);
-    expect(em(linhasPorColuna - 1)).toBe(larguraInicial);
-    expect(em(linhasPorColuna)).toBe(larguraInicial + 1);
-    expect(em(linhasPorColuna * 2)).toBe(larguraInicial + 2);
+    expect(em(0)).toBe(largura);
+    expect(em(linhasPorColuna)).toBe(largura);
+    expect(em(linhasPorColuna * 2)).toBe(largura);
     expect(em(9999)).toBe(largura);
   });
 
@@ -159,23 +168,27 @@ describe("a largura cresce com a corrida", () => {
     });
 
     expect(antes).toEqual(noitrocado);
-    expect(antes).toHaveLength(larguraInicial + 1);
+    expect(antes).toHaveLength(largura);
   });
 
-  it("o tabuleiro alarga no instante em que a linha mais larga entra", () => {
-    // O índice em que a largura sobe, com um tabuleiro baixo para não morrer.
-    const degrau = alturaInicial + linhasPorColuna;
+  /*
+   * **Limpar colunas não estreita a corrida.** O colapso empurra as colunas
+   * para a esquerda e o tabuleiro fica mais estreito do que sete; a linha
+   * seguinte entra à largura cheia na mesma, e repõe-no. Sem isto, jogar bem
+   * encolhia a área de jogo para sempre — o jogador era punido por limpar.
+   */
+  it("a linha repõe a largura cheia num tabuleiro que colapsou", () => {
     const base = startSurvival(SEED);
-    const antes: SurvivalState = {
+    const estreito: SurvivalState = {
       ...base,
-      linhasInjetadas: degrau,
-      game: { ...base.game, board: [[1], [2], [3], [4], [5]] },
+      linhasInjetadas: alturaInicial + linhasPorColuna,
+      game: { ...base.game, board: [[1], [2], [3]] },
     };
 
-    expect(width(antes.game.board)).toBe(larguraInicial);
-    expect(larguraAtual(antes)).toBe(larguraInicial + 1);
+    expect(width(estreito.game.board)).toBe(3);
+    expect(larguraAtual(estreito)).toBe(largura);
 
-    expect(width(injectRow(antes, false).game.board)).toBe(larguraInicial + 1);
+    expect(width(injectRow(estreito, false).game.board)).toBe(largura);
   });
 });
 

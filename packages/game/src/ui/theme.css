@@ -166,12 +166,15 @@
   --sombra: 0 1px 2px rgb(18 63 58 / 0.1), 0 6px 18px rgb(18 63 58 / 0.07);
 
   /*
-   * A folga entre a bandeja do tabuleiro e o próprio tabuleiro — ver
-   * `.tabuleiro` em `app.css`. Um só valor porque dois consumidores lêem dele:
-   * o `padding` do palco, que é o que `BoardView.redimensionar` desconta ao
-   * espaço disponível, e a sombra do tabuleiro, que pinta a bandeja exatamente
-   * até onde esse espaço foi descontado. Divergirem um pixel bastava para abrir
-   * uma fresta entre as duas.
+   * A folga entre o tabuleiro e as margens do palco — ver `.tabuleiro` em
+   * `app.css`.
+   *
+   * Pintou uma bandeja à volta das peças, e deixou de pintar: a moldura fechava
+   * as peças dentro de um retângulo de cor que competia com a única grelha de
+   * cor que o ecrã deve ter. A folga ficou, porque é ela que dá espaço aos anéis
+   * de seleção das peças da borda — o palco corta na horizontal — e é ela que o
+   * `BoardView.redimensionar` desconta ao espaço disponível, pelo `padding` do
+   * palco.
    */
   --moldura: clamp(8px, 2vw, 20px);
 

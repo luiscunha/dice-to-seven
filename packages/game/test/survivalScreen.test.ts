@@ -11,8 +11,10 @@
 
 import { beforeEach, describe, expect, it } from "vitest";
 
+import type { Board } from "@dicetoseven/engine";
 import { findAllGroups } from "@dicetoseven/engine";
 
+import type { CorridaGuardada } from "../src/session/corridaSurvival";
 import { DEFAULT_SURVIVAL, startSurvival } from "../src/session/SurvivalSession";
 import { SurvivalScreen } from "../src/ui/SurvivalScreen";
 
@@ -434,6 +436,120 @@ describe("a linha de fogo", () => {
 
     expect(fogo()).not.toBeNull();
     expect(fogo()).toBe(host.querySelector(".tabuleiro")?.lastElementChild);
+    ecra.destruir();
+  });
+});
+
+/*
+ * ── A caixa de fim de corrida ──
+ *
+ * Duas coisas que vieram do jogo a sério e que só um teste impede de voltarem:
+ *
+ * - **«Repetir esta» só existe para quem perdeu.** É um botão de segunda
+ *   tentativa; a quem acabou de limpar o tabuleiro, refazer a mesma partida é a
+ *   única coisa que já se sabe fazer.
+ * - **A seed não se imprime aqui.** Está no endereço, que é onde serve para
+ *   alguma coisa — copiar o link partilha a corrida. No fim de uma partida era
+ *   um número sem uso à frente de quem quer é jogar outra.
+ */
+describe("a caixa de fim de corrida", () => {
+  let host: HTMLElement;
+
+  /** O estado de partida com outro tabuleiro, para chegar ao fim em um toque. */
+  const corridaCom = (board: Board): CorridaGuardada => {
+    const s = startSurvival(SEED);
+    return {
+      estado: { ...s, game: { ...s.game, board } },
+      decorridoMs: 1_000,
+    };
+  };
+
+  const montar = (
+    board: Board,
+    aoRecomecar: (seed: number) => void = () => undefined,
+  ): SurvivalScreen =>
+    new SurvivalScreen(host, {
+      seed: SEED,
+      retomar: corridaCom(board),
+      melhorTempo: 0,
+      aoGuardar: () => undefined,
+      aoTerminar: () => undefined,
+      aoSair: () => undefined,
+      aoRecomecar,
+    });
+
+  const caixa = (): HTMLElement | null =>
+    host.querySelector<HTMLElement>("dialog:not(.confirmacao) .popup-corpo");
+
+  const acoes = (): string[] =>
+    [...(caixa()?.querySelectorAll(".acoes .btn") ?? [])].map(
+      (b) => b.textContent ?? "",
+    );
+
+  const assentar = async (): Promise<void> => {
+    await new Promise((r) => {
+      setTimeout(r, 900);
+    });
+  };
+
+  beforeEach(() => {
+    document.body.replaceChildren();
+    host = document.createElement("div");
+    document.body.appendChild(host);
+  });
+
+  /* Duas peças que somam 7: um toque em cada e o tabuleiro fica vazio. */
+  it("quem limpa o tabuleiro não vê «Repetir esta»", async () => {
+    const ecra = montar([[3], [4]]);
+
+    host
+      .querySelector('.peca[data-pos="0"]')
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    host
+      .querySelector('.peca[data-pos="64"]')
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await assentar();
+
+    expect(caixa()?.textContent).toContain("Tabuleiro limpo");
+    expect(acoes()).toEqual(["Outra corrida", "Sair"]);
+
+    ecra.destruir();
+  });
+
+  /* Uma coluna já na altura máxima: a linha seguinte transborda. */
+  it("quem transborda vê «Repetir esta», e ela devolve a mesma seed", async () => {
+    let repetida = 0;
+    const ecra = montar([[2, 2, 2, 2, 3, 3, 3]], (s) => {
+      if (s === SEED) repetida++;
+    });
+
+    host.querySelector<HTMLButtonElement>(".rodape .acoes .btn")?.click();
+    await assentar();
+
+    expect(caixa()?.textContent).toContain("transbordou");
+    expect(acoes()).toEqual(["Outra corrida", "Repetir esta", "Sair"]);
+
+    [...(caixa()?.querySelectorAll<HTMLButtonElement>(".acoes .btn") ?? [])]
+      .find((b) => b.textContent === "Repetir esta")
+      ?.click();
+    expect(repetida).toBe(1);
+
+    ecra.destruir();
+  });
+
+  it("não imprime a seed: ela vive no endereço", async () => {
+    const ecra = montar([[3], [4]]);
+
+    host
+      .querySelector('.peca[data-pos="0"]')
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    host
+      .querySelector('.peca[data-pos="64"]')
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await assentar();
+
+    expect(caixa()?.textContent).not.toContain("Seed");
+
     ecra.destruir();
   });
 });
