@@ -19,6 +19,59 @@
 }
 
 /*
+ * ── O fundo: peças soltas, em marca de água ──
+ *
+ * A aplicação assentava num liso, e um liso num jogo de dados é uma página em
+ * branco à espera de identidade. O padrão dá-lha com o material que o jogo já
+ * tem — as peças — em vez de a ir buscar a um enfeite que não pertence a lado
+ * nenhum.
+ *
+ * **Máscara e não imagem.** O SVG é só forma, e a cor vem de `--fundo-peca`,
+ * que muda com o tema: um ficheiro, dois temas, e nada para manter sincronizado.
+ * Com uma imagem colorida seriam dois SVG a dizer a mesma coisa em cores
+ * diferentes.
+ *
+ * `position: fixed` e não `background` do `body`: fixo, o padrão não anda com o
+ * scroll das listas — um fundo que desliza por baixo de uma lista de níveis
+ * chama a atenção para si, que é exatamente o contrário do que ele é. E fica
+ * **atrás de tudo** (`z-index: -1`), portanto nenhuma peça, cartão ou caixa
+ * precisa de saber que ele existe.
+ *
+ * O tamanho é o do tile, e não uma percentagem: esticá-lo faria as peças mudar
+ * de tamanho com a janela, e num ecrã largo ficariam dados de 200px por trás de
+ * peças de 46px.
+ *
+ * ── Sobre `fundo-pecas.svg` ──
+ *
+ * São cinco peças num quadrado de 300, todas inteiras e afastadas das bordas: o
+ * padrão repete-se lado a lado, e uma peça cortada na costura desenharia uma
+ * grelha onde o que se quer é dispersão. As rotações são todas diferentes pela
+ * mesma razão. Contorno e não sólido — a esta opacidade um dado cheio vira uma
+ * mancha, e o que faz a forma reconhecer-se é o quadrado arredondado com as
+ * pintas dentro.
+ *
+ * **O ficheiro é uma linha, sem prólogo XML e sem comentários**, e não é
+ * desleixo: o Vite inliniza-o como `data:` URI, e tanto o `<?xml?>` como um
+ * comentário com acentos partiam a codificação — o browser recusava a imagem em
+ * silêncio e a máscara escondia tudo o que devia mostrar. A documentação vive
+ * aqui, que é onde alguém a procura.
+ */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-color: var(--fundo-peca);
+  mask-image: url("./fundo-pecas.svg");
+  mask-repeat: repeat;
+  mask-size: 300px 300px;
+  -webkit-mask-image: url("./fundo-pecas.svg");
+  -webkit-mask-repeat: repeat;
+  -webkit-mask-size: 300px 300px;
+}
+
+/*
  * A coluna é `minmax(0, 1fr)`, e não a omissão — e é isso que deixa o tabuleiro
  * encolher.
  *
@@ -1266,14 +1319,32 @@
  */
 .home-titulo {
   margin: 0;
-  font-size: clamp(24px, 7.2vw, 30px);
-  font-weight: 750;
-  letter-spacing: -0.035em;
-  line-height: 1.1;
+  font-family: var(--fonte-marca);
+  font-size: clamp(26px, 7.8vw, 34px);
+  font-weight: 600;
+  /*
+   * A Fredoka já é larga e arredondada: o `tracking` negativo que a `system-ui`
+   * precisava para não parecer solta fazia aqui as letras tocarem-se. Um pouco
+   * de ar, e o «o» que é uma pinta ganha espaço para se ler como letra.
+   */
+  letter-spacing: 0.005em;
+  line-height: 1.15;
   color: var(--ink);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  /*
+   * O relevo da marca: um realce por dentro, em cima, e uma sombra curta por
+   * baixo. É o que dá à palavra o ar de peça — a mesma leitura que as faces já
+   * têm, com a luz a vir de cima.
+   *
+   * `text-shadow` e não um contorno: o contorno é uma segunda cor a manter
+   * afinada contra dois fundos, e num tamanho de 26px engorda as letras até as
+   * fechar por dentro.
+   */
+  text-shadow:
+    0 1px 0 var(--marca-luz),
+    0 2px 3px var(--marca-sombra);
 }
 
 /*
