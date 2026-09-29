@@ -1475,7 +1475,17 @@ body::before {
   border-radius: calc(var(--raio) + 6px);
   background: var(--cor);
   color: var(--tinta-modo);
-  box-shadow: inset 0 0 0 1px var(--aro);
+  /*
+   * O aro por dentro e a sombra por fora, na mesma declaração.
+   *
+   * A sombra em repouso e não só na passagem: os cartões são a única coisa que
+   * se toca neste ecrã, e a profundidade é o que os separa do fundo — que agora
+   * tem peças desenhadas, e um cartão assente nele sem sombra parecia recortado
+   * e colado. Num telemóvel não há passagem nenhuma para revelar o relevo.
+   */
+  box-shadow:
+    inset 0 0 0 1px var(--aro),
+    var(--sombra-cartao);
   cursor: pointer;
   transition: box-shadow var(--t-ui) linear;
 }
@@ -1498,13 +1508,32 @@ body::before {
   --placa: var(--modo-survival-placa);
 }
 
-/* O realce de passagem levanta o cartão. Uma borda mudava-lhe a silhueta. */
+/*
+ * O realce de passagem **levanta mais** o cartão. Uma borda mudava-lhe a
+ * silhueta.
+ *
+ * O cartão já está pousado com `--sombra-cartao`; o que o rato faz é trocá-la
+ * pela sombra alta. É a diferença entre as duas que se lê como levantar — com a
+ * mesma sombra nos dois estados, passar por cima não dizia nada.
+ */
 @media (hover: hover) {
   .home-modo:hover {
     box-shadow:
       inset 0 0 0 1px var(--aro),
       var(--sombra);
   }
+}
+
+/*
+ * Carregado, o cartão pousa a fundo: fica só o aro, sem sombra nenhuma.
+ *
+ * Vem **depois** do bloco de passagem de propósito. As duas regras têm a mesma
+ * especificidade, portanto quem ganha é a última — e com esta escrita antes, o
+ * cartão ficava com a sombra alta do rato enquanto se carregava nele, a pairar
+ * um pixel abaixo de onde estava.
+ */
+.home-modo:active {
+  box-shadow: inset 0 0 0 1px var(--aro);
 }
 
 /*
@@ -1652,6 +1681,8 @@ body::before {
   border: 1px solid var(--line);
   border-radius: calc(var(--raio) + 6px);
   background: var(--surface);
+  /* A mesma profundidade dos cartões de modo: é um cartão como os outros. */
+  box-shadow: var(--sombra-cartao);
   text-align: center;
 }
 
