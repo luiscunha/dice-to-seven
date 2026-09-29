@@ -83,12 +83,12 @@ describe("a Home", () => {
    * O teste acima já garante o texto; este garante que não é o desenho a
    * fornecê-lo.
    */
-  it("a pinta do nome é decoração, e o «o» continua no texto", () => {
+  it("a peça do nome é decoração, e o «o» continua no texto", () => {
     const ecra = home();
 
     const titulo = host.querySelector(".home-titulo");
     expect(
-      titulo?.querySelector(".home-titulo-pinta")?.getAttribute("aria-hidden"),
+      titulo?.querySelector(".home-titulo-peca")?.getAttribute("aria-hidden"),
     ).toBe("true");
     expect(titulo?.querySelector(".home-titulo-o")?.textContent).toBe("o");
 
