@@ -147,34 +147,33 @@
    */
   overflow-x: clip;
   /*
-   * Sem cor própria: o fundo é o da página (`--ground`, em `theme.css`). A
-   * bandeja é do tabuleiro — ver a nota aí.
+   * Sem cor própria: o fundo é o da página (`--ground`, em `theme.css`), e o
+   * tabuleiro também não tem — ver a nota aí.
    */
   padding: var(--moldura);
 }
 
 /*
- * ── A bandeja é do tabuleiro, não do palco ──
+ * ── O tabuleiro não tem bandeja ──
  *
- * Antes a cor `--tray` pintava o `.palco` inteiro: com o tabuleiro encostado
- * ao chão, isso deixava uma bandeja vazia do tamanho da folga toda — no
- * Iniciado de cinco linhas a 375×812, mais de 300px de retângulo colorido sem
- * uma peça lá dentro.
+ * Houve uma: `--tray` pintava uma faixa de `--moldura` à volta das peças, para
+ * o tabuleiro assentar em alguma coisa em vez de flutuar no fundo da página.
+ * A jogar, era uma moldura — um retângulo de cor a fechar as peças por dentro,
+ * que competia com a única grelha de cor que o ecrã devia ter, que é a das
+ * faces. As peças têm aro, sombra e raio próprios: já se lêem como um conjunto
+ * sem ninguém desenhar a caixa à volta delas.
  *
- * `box-shadow` sem desfoque, só espalhamento, pinta a bandeja **à volta do
- * tabuleiro e mais nada**: o `--moldura` do espalhamento é o mesmo do
- * `padding` do palco, portanto a bandeja acaba exatamente onde
- * `BoardView.redimensionar` já reservava espaço para ela — sem fresta, sem
- * sobreposição, e sem o `BoardView` saber que isto existe. Uma sombra não é
- * layout: o tabuleiro continua a ser dimensionado pelas mesmas contas de
- * sempre, só o que se vê à volta dele é que mudou.
+ * **A folga de `--moldura` fica.** Já não pinta nada, mas continua a ser o que
+ * separa o tabuleiro das margens do palco — e o palco tem `overflow-x: clip`,
+ * portanto sem ela o anel de seleção da peça da primeira coluna saía cortado.
+ * `BoardView.redimensionar` reserva-a como sempre reservou, e nenhuma peça muda
+ * de tamanho com isto.
  */
 .tabuleiro {
   position: relative;
   /* A caixa não encolhe a meio do nível: o tabuleiro perde peças, não âncora. */
   flex: none;
   border-radius: var(--raio);
-  box-shadow: 0 0 0 var(--moldura) var(--tray);
   transition: opacity var(--t-ui) linear;
 }
 
@@ -2248,8 +2247,8 @@
   }
 
   /*
-   * A folga do palco e a bandeja do tabuleiro apertam sozinhas: as duas leem
-   * `--moldura`, que `theme.css` já aperta para 6px neste breakpoint.
+   * A folga à volta do tabuleiro aperta sozinha: lê `--moldura`, que o
+   * `theme.css` já aperta para 6px neste breakpoint.
    *
    * O cabeçalho aperta os espaços e não os alvos: com os botões a 44px, o
    * `gap` de secretária fazia «Avançado 12 · relógio · peças · ?» quebrar em
@@ -2740,10 +2739,9 @@
 @media (orientation: landscape) and (max-height: 560px) {
   /*
    * Aperta o mesmo token que o retrato estreito aperta, e pela mesma razão:
-   * altura é o que falta aqui. `--moldura` alimenta o `padding` do palco e a
-   * sombra do tabuleiro ao mesmo tempo — divergir um dos dois abria uma
-   * fresta ou um transbordo entre a bandeja e o rebordo que o `BoardView`
-   * reservou para ela.
+   * altura é o que falta aqui. `--moldura` é a folga entre o tabuleiro e as
+   * margens do palco, e cada pixel que ela perde é um pixel que a peça ganha —
+   * numa paisagem de 400px de altura isso conta.
    */
   :root {
     --moldura: 6px;

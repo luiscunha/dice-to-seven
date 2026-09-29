@@ -588,9 +588,9 @@ export class BoardView {
      *
      * Sem descontar, o tabuleiro é dimensionado para um espaço que não tem, e o
      * `place-items: center` do palco reparte o excesso pelos dois lados: as peças
-     * saem por cima e por baixo da bandeja. Medido num 7×7 a 1080×610, com o
-     * palco a 888×394 e 20px de padding: davam peças de 51px e uma grelha de
-     * 393px onde só cabem 354.
+     * saem para fora do palco. Medido num 7×7 a 1080×610, com o palco a 888×394
+     * e 20px de padding: davam peças de 51px e uma grelha de 393px onde só cabem
+     * 354.
      */
     const espaco = this.paddingDoHost();
     const largura = caixa.width - espaco.horizontal;
