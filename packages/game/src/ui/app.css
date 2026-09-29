@@ -1146,10 +1146,11 @@
 /* ─── Home ────────────────────────────────────────────────────────────────── */
 
 /*
- * Quatro faixas: a barra da marca, o lema, os modos, e o cartão das regras.
+ * Cinco faixas: a barra da marca, o lema, os modos, o cartão das regras, e o
+ * rodapé de quem joga.
  *
  * Só os modos têm faixa elástica (`minmax(0, 1fr)`): é a única que pode crescer
- * num ecrã alto e a única que tem de ficar ao alcance do polegar. As outras três
+ * num ecrã alto e a única que tem de ficar ao alcance do polegar. As outras
  * medem-se pelo conteúdo, e num ecrã baixo é o espaço entre elas que cede —
  * nunca um cartão.
  *
@@ -1158,7 +1159,7 @@
  * liam-se como uma página de definições.
  */
 .ecra.home {
-  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
   gap: 14px;
   max-width: 460px;
 }
@@ -1168,7 +1169,7 @@
  *
  * A marca era um bloco centrado com o símbolo grande, o nome e o lema, e ficava
  * com o terço de cima do ecrã a dizer ao jogador o nome da aplicação que ele
- * acabou de abrir. Numa barra diz o mesmo em 40px, e o que sobra é dos modos.
+ * acabou de abrir. Numa barra diz o mesmo em 44px, e o que sobra é dos modos.
  */
 .home-barra {
   display: flex;
@@ -1178,22 +1179,36 @@
 }
 
 /*
- * Quem joga, à esquerda de tudo.
+ * Quem joga, no fundo do ecrã e centrado.
  *
- * Uma pastilha e não um botão quadrado: o avatar é redondo, o nome vem a
- * seguir, e a forma diz «isto é uma pessoa» antes de se ler a palavra. Encolhe
- * ao mesmo tempo que a marca — ver a nota em `.home-titulo`.
+ * Esteve na barra de cima, à esquerda do nome do jogo, e os dois rótulos
+ * disputavam a mesma linha: um nome de jogador comprido cortava-se a si e ao
+ * nome do jogo. Em baixo tem a largura inteira, e a pastilha centrada lê-se como
+ * assinatura em vez de mais um controlo da barra.
+ */
+.home-rodape {
+  display: flex;
+  justify-content: center;
+  min-height: var(--alvo);
+  align-items: center;
+}
+
+/*
+ * Uma pastilha e não um botão quadrado: o avatar é redondo, o nome vem a seguir,
+ * e a forma diz «isto é uma pessoa» antes de se ler a palavra.
  */
 .home-jogador {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
+  max-width: 100%;
   min-width: 0;
-  flex-shrink: 1;
-  padding: 3px 12px 3px 3px;
+  padding: 4px 14px 4px 4px;
   border-radius: 999px;
   font-size: 14px;
   font-weight: 600;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--line);
 }
 
 .home-avatar {
@@ -1225,46 +1240,116 @@
 .home-marca {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   min-width: 0;
-  /* Cede três vezes mais depressa do que a pastilha do jogador ao lado. */
-  flex-shrink: 3;
   /* Empurra as definições para a direita sem um separador vazio pelo meio. */
   margin-right: auto;
 }
 
 .home-simbolo {
   display: block;
-  width: 28px;
-  height: 28px;
+  width: 34px;
+  height: 34px;
   flex-shrink: 0;
 }
 
 /*
- * O nome do jogo, à medida do símbolo ao lado.
+ * O nome do jogo, agora com a barra inteira para si.
  *
- * Corta com reticências em vez de quebrar: "DiceToSeven" numa segunda linha
- * desalinhava a barra inteira. E é ele que cede primeiro quando a barra aperta
- * — o nome do jogo é conhecido e reconstrói-se de três letras; o do jogador,
- * não.
+ * Partilhava-a com a pastilha do jogador e media 19px por caber; com a pastilha
+ * no rodapé sobram 200px, e o nome ocupa-os — é a única palavra deste ecrã que
+ * não é uma instrução, e o primeiro ecrã de um jogo pode dizer como se chama em
+ * tamanho de nome próprio.
+ *
+ * Continua a cortar com reticências em vez de quebrar: uma segunda linha
+ * desalinhava a barra inteira. Com o `clamp`, só chega lá em larguras onde já
+ * nada mais caberia.
  */
 .home-titulo {
   margin: 0;
-  font-size: 19px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  line-height: 1.2;
-  color: var(--accent);
+  font-size: clamp(24px, 7.2vw, 30px);
+  font-weight: 750;
+  letter-spacing: -0.035em;
+  line-height: 1.1;
+  color: var(--ink);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+/*
+ * O «To» destacado, e é ele que leva a pinta.
+ *
+ * O nome do jogo é uma conta — dados **para** sete — e a preposição é a única
+ * parte que diz isso. Em `--accent` e com a pinta no lugar do «o», o meio da
+ * palavra passa a ser o que se olha primeiro.
+ *
+ * Tentou-se dar a cada uma das três maiúsculas a cor de um modo, que era a
+ * ligação mais bonita à paleta dos cartões: a face 2 tem contraste 1,6 contra o
+ * papel e o «S» de «Seven» desaparecia. O `--accent` faz o mesmo trabalho e é,
+ * ele próprio, a face 6 no tema claro e a face 4 no escuro — a ligação à rampa
+ * está lá na mesma, só que numa cor que se lê.
+ */
+.home-titulo-liga {
+  color: var(--accent);
+}
+
+/*
+ * A pinta no lugar do «o» de «To».
+ *
+ * Um círculo à altura do x lê-se como um «o» e diz o que o jogo é, sem uma
+ * linha de arte nova: é a pinta do dado, no meio do nome. O `o` verdadeiro fica
+ * no DOM logo a seguir, com largura zero, para que a palavra continue a
+ * soletrar-se e a copiar-se inteira.
+ *
+ * `currentColor` e não `--solda`: a solda é preta porque tem de se ler sobre as
+ * seis faces, e sobre o fundo escuro do tema escuro desaparecia. Aqui a pinta
+ * está a fazer de letra, portanto tem a cor das letras à volta.
+ *
+ * `0.56em` e não menos: abaixo disso deixa de parecer uma letra e passa a
+ * parecer um ponto final no meio da palavra.
+ */
+.home-titulo-pinta {
+  display: inline-block;
+  width: 0.56em;
+  height: 0.56em;
+  margin-inline: 0.05em;
+  border-radius: 50%;
+  background: currentColor;
+  /* Assenta no centro da altura do x, que é onde o «o» que substitui está. */
+  vertical-align: 0.02em;
+}
+
+/*
+ * O «o» continua escrito — só não se vê. `visibility: hidden` e não
+ * `display: none`: um leitor de ecrã salta o segundo, e a marca deixaria de se
+ * soletrar para quem a ouve.
+ */
+.home-titulo-o {
+  display: inline-block;
+  width: 0;
+  overflow: hidden;
+  visibility: hidden;
+}
+
+/*
+ * O lema: o objetivo em negrito, a ressalva a seguir.
+ *
+ * As duas metades dizem coisas diferentes — uma é a regra, a outra é o aviso de
+ * que a regra não chega — e o contraste de peso é o que impede que se leiam
+ * como uma frase corrida de que só sobra a primeira metade.
+ */
 .home-lema {
   margin: 0;
   font-size: 14px;
-  line-height: 1.4;
+  line-height: 1.45;
   color: var(--ink-muted);
+  text-wrap: balance;
+}
+
+.home-lema-forte {
+  font-weight: 650;
+  color: var(--ink);
 }
 
 /*
@@ -2560,6 +2645,76 @@
   grid-template-rows: auto auto 1fr auto;
 }
 
+/* ─── Home num ecrã curto ─────────────────────────────────────────────────── */
+
+/*
+ * Cinco faixas não cabem em 568px de altura, e o que cede é o cromado.
+ *
+ * A Home tem uma faixa elástica — os modos — e quatro medidas pelo conteúdo. Num
+ * ecrã de 568px as quatro somam mais do que sobra, a faixa elástica encolhe
+ * abaixo do que os cartões medem, e os cartões passam por cima do que está
+ * abaixo. `minmax(0, 1fr)` permite-o de propósito: é o que impede o ecrã inteiro
+ * de ganhar barra de scroll, e o preço é ter de o apertar aqui.
+ *
+ * O que encolhe é tudo o que é moldura: o espaço entre faixas, o tamanho do
+ * nome, o enchimento do cartão das regras. **Nada desaparece** — quem tem um
+ * ecrã pequeno vê a mesma Home, não uma Home com menos coisas.
+ *
+ * A condição é a altura e não o aparelho, como na secção seguinte: uma janela de
+ * computador baixa tem o mesmo problema pela mesma razão.
+ */
+@media (max-height: 640px) {
+  .ecra.home {
+    gap: 10px;
+  }
+
+  .home-barra {
+    min-height: 0;
+  }
+
+  .home-titulo {
+    font-size: clamp(21px, 6.4vw, 24px);
+  }
+
+  .home-simbolo {
+    width: 27px;
+    height: 27px;
+  }
+
+  /*
+   * O mosaico é o que mais altura ocupa. Aqui não é o `min-height` que manda —
+   * é a soma do que lá está dentro — portanto o que aperta é a folga: o
+   * enchimento, o espaço entre o ícone e o nome, e o próprio ícone.
+   */
+  .ecra.home .home-modo.compacto {
+    min-height: clamp(104px, 20vh, 200px);
+    gap: 6px;
+    padding: 10px;
+  }
+
+  .ecra.home .home-modo.compacto .home-modo-icone {
+    width: 38px;
+    height: 38px;
+  }
+
+  .home-ajuda {
+    gap: 6px;
+    padding: 10px 14px 12px;
+  }
+
+  .home-ajuda-conta {
+    margin-bottom: 0;
+  }
+
+  .home-ajuda-conta .peca {
+    --lado: 26px;
+  }
+
+  .home-rodape {
+    min-height: 0;
+  }
+}
+
 /* ─── Paisagem num ecrã baixo ─────────────────────────────────────────────── */
 
 /*
@@ -2703,11 +2858,12 @@
   .ecra.home {
     max-width: 880px;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    grid-template-rows: auto auto minmax(0, 1fr);
+    grid-template-rows: auto auto auto minmax(0, 1fr);
     grid-template-areas:
       "barra barra"
       "modos lema"
-      "modos ajuda";
+      "modos ajuda"
+      "modos rodape";
     align-items: start;
     gap: 10px 24px;
     padding: 8px 16px;
@@ -2719,6 +2875,11 @@
 
   .home-lema {
     grid-area: lema;
+  }
+
+  /* Ao lado dos modos e não debaixo deles: em paisagem não há linha a sobrar. */
+  .home-rodape {
+    grid-area: rodape;
   }
 
   .home-modos {
