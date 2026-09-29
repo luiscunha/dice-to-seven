@@ -8,6 +8,34 @@
  * A paleta deriva do logótipo. Ver `documentation/desenho-fase-8.md` §4.
  */
 
+/*
+ * A fonte da marca — e **só** da marca. Ver `tipos/LEIA-ME.md`.
+ *
+ * Um tipo arredondado e gordo, do feitio de um dado: o nome do jogo é a única
+ * palavra do jogo inteiro que não é uma instrução, e é a única que pode dar-se
+ * ao luxo de ter carácter. Tudo o resto fica em `system-ui`, que é a fonte que o
+ * aparelho já tem, que o utilizador já sabe ler, e que respeita o tamanho de
+ * letra que ele escolheu nas definições do telemóvel.
+ *
+ * `font-display: swap`, e não `block`: a fonte é local e carrega quase sempre no
+ * primeiro frame, mas se alguma vez demorar, o nome aparece em `system-ui` e
+ * troca depois. Um cabeçalho invisível à espera de 16 KB seria o pior dos dois.
+ */
+@font-face {
+  font-family: "Fredoka";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("./tipos/fredoka-600-latin.woff2") format("woff2");
+  /*
+   * O subconjunto é o latino. Sem esta linha o browser usaria a Fredoka para
+   * qualquer caráter e desenharia caixas vazias fora dela — com ela, cai em
+   * `system-ui` sozinho, que é o que já lá estava.
+   */
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+2000-206F, U+2122, U+2212, U+FEFF, U+FFFD;
+}
+
 :root {
   /* ─── Neutros ─────────────────────────────────────────────────────────── */
   --ground: #f1f2f0;
@@ -166,6 +194,15 @@
   --sombra: 0 1px 2px rgb(18 63 58 / 0.1), 0 6px 18px rgb(18 63 58 / 0.07);
 
   /*
+   * A sombra de repouso dos cartões da Home.
+   *
+   * Mais curta e mais próxima do que `--sombra`, que é a de passagem: pousada,
+   * não levantada. A diferença entre as duas é que faz o rato levantar o
+   * cartão — se a de repouso fosse a mesma, passar por cima não dizia nada.
+   */
+  --sombra-cartao: 0 1px 1px rgb(18 63 58 / 0.06), 0 3px 8px rgb(18 63 58 / 0.08);
+
+  /*
    * A folga entre o tabuleiro e as margens do palco — ver `.tabuleiro` em
    * `app.css`.
    *
@@ -177,6 +214,17 @@
    * palco.
    */
   --moldura: clamp(8px, 2vw, 20px);
+
+  /* A fonte da marca. Ver o `@font-face` no topo deste ficheiro. */
+  --fonte-marca: "Fredoka", system-ui, sans-serif;
+
+  /*
+   * O relevo do nome do jogo: luz por dentro em cima, sombra curta por baixo.
+   * A mesma leitura que as faces já têm — a luz vem de cima — sem introduzir um
+   * segundo vocabulário de profundidade.
+   */
+  --marca-luz: rgb(255 255 255 / 0.8);
+  --marca-sombra: rgb(18 63 58 / 0.18);
 
   /*
    * O lado de um alvo de toque do cromado — os botões redondos do cabeçalho e
@@ -191,6 +239,16 @@
    * fica com a altura toda.
    */
   --calha: clamp(118px, 19vw, 190px);
+
+  /*
+   * A tinta das peças de fundo. Ver `body::before` em `app.css`.
+   *
+   * Cinco por cento, e não é timidez: o padrão está **por baixo do tabuleiro**,
+   * e o tabuleiro é a única grelha de faces que o ecrã pode ter. Acima disto, um
+   * dado de fundo à beira de uma peça a sério lê-se como peça — e num jogo em
+   * que a jogada é reconhecer grupos, isso não é ruído bonito, é erro.
+   */
+  --fundo-peca: rgb(18 63 58 / 0.07);
 
   /*
    * ─── Movimento ────────────────────────────────────────────────────────
@@ -280,6 +338,14 @@
     --fogo-veu-meio: rgb(255 106 69 / 0.045);
     --fogo-faisca: rgb(255 243 232 / 0.9);
     --sombra: 0 1px 2px rgb(0 0 0 / 0.5), 0 8px 22px rgb(0 0 0 / 0.35);
+    /* No escuro a sombra precisa de ser mais funda para se ver de todo. */
+    --sombra-cartao: 0 1px 2px rgb(0 0 0 / 0.4), 0 4px 12px rgb(0 0 0 / 0.3);
+    /* Claro sobre escuro, e um pouco mais forte: o fundo escuro engole véus. */
+    --fundo-peca: rgb(227 237 234 / 0.06);
+    /* No escuro a luz vem de dentro, não de fora: o realce branco desenharia um
+     * contorno. Um véu claro por cima e uma sombra preta chegam. */
+    --marca-luz: rgb(255 255 255 / 0.12);
+    --marca-sombra: rgb(0 0 0 / 0.45);
   }
 }
 
@@ -313,6 +379,14 @@
   --fogo-veu-meio: rgb(255 106 69 / 0.045);
   --fogo-faisca: rgb(255 243 232 / 0.9);
   --sombra: 0 1px 2px rgb(0 0 0 / 0.5), 0 8px 22px rgb(0 0 0 / 0.35);
+  /* No escuro a sombra precisa de ser mais funda para se ver de todo. */
+  --sombra-cartao: 0 1px 2px rgb(0 0 0 / 0.4), 0 4px 12px rgb(0 0 0 / 0.3);
+  /* Claro sobre escuro, e um pouco mais forte: o fundo escuro engole véus. */
+  --fundo-peca: rgb(227 237 234 / 0.06);
+  /* No escuro a luz vem de dentro, não de fora: o realce branco desenharia um
+   * contorno. Um véu claro por cima e uma sombra preta chegam. */
+  --marca-luz: rgb(255 255 255 / 0.12);
+  --marca-sombra: rgb(0 0 0 / 0.45);
 }
 
 /* ─── Base ────────────────────────────────────────────────────────────────── */

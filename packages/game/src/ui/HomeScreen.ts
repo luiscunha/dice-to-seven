@@ -149,18 +149,23 @@ export class HomeScreen {
   }
 
   /**
-   * O nome do jogo, com uma pinta no lugar do «o» de «To».
+   * O nome do jogo, com uma **peça** no lugar do «o» de «To».
    *
    * A palavra estava escrita como qualquer outro título e não dizia nada sobre
-   * o jogo. A pinta diz: é a mesma marca preta que está nas faces, com o mesmo
-   * raio, e é o vocabulário do tabuleiro a aparecer na única palavra do ecrã que
-   * não é uma instrução. Custa um `span` e não há arte nova a manter.
+   * o jogo. A peça diz: é a face 1 — quadrado arredondado, uma pinta ao centro —
+   * com as cores que a rampa já tem, e é o vocabulário do tabuleiro a aparecer
+   * na única palavra do ecrã que não é uma instrução. Custa um `span` e não há
+   * arte nova a manter.
    *
-   * **O «o» continua no DOM**, apenas invisível, e a pinta é `aria-hidden`.
+   * Foi primeiro só a pinta, sem o quadrado à volta. Lia-se como «o» e mais
+   * nada; com a peça inteira lê-se como «o» **e** como dado, que era o ponto.
+   *
+   * **O «o» continua no DOM**, apenas invisível, e a peça é `aria-hidden`.
    * Quem lê pelo ecrã ouve «DiceToSeven» inteiro; quem o vê lê o mesmo, porque
-   * um círculo na altura do x é um «o». Trocar o caráter por um desenho sem
-   * deixar o caráter lá seria uma marca que não se consegue soletrar — nem
-   * copiar, nem procurar.
+   * um quadrado com uma pinta ao centro, à altura do x, ocupa o lugar do «o» e
+   * é isso que o olho completa. Trocar o caráter por um desenho sem deixar o
+   * caráter lá seria uma marca que não se consegue soletrar — nem copiar, nem
+   * procurar.
    *
    * O «To» inteiro vai destacado, porque o nome do jogo é uma conta e a
    * preposição é a única parte que o diz: dados **para** sete.
@@ -168,11 +173,11 @@ export class HomeScreen {
   private wordmark(): HTMLElement {
     const h = elemento("h1", "home-titulo");
 
-    const pinta = elemento("span", "home-titulo-pinta");
-    pinta.setAttribute("aria-hidden", "true");
+    const peca = elemento("span", "home-titulo-peca");
+    peca.setAttribute("aria-hidden", "true");
 
     const liga = elemento("span", "home-titulo-liga");
-    liga.append("T", pinta, elemento("span", "home-titulo-o", "o"));
+    liga.append("T", peca, elemento("span", "home-titulo-o", "o"));
 
     h.append("Dice", liga, "Seven");
     return h;

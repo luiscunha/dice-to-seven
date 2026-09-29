@@ -19,6 +19,59 @@
 }
 
 /*
+ * ── O fundo: peças soltas, em marca de água ──
+ *
+ * A aplicação assentava num liso, e um liso num jogo de dados é uma página em
+ * branco à espera de identidade. O padrão dá-lha com o material que o jogo já
+ * tem — as peças — em vez de a ir buscar a um enfeite que não pertence a lado
+ * nenhum.
+ *
+ * **Máscara e não imagem.** O SVG é só forma, e a cor vem de `--fundo-peca`,
+ * que muda com o tema: um ficheiro, dois temas, e nada para manter sincronizado.
+ * Com uma imagem colorida seriam dois SVG a dizer a mesma coisa em cores
+ * diferentes.
+ *
+ * `position: fixed` e não `background` do `body`: fixo, o padrão não anda com o
+ * scroll das listas — um fundo que desliza por baixo de uma lista de níveis
+ * chama a atenção para si, que é exatamente o contrário do que ele é. E fica
+ * **atrás de tudo** (`z-index: -1`), portanto nenhuma peça, cartão ou caixa
+ * precisa de saber que ele existe.
+ *
+ * O tamanho é o do tile, e não uma percentagem: esticá-lo faria as peças mudar
+ * de tamanho com a janela, e num ecrã largo ficariam dados de 200px por trás de
+ * peças de 46px.
+ *
+ * ── Sobre `fundo-pecas.svg` ──
+ *
+ * São cinco peças num quadrado de 300, todas inteiras e afastadas das bordas: o
+ * padrão repete-se lado a lado, e uma peça cortada na costura desenharia uma
+ * grelha onde o que se quer é dispersão. As rotações são todas diferentes pela
+ * mesma razão. Contorno e não sólido — a esta opacidade um dado cheio vira uma
+ * mancha, e o que faz a forma reconhecer-se é o quadrado arredondado com as
+ * pintas dentro.
+ *
+ * **O ficheiro é uma linha, sem prólogo XML e sem comentários**, e não é
+ * desleixo: o Vite inliniza-o como `data:` URI, e tanto o `<?xml?>` como um
+ * comentário com acentos partiam a codificação — o browser recusava a imagem em
+ * silêncio e a máscara escondia tudo o que devia mostrar. A documentação vive
+ * aqui, que é onde alguém a procura.
+ */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-color: var(--fundo-peca);
+  mask-image: url("./fundo-pecas.svg");
+  mask-repeat: repeat;
+  mask-size: 300px 300px;
+  -webkit-mask-image: url("./fundo-pecas.svg");
+  -webkit-mask-repeat: repeat;
+  -webkit-mask-size: 300px 300px;
+}
+
+/*
  * A coluna é `minmax(0, 1fr)`, e não a omissão — e é isso que deixa o tabuleiro
  * encolher.
  *
@@ -1266,14 +1319,32 @@
  */
 .home-titulo {
   margin: 0;
-  font-size: clamp(24px, 7.2vw, 30px);
-  font-weight: 750;
-  letter-spacing: -0.035em;
-  line-height: 1.1;
+  font-family: var(--fonte-marca);
+  font-size: clamp(26px, 7.8vw, 34px);
+  font-weight: 600;
+  /*
+   * A Fredoka já é larga e arredondada: o `tracking` negativo que a `system-ui`
+   * precisava para não parecer solta fazia aqui as letras tocarem-se. Um pouco
+   * de ar, e o «o» que é uma pinta ganha espaço para se ler como letra.
+   */
+  letter-spacing: 0.005em;
+  line-height: 1.15;
   color: var(--ink);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  /*
+   * O relevo da marca: um realce por dentro, em cima, e uma sombra curta por
+   * baixo. É o que dá à palavra o ar de peça — a mesma leitura que as faces já
+   * têm, com a luz a vir de cima.
+   *
+   * `text-shadow` e não um contorno: o contorno é uma segunda cor a manter
+   * afinada contra dois fundos, e num tamanho de 26px engorda as letras até as
+   * fechar por dentro.
+   */
+  text-shadow:
+    0 1px 0 var(--marca-luz),
+    0 2px 3px var(--marca-sombra);
 }
 
 /*
@@ -1294,29 +1365,46 @@
 }
 
 /*
- * A pinta no lugar do «o» de «To».
+ * A peça no lugar do «o» de «To».
  *
- * Um círculo à altura do x lê-se como um «o» e diz o que o jogo é, sem uma
- * linha de arte nova: é a pinta do dado, no meio do nome. O `o` verdadeiro fica
- * no DOM logo a seguir, com largura zero, para que a palavra continue a
- * soletrar-se e a copiar-se inteira.
+ * A face 1: quadrado arredondado, uma pinta ao centro, nas cores que a rampa já
+ * tem — `--face-6` e a tinta que ela usa nas pintas. Não é uma cor nova nem um
+ * desenho novo; é a peça mais simples do jogo, do tamanho de uma letra.
  *
- * `currentColor` e não `--solda`: a solda é preta porque tem de se ler sobre as
- * seis faces, e sobre o fundo escuro do tema escuro desaparecia. Aqui a pinta
- * está a fazer de letra, portanto tem a cor das letras à volta.
+ * Foi primeiro só a pinta, um círculo em `currentColor`. Lia-se como «o» e
+ * ficava por aí: a forma que diz «dado» é o quadrado com a pinta lá dentro, e
+ * sem ele o nome do jogo perdia a única coisa que o desenho estava a fazer.
  *
- * `0.56em` e não menos: abaixo disso deixa de parecer uma letra e passa a
- * parecer um ponto final no meio da palavra.
+ * O `o` verdadeiro fica no DOM logo a seguir, com largura zero, para que a
+ * palavra continue a soletrar-se e a copiar-se inteira.
+ *
+ * `0.62em` e o raio a um terço: à altura do x da Fredoka é o que faz a peça
+ * ocupar o lugar do «o» sem crescer acima das letras à volta — maior, passava a
+ * ser um ícone entalado no meio da palavra.
  */
-.home-titulo-pinta {
+.home-titulo-peca {
+  position: relative;
   display: inline-block;
-  width: 0.56em;
-  height: 0.56em;
-  margin-inline: 0.05em;
+  width: 0.62em;
+  height: 0.62em;
+  margin-inline: 0.07em;
+  border-radius: 0.2em;
+  background: var(--face-6);
+  /* O mesmo aro das peças do tabuleiro, pela mesma razão: contorno sobre fundo. */
+  box-shadow: inset 0 0 0 1px var(--aro);
+  /* Assenta na linha de base do «o» que substitui. */
+  vertical-align: -0.02em;
+}
+
+.home-titulo-peca::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 0.2em;
+  height: 0.2em;
   border-radius: 50%;
-  background: currentColor;
-  /* Assenta no centro da altura do x, que é onde o «o» que substitui está. */
-  vertical-align: 0.02em;
+  background: var(--ink-6);
 }
 
 /*
@@ -1387,7 +1475,17 @@
   border-radius: calc(var(--raio) + 6px);
   background: var(--cor);
   color: var(--tinta-modo);
-  box-shadow: inset 0 0 0 1px var(--aro);
+  /*
+   * O aro por dentro e a sombra por fora, na mesma declaração.
+   *
+   * A sombra em repouso e não só na passagem: os cartões são a única coisa que
+   * se toca neste ecrã, e a profundidade é o que os separa do fundo — que agora
+   * tem peças desenhadas, e um cartão assente nele sem sombra parecia recortado
+   * e colado. Num telemóvel não há passagem nenhuma para revelar o relevo.
+   */
+  box-shadow:
+    inset 0 0 0 1px var(--aro),
+    var(--sombra-cartao);
   cursor: pointer;
   transition: box-shadow var(--t-ui) linear;
 }
@@ -1410,13 +1508,32 @@
   --placa: var(--modo-survival-placa);
 }
 
-/* O realce de passagem levanta o cartão. Uma borda mudava-lhe a silhueta. */
+/*
+ * O realce de passagem **levanta mais** o cartão. Uma borda mudava-lhe a
+ * silhueta.
+ *
+ * O cartão já está pousado com `--sombra-cartao`; o que o rato faz é trocá-la
+ * pela sombra alta. É a diferença entre as duas que se lê como levantar — com a
+ * mesma sombra nos dois estados, passar por cima não dizia nada.
+ */
 @media (hover: hover) {
   .home-modo:hover {
     box-shadow:
       inset 0 0 0 1px var(--aro),
       var(--sombra);
   }
+}
+
+/*
+ * Carregado, o cartão pousa a fundo: fica só o aro, sem sombra nenhuma.
+ *
+ * Vem **depois** do bloco de passagem de propósito. As duas regras têm a mesma
+ * especificidade, portanto quem ganha é a última — e com esta escrita antes, o
+ * cartão ficava com a sombra alta do rato enquanto se carregava nele, a pairar
+ * um pixel abaixo de onde estava.
+ */
+.home-modo:active {
+  box-shadow: inset 0 0 0 1px var(--aro);
 }
 
 /*
@@ -1564,6 +1681,8 @@
   border: 1px solid var(--line);
   border-radius: calc(var(--raio) + 6px);
   background: var(--surface);
+  /* A mesma profundidade dos cartões de modo: é um cartão como os outros. */
+  box-shadow: var(--sombra-cartao);
   text-align: center;
 }
 
