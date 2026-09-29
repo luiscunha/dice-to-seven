@@ -50,6 +50,7 @@ import { elemento } from "./ui/dom";
 import { HomeScreen } from "./ui/HomeScreen";
 import { JokerTutorial } from "./ui/JokerTutorial";
 import { NiveisScreen } from "./ui/NiveisScreen";
+import { abrirPerfil } from "./ui/PerfilDialog";
 import { PuzzleScreen } from "./ui/PuzzleScreen";
 import type { Rota } from "./ui/rotas";
 import { deHash, paraHash, rotaAcima, rotaLegada } from "./ui/rotas";
@@ -222,6 +223,9 @@ async function mostrar(rota: Rota): Promise<void> {
         aoEscolherSurvival: voltarA({ ecra: "survival" }),
         aoEscolherDefinicoes: voltarA({ ecra: "definicoes" }),
         aoEscolherComoJogar: voltarA({ ecra: "regras" }),
+        nome: preferencias.nome,
+        avatar: preferencias.avatar,
+        aoEditarPerfil: editarPerfil,
       });
       return;
 
@@ -484,6 +488,26 @@ function mostrarSurvival(seed: number | undefined): void {
       ir({ ecra: "survival", seed: nova });
     },
     aoSair: voltarA({ ecra: "home" }),
+  });
+}
+
+/**
+ * O editor do nome e do avatar, aberto pela barra da Home.
+ *
+ * Guardar volta a montar a Home — e não a remenda por dentro. É o mesmo
+ * princípio do resto do ficheiro: o ecrã é função da rota e do estado, e um
+ * caminho que actualiza só o pedaço que mudou é um segundo caminho a manter
+ * sincronizado com o primeiro. A Home custa um `replaceChildren`.
+ */
+function editarPerfil(): void {
+  abrirPerfil(app as HTMLElement, {
+    nome: preferencias.nome,
+    avatar: preferencias.avatar,
+    aoGuardar: ({ nome, avatar }) => {
+      preferencias = { ...preferencias, nome, avatar };
+      guardarPreferencias();
+      void mostrar({ ecra: "home" });
+    },
   });
 }
 

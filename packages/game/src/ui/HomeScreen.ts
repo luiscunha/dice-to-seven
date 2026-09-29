@@ -5,6 +5,12 @@
  * o resto é uma escolha entre três coisas — e três coisas não precisam de mapa,
  * de metáfora, nem de arte que envelhece (desenho §5.6).
  *
+ * **Na barra de cima está quem joga, além do que se joga.** O avatar e o nome
+ * não são enfeite nem conta: são o sítio onde o jogo reconhece a pessoa que o
+ * abriu, e o único do jogo inteiro que ela escolhe. Quem não se nomeou vê um
+ * convite esmorecido, e o convite é o próprio botão — ninguém é baptizado à
+ * revelia com um «Jogador» que tem género.
+ *
  * **A marca vive na barra de cima, ao lado das definições.** Era um bloco
  * centrado com o símbolo grande, o nome e o lema, e ocupava o terço superior do
  * ecrã a dizer ao jogador o nome da aplicação que ele acabou de abrir. Numa
@@ -31,6 +37,8 @@
  * e o fundo de um telemóvel é a zona do polegar — o sítio mais caro do ecrã.
  */
 
+import type { Cell } from "@dicetoseven/engine";
+
 import type { Profile } from "../session/progress";
 import type { ModoFace } from "./dice";
 import { pecaDeAmostra } from "./dice";
@@ -51,6 +59,12 @@ export interface OpcoesHome {
   readonly aoEscolherDefinicoes: () => void;
   /** O ecrã das regras, pelo cartão do fundo. */
   readonly aoEscolherComoJogar?: () => void;
+  /** Abre o editor do nome e do avatar. */
+  readonly aoEditarPerfil?: () => void;
+  /** O nome do jogador, ou vazio — ver `Settings.nome`. */
+  readonly nome?: string;
+  /** A face que ele escolheu para avatar. */
+  readonly avatar?: Cell;
   readonly perfil: Profile;
   /** Total de níveis do pack, para o «x de y». */
   readonly totalNiveis: number;
@@ -107,10 +121,10 @@ export class HomeScreen {
   /* ─── A barra ───────────────────────────────────────────────────────────── */
 
   /**
-   * A marca à esquerda, as definições à direita.
+   * O jogador à esquerda, a marca a seguir, as definições à direita.
    *
-   * O símbolo e o nome vão dentro do mesmo elemento e não em dois: são uma
-   * coisa só a olhar, e separá-los deixava o nome a escorregar num ecrã
+   * O símbolo e o nome do jogo vão dentro do mesmo elemento e não em dois: são
+   * uma coisa só a olhar, e separá-los deixava o nome a escorregar num ecrã
    * estreito enquanto o símbolo ficava.
    */
   private barra(opcoes: OpcoesHome): HTMLElement {
@@ -120,11 +134,50 @@ export class HomeScreen {
     marca.append(this.simbolo(), elemento("h1", "home-titulo", "DiceToSeven"));
 
     barra.append(
+      this.jogador(opcoes),
       marca,
       botaoRedondo(iconeDefinicoes(), "Definições", opcoes.aoEscolherDefinicoes),
     );
 
     return barra;
+  }
+
+  /**
+   * Quem está a jogar: o avatar e o nome, num botão que abre o editor.
+   *
+   * **Sem nome é o estado normal**, não um erro: o jogo não pede nada a ninguém
+   * para deixar jogar. O botão mostra então o convite, esmorecido — e o convite
+   * é o próprio sítio onde se responde, que é a forma mais barata de o explicar.
+   *
+   * O `aria-label` diz sempre o que o botão faz, com ou sem nome. Quem ouve o
+   * ecrã não pode ficar com «✳ Rita» e ter de adivinhar que aquilo se toca.
+   */
+  private jogador(opcoes: OpcoesHome): HTMLElement {
+    const nome = opcoes.nome ?? "";
+
+    const b = botao("", "home-jogador", opcoes.aoEditarPerfil);
+    b.setAttribute(
+      "aria-label",
+      nome === "" ? "escolher nome e avatar" : `${nome} — mudar nome e avatar`,
+    );
+
+    const avatar = elemento("span", "home-avatar");
+    avatar.appendChild(pecaDeAmostra(opcoes.avatar ?? 6, opcoes.modoFace ?? "pintas"));
+
+    /*
+     * «Quem és?» e não «Dá-te um nome»: a barra partilha a largura com o nome
+     * do jogo, e o convite mais longo cortava com reticências — «Dá-te um
+     * no…» — justamente no estado em que ele tem de se ler inteiro.
+     */
+    const etiqueta = elemento(
+      "span",
+      "home-jogador-nome",
+      nome === "" ? "Quem és?" : nome,
+    );
+    if (nome === "") etiqueta.dataset["convite"] = "sim";
+
+    b.append(avatar, etiqueta);
+    return b;
   }
 
   /**

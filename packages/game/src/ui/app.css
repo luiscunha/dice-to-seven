@@ -1177,29 +1177,80 @@
   min-height: var(--alvo);
 }
 
+/*
+ * Quem joga, à esquerda de tudo.
+ *
+ * Uma pastilha e não um botão quadrado: o avatar é redondo, o nome vem a
+ * seguir, e a forma diz «isto é uma pessoa» antes de se ler a palavra. Encolhe
+ * ao mesmo tempo que a marca — ver a nota em `.home-titulo`.
+ */
+.home-jogador {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  flex-shrink: 1;
+  padding: 3px 12px 3px 3px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.home-avatar {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.home-avatar .peca {
+  --lado: 28px;
+
+  /* Redondo: é um retrato, e um retrato não tem cantos de peça. */
+  border-radius: 50%;
+}
+
+.home-jogador-nome {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Sem nome não é erro: é o convite, e o convite é o próprio sítio de responder. */
+.home-jogador-nome[data-convite="sim"] {
+  font-weight: 500;
+  color: var(--ink-muted);
+}
+
 .home-marca {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
+  /* Cede três vezes mais depressa do que a pastilha do jogador ao lado. */
+  flex-shrink: 3;
   /* Empurra as definições para a direita sem um separador vazio pelo meio. */
   margin-right: auto;
 }
 
 .home-simbolo {
   display: block;
-  width: 34px;
-  height: 34px;
+  width: 28px;
+  height: 28px;
   flex-shrink: 0;
 }
 
 /*
- * O nome, à medida do símbolo ao lado. Corta com reticências em vez de quebrar:
- * "DiceToSeven" numa segunda linha desalinhava a barra inteira.
+ * O nome do jogo, à medida do símbolo ao lado.
+ *
+ * Corta com reticências em vez de quebrar: "DiceToSeven" numa segunda linha
+ * desalinhava a barra inteira. E é ele que cede primeiro quando a barra aperta
+ * — o nome do jogo é conhecido e reconstrói-se de três letras; o do jogador,
+ * não.
  */
 .home-titulo {
   margin: 0;
-  font-size: 22px;
+  font-size: 19px;
   font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 1.2;
@@ -1471,6 +1522,102 @@
   font-size: 13px;
   line-height: 1.45;
   color: var(--ink-muted);
+}
+
+/* ─── Quem és: o nome e o avatar ──────────────────────────────────────────── */
+
+/*
+ * Este diálogo tem largura, e não a largura do que lá está dentro.
+ *
+ * Um `<dialog>` é `width: fit-content`: a confirmação, que é só texto e dois
+ * botões, fica do tamanho da frase mais longa — e é o que se quer lá. Aqui não:
+ * o campo do nome e as sete faces precisam de espaço para caber numa linha, e
+ * com `fit-content` a caixa fechava-se sobre eles até os avatares quebrarem em
+ * três linhas.
+ */
+.popup.perfil {
+  width: min(360px, calc(100vw - 32px));
+}
+
+.perfil-campo {
+  display: grid;
+  gap: 6px;
+}
+
+.perfil-rotulo {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+
+/*
+ * O campo do nome.
+ *
+ * **16px e não 14**, embora todo o cromado à volta seja mais pequeno: abaixo de
+ * 16px o Safari e o Chrome do telemóvel dão zoom à página ao focar um campo de
+ * texto, e a página fica encolhida depois de o teclado fechar.
+ *
+ * E a seleção de texto tem de voltar aqui: o `body` desliga-a, porque o
+ * tabuleiro é uma superfície de toque e não de arrastar para selecionar — mas
+ * num campo de escrita isso tira o que faz dele um campo.
+ */
+.perfil-nome {
+  font: inherit;
+  font-size: 16px;
+  min-height: var(--alvo);
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--ground);
+  color: var(--ink);
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.perfil-nome::placeholder {
+  color: var(--ink-muted);
+}
+
+/*
+ * As sete faces, numa linha enquanto couberem.
+ *
+ * `auto-fit` com um mínimo, e não sete colunas fixas: num diálogo de 303px as
+ * sete cabem por um triz, e num ecrã de 320 não cabem — aí passam a seis e uma,
+ * em vez de encolherem abaixo do alvo de toque. Um avatar mais pequeno do que o
+ * dedo é um avatar em que se acerta ao lado.
+ */
+.perfil-avatares {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(38px, 1fr));
+  gap: 4px;
+}
+
+.btn.avatar-opcao {
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+}
+
+@media (hover: hover) {
+  .btn.avatar-opcao:hover {
+    background: var(--surface-alt);
+  }
+}
+
+.btn.avatar-opcao[aria-checked="true"] {
+  background: var(--surface-alt);
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+
+.avatar-opcao .peca {
+  --lado: 30px;
+
+  border-radius: 50%;
 }
 
 /* ─── Como jogar ──────────────────────────────────────────────────────────── */
