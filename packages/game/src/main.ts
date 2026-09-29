@@ -53,7 +53,7 @@ import { NiveisScreen } from "./ui/NiveisScreen";
 import { abrirPerfil } from "./ui/PerfilDialog";
 import { PuzzleScreen } from "./ui/PuzzleScreen";
 import type { Rota } from "./ui/rotas";
-import { deHash, paraHash, rotaAcima, rotaLegada } from "./ui/rotas";
+import { deHash, paraHash, rotaAcima, rotaLegada, sentidoEntre } from "./ui/rotas";
 import { abrirArmazenamento } from "./plataforma/armazenamento";
 import {
   ajustarBarras,
@@ -108,6 +108,15 @@ let atual:
   | { readonly destruir: () => void; readonly interceptarVoltar?: () => boolean }
   | undefined;
 let tutorial: JokerTutorial | undefined;
+
+/**
+ * A rota do ecrã que está montado.
+ *
+ * Só serve à animação de entrada, e é por isso que não se lê do `location.hash`:
+ * quando o `hashchange` chega, o endereço já é o do destino, e o de onde se veio
+ * está perdido. A rota real continua a vir do hash, como sempre.
+ */
+let rotaMontada: Rota | undefined;
 
 /** O tutorial aberto pelo `?`, que se pode fechar — ao contrário do primeiro. */
 let tutorialEmRevisao = false;
@@ -198,7 +207,35 @@ function subirUmNivel(): boolean {
   return true;
 }
 
+/**
+ * O ecrã da rota, montado — e **de que lado entrou**.
+ *
+ * A marca vai no elemento já montado, e não em cada construtor: são nove a
+ * chamar `host.replaceChildren`, e repetir a linha nos nove era garantir que o
+ * décimo a nascer se esquecia dela. Aqui é um sítio só, e quem decide o sentido
+ * é a rota — que é o que o `sentidoEntre` sabe ler.
+ *
+ * **Só a entrada se anima.** Animar a saída era atrasar a navegação pelo tempo
+ * da animação e manter vivo o ecrã antigo — com o relógio dele a contar — só
+ * para o ver a esvair-se. O ecrã que sai desaparece no instante do toque, que é
+ * o que faz a navegação parecer imediata.
+ */
 async function mostrar(rota: Rota): Promise<void> {
+  const sentido = sentidoEntre(rotaMontada, rota);
+
+  await montar(rota);
+  rotaMontada = rota;
+
+  /*
+   * Pode não haver ecrã nenhum: uma rota que se corrige a si mesma — Survival
+   * sem seed, um nível que não existe — chama `ir` e devolve sem montar. O
+   * `hashchange` que se segue monta o ecrã certo, e anima-se esse.
+   */
+  const ecra = (app as HTMLElement).querySelector<HTMLElement>(".ecra");
+  if (ecra !== null) ecra.dataset["entrada"] = sentido;
+}
+
+async function montar(rota: Rota): Promise<void> {
   tutorial?.destruir();
   tutorial = undefined;
   atual?.destruir();

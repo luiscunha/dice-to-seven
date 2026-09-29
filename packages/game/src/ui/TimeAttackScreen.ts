@@ -19,7 +19,6 @@
 import type { Board, Cell, Level, Packed, Rng } from "@dicetoseven/engine";
 import { colOf, mulberry32, rowOf } from "@dicetoseven/engine";
 
-import { selectionTotal } from "../session/GameSession";
 import type {
   Escada,
   TimeAttackConfig,
@@ -92,7 +91,6 @@ export class TimeAttackScreen {
 
   private readonly elRelogio: HTMLElement;
   private readonly elMeta: HTMLElement;
-  private readonly elSoma: HTMLElement;
   private readonly elFim: HTMLElement;
 
   private estado: TimeAttackState;
@@ -158,12 +156,19 @@ export class TimeAttackScreen {
     this.elFim.hidden = true;
     this.palco.appendChild(this.elFim);
 
-    /* ── rodapé ── */
-    const rodape = elemento("footer", "rodape");
-    this.elSoma = elemento("div", "soma");
-    rodape.append(this.elSoma);
-
-    this.raiz.append(topo, this.palco, rodape);
+    /*
+     * ── Sem rodapé ──
+     *
+     * Tinha um, e tinha lá dentro uma coisa só: «Toca nas peças para somar 7»,
+     * que passava a «4 / 7» com a seleção aberta. Andaime a mais para um modo
+     * contra o relógio — a conta está nas peças acesas, e relê-la em texto no
+     * fundo do ecrã é tempo gasto a olhar para onde não se joga.
+     *
+     * Sem ele o rodapé ficava vazio a ocupar uma linha da grelha, e na
+     * composição deitada uma calha inteira. Sai o elemento, e o tabuleiro fica
+     * com o espaço — que num modo em que os tabuleiros crescem é o que vale.
+     */
+    this.raiz.append(topo, this.palco);
     host.replaceChildren(this.raiz);
 
     this.view = new BoardView(this.palco, {
@@ -341,12 +346,6 @@ export class TimeAttackScreen {
 
     const jogo = this.estado.game;
     this.view.marcarSelecao(new Set(jogo.selection));
-
-    // O mesmo formato do Survival: dois modos com relógio, a mesma leitura.
-    this.elSoma.textContent =
-      jogo.selection.length === 0
-        ? "Toca nas peças para somar 7"
-        : `${String(selectionTotal(jogo))} / 7`;
   }
 
   /**

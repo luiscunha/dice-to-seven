@@ -27,7 +27,8 @@ import {
 import { PROFILE_KEY } from "../src/session/progress";
 import { CORRIDA_KEY } from "../src/session/corridaSurvival";
 import { SETTINGS_KEY } from "../src/session/settings";
-import { rotaAcima } from "../src/ui/rotas";
+import type { Rota } from "../src/ui/rotas";
+import { rotaAcima, sentidoEntre } from "../src/ui/rotas";
 import {
   SETTINGS_VERSION,
   defaultSettings,
@@ -131,6 +132,89 @@ describe("a rota acima", () => {
     ] as const) {
       expect(rotaAcima(r)).toEqual({ ecra: "home" });
     }
+  });
+});
+
+/*
+ * ── De que lado o ecrã entra ──
+ *
+ * A animação de entrada lê a hierarquia, e o que aqui se protege é que a lê **da
+ * mesma maneira que a seta de voltar**: se as duas divergirem, o ecrã anima como
+ * se estivesse a descer no exato passo em que a seta o fez subir.
+ */
+describe("o sentido da entrada", () => {
+  const TODAS: readonly Rota[] = [
+    { ecra: "home" },
+    { ecra: "bandas" },
+    { ecra: "niveis", capitulo: "final" },
+    { ecra: "jogo", banda: "perito", nivel: 3 },
+    { ecra: "tempo" },
+    { ecra: "survival", seed: 7 },
+    { ecra: "definicoes" },
+    { ecra: "regras" },
+  ];
+
+  it("sem rota anterior — o arranque — não se veio de lado nenhum", () => {
+    expect(sentidoEntre(undefined, { ecra: "home" })).toBe("lado");
+  });
+
+  it("descer na hierarquia avança", () => {
+    expect(sentidoEntre({ ecra: "home" }, { ecra: "bandas" })).toBe("avanca");
+    expect(
+      sentidoEntre({ ecra: "bandas" }, { ecra: "niveis", capitulo: "final" }),
+    ).toBe("avanca");
+    expect(
+      sentidoEntre(
+        { ecra: "niveis", capitulo: "final" },
+        { ecra: "jogo", banda: "perito", nivel: 3 },
+      ),
+    ).toBe("avanca");
+  });
+
+  /*
+   * A invariante que interessa: para toda a rota que tem uma acima, ir para
+   * essa é sempre recuar. É o que mantém as duas leituras da hierarquia — a
+   * desta animação e a do `rotaAcima` — a dizer o mesmo.
+   */
+  it("ir para a rota acima é sempre recuar", () => {
+    for (const r of TODAS) {
+      const acima = rotaAcima(r, "final");
+      if (acima === undefined) continue;
+      expect(sentidoEntre(r, acima)).toBe("recua");
+    }
+  });
+
+  it("os quatro modos estão todos ao mesmo nível: entre eles é de lado", () => {
+    const modos: readonly Rota[] = [
+      { ecra: "bandas" },
+      { ecra: "tempo" },
+      { ecra: "survival" },
+      { ecra: "definicoes" },
+      { ecra: "regras" },
+    ];
+
+    for (const de of modos) {
+      for (const para of modos) {
+        expect(sentidoEntre(de, para)).toBe("lado");
+      }
+    }
+  });
+
+  it("o mesmo ecrã montado de novo entra de lado", () => {
+    // Outra corrida, repetir a seed, a Home depois de mudar o nome.
+    expect(
+      sentidoEntre({ ecra: "survival", seed: 1 }, { ecra: "survival", seed: 2 }),
+    ).toBe("lado");
+    expect(sentidoEntre({ ecra: "home" }, { ecra: "home" })).toBe("lado");
+  });
+
+  it("o nível seguinte é ao lado, não mais um passo para dentro", () => {
+    expect(
+      sentidoEntre(
+        { ecra: "jogo", banda: "perito", nivel: 3 },
+        { ecra: "jogo", banda: "perito", nivel: 4 },
+      ),
+    ).toBe("lado");
   });
 });
 

@@ -160,3 +160,60 @@ export function rotaAcima(r: Rota, capitulo?: string): Rota | undefined {
       return { ecra: "home" };
   }
 }
+
+/**
+ * De que lado o ecrã entra: a descer na hierarquia, a subir, ou ao lado.
+ *
+ * A transição diz **a relação entre os dois ecrãs**, e não que houve uma
+ * transição. Sem isto, entrar num nível e sair dele animavam-se da mesma
+ * maneira, e a animação passava a decoração: um movimento que acontece sempre
+ * igual deixa de informar ao segundo minuto de jogo.
+ */
+export type Sentido = "avanca" | "recua" | "lado";
+
+/**
+ * A que distância do topo está a rota.
+ *
+ * É a mesma hierarquia de `rotaAcima` dita por um número — e tem de continuar a
+ * ser: se as duas divergirem, a seta de voltar sobe um nível enquanto o ecrã
+ * anima como se estivesse a descer.
+ *
+ * Os quatro modos ficam todos ao nível 1, e nenhum é mais fundo do que o outro:
+ * da Home entra-se em qualquer um, e de qualquer um volta-se à Home.
+ */
+function profundidade(r: Rota): number {
+  switch (r.ecra) {
+    case "home":
+      return 0;
+
+    case "bandas":
+    case "tempo":
+    case "survival":
+    case "definicoes":
+    case "regras":
+      return 1;
+
+    case "niveis":
+      return 2;
+
+    case "jogo":
+      return 3;
+  }
+}
+
+/**
+ * Sem rota anterior — o arranque — é `lado`: não se veio de nenhum sítio, e um
+ * ecrã a deslizar de um lado qualquer prometia um percurso que não houve.
+ *
+ * Dois ecrãs à mesma profundidade também são `lado`, e isso inclui o mesmo ecrã
+ * montado de novo (outra corrida, repetir a seed, a Home depois de mudar o
+ * nome): é conteúdo novo no mesmo lugar, e não um passo na hierarquia.
+ */
+export function sentidoEntre(de: Rota | undefined, para: Rota): Sentido {
+  if (de === undefined) return "lado";
+
+  const passo = profundidade(para) - profundidade(de);
+  if (passo > 0) return "avanca";
+  if (passo < 0) return "recua";
+  return "lado";
+}

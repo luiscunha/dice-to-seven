@@ -251,6 +251,23 @@ describe("o fim do nível", () => {
     await acabar();
     expect(ecra?.interceptarVoltar()).toBe(false);
   });
+
+  /*
+   * O painel abre **no palco**, e os botões de corrigir ficam por baixo dele.
+   * Vivos, davam para clicar por trás da caixa de resultado: desfazer desfazia
+   * a vitória que o painel estava a anunciar, e reiniciar deitava fora a
+   * partida que ele estava a mostrar.
+   */
+  it("com o nível ganho, os botões de corrigir ficam desativados", async () => {
+    await acabar();
+
+    const botoes = [
+      ...host.querySelectorAll<HTMLButtonElement>(".acoes-jogo .btn"),
+    ];
+
+    expect(botoes.length).toBe(3);
+    expect(botoes.map((b) => b.disabled)).toEqual([true, true, true]);
+  });
 });
 
 /* ─── Contra-Relógio ────────────────────────────────────────────────────── */
@@ -301,6 +318,18 @@ describe("o Contra-Relógio", () => {
   it("o «para trás» do Android pergunta, como a seta", () => {
     expect(ecra?.interceptarVoltar()).toBe(true);
     expect(confirmacao()?.textContent).toContain("Sair da corrida?");
+  });
+
+  /*
+   * O rodapé tinha uma coisa só — a soma corrente, «Toca nas peças para somar
+   * 7» — e era andaime a mais num modo contra o relógio: a conta está nas peças
+   * acesas. Sem ele o elemento ficava vazio a ocupar uma linha da grelha, e na
+   * composição deitada uma calha inteira. Sai o rodapé, e o palco fica com o
+   * espaço.
+   */
+  it("não tem rodapé: a soma corrente saiu, e o palco ficou com o espaço", () => {
+    expect(host.querySelector(".ecra.tempo .rodape")).toBeNull();
+    expect(host.querySelector(".ecra.tempo .soma")).toBeNull();
   });
 
   it("no fim oferece outra corrida, e deixa sair sem perguntar", () => {

@@ -10,6 +10,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   CORRIDA_KEY,
+  CORRIDA_VERSION,
   guardarCorrida,
   lerCorrida,
   limparCorrida,
@@ -87,6 +88,28 @@ describe("ler nunca falha", () => {
     recusa(JSON.stringify({ version: 1, corrida: { estado: {}, decorridoMs: 0 } }));
   });
 
+  /*
+   * A corrida da versão anterior tem sete colunas, e o teto passou a seis.
+   *
+   * Não é lixo nem um campo em falta: é um estado **bem formado** cujo
+   * significado mudou por baixo dele. Retomada, o ecrã desenhava a caixa a seis
+   * e a sétima coluna jogava-se fora dela, e as linhas novas entravam estreitas
+   * numa área larga. Descartar é o contrato do envelope — uma partida a meio
+   * não é progresso conquistado, e o recorde vive no perfil.
+   */
+  it("uma corrida da versão anterior é descartada, mesmo bem formada", () => {
+    const s = memoria();
+    s.setItem(
+      CORRIDA_KEY,
+      JSON.stringify({
+        version: CORRIDA_VERSION - 1,
+        corrida: { estado: emJogo(), decorridoMs: 1000 },
+      }),
+    );
+
+    expect(lerCorrida(s)).toBeUndefined();
+  });
+
   it("recusa um tabuleiro que não passa nas invariantes", () => {
     const s = memoria();
     const estado = emJogo();
@@ -96,7 +119,7 @@ describe("ler nunca falha", () => {
     s.setItem(
       CORRIDA_KEY,
       JSON.stringify({
-        version: 1,
+        version: CORRIDA_VERSION,
         corrida: {
           estado: { ...estado, game: { ...estado.game, board: [[1], [], [2]] } },
           decorridoMs: 0,
@@ -111,7 +134,10 @@ describe("ler nunca falha", () => {
     const s = memoria();
     s.setItem(
       CORRIDA_KEY,
-      JSON.stringify({ version: 1, corrida: { estado: emJogo(), decorridoMs: null } }),
+      JSON.stringify({
+        version: CORRIDA_VERSION,
+        corrida: { estado: emJogo(), decorridoMs: null },
+      }),
     );
     expect(lerCorrida(s)).toBeUndefined();
   });

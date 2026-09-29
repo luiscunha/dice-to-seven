@@ -93,6 +93,76 @@ body::before {
   padding: 12px 16px 16px;
 }
 
+/*
+ * ── A entrada de um ecrã ──
+ *
+ * A navegação era um corte: o ecrã antigo desaparecia e o novo já lá estava. Num
+ * jogo com endereços — onde se desce a um nível, se volta à lista, se salta para
+ * outro modo — isso deixa o jogador a reconstruir de onde veio a cada passo. A
+ * entrada anima-se porque **explica uma mudança de estado** (desenho §2.1): é a
+ * mesma autorização do pop-up do beco, e é o mesmo vocabulário — opacidade e
+ * alguns píxeis, nada mais.
+ *
+ * **O eixo é que diz a relação**, e é o que faz esta animação informar em vez de
+ * enfeitar:
+ *
+ *   avanca   entra da direita   desce-se na hierarquia (lista → nível)
+ *   recua    entra da esquerda  sobe-se (nível → lista, qualquer ecrã → Home)
+ *   lado     sobe do fundo      o mesmo nível: outro modo, outra corrida, o
+ *                              mesmo ecrã montado de novo, o arranque
+ *
+ * Quem decide é o `sentidoEntre`, em `rotas.ts`, a partir da mesma hierarquia
+ * que a seta de voltar usa.
+ *
+ * ── Opacidade e deslocação, nunca escala ──
+ *
+ * Não é gosto, é aritmética: `BoardView.redimensionar` mede o palco com
+ * `getBoundingClientRect` para calcular o lado da peça, e uma escala num
+ * antepassado mudava a largura medida. O tabuleiro era dimensionado para um palco
+ * que só existia durante a animação, e as peças nasciam do tamanho errado. Uma
+ * deslocação não mexe em largura nenhuma — e o seletor do joker, que também mede,
+ * subtrai duas caixas deslocadas pelo mesmo valor, portanto cancela.
+ *
+ * `transform` e não `translate`: a propriedade `translate` é a do toque que
+ * afunda os cartões um píxel, e as duas compõem-se sem se pisarem.
+ *
+ * Os dez píxeis na horizontal e os oito na vertical são **a folga do pop-up**,
+ * não um slide: o ecrã não vem de fora do ecrã, assenta no lugar. O que se lê é
+ * a direção, não a distância.
+ */
+.ecra[data-entrada] {
+  animation: entrar-ecra var(--t-ecra) var(--suavizacao) backwards;
+}
+
+.ecra[data-entrada="avanca"] {
+  animation-name: entrar-avancando;
+}
+
+.ecra[data-entrada="recua"] {
+  animation-name: entrar-recuando;
+}
+
+@keyframes entrar-ecra {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@keyframes entrar-avancando {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+}
+
+@keyframes entrar-recuando {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+}
+
 /* ─── Cabeçalho ───────────────────────────────────────────────────────────── */
 
 /*
@@ -260,8 +330,7 @@ body::before {
   pointer-events: none;
 }
 
-.ecra[data-estado="fim"] .linha-selecao,
-.ecra[data-estado="fim"] .rodape > .soma {
+.ecra[data-estado="fim"] .linha-selecao {
   visibility: hidden;
 }
 
@@ -586,6 +655,29 @@ body::before {
   color: var(--ink-muted);
 }
 
+/*
+ * A recusa sobe três píxeis e acende. Ver `recusou()`, em `PuzzleScreen.ts`.
+ *
+ * Sobe, como tudo o que entra neste jogo. Um abanão horizontal era o que o
+ * género faria — e é o que a direção de arte proíbe: o ecrã não treme, nem uma
+ * linha dele. O que se pede à animação é que a mensagem seja vista, não que a
+ * recusa seja dramatizada.
+ *
+ * `--t-ui` e não um tempo próprio: é a resposta a um toque, e é a escala de
+ * tempo de todas as outras. Sob `prefers-reduced-motion` o token vai a zero e
+ * isto desliga-se com o resto, sem uma regra a dizê-lo.
+ */
+.aviso.surge[data-tipo="erro"] {
+  animation: surgir-aviso var(--t-ui) var(--suavizacao);
+}
+
+@keyframes surgir-aviso {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+}
+
 .acoes {
   display: flex;
   gap: 8px;
@@ -634,9 +726,25 @@ body::before {
   background: var(--surface);
   color: var(--ink);
   cursor: pointer;
+  /*
+   * A opacidade e a cor entram nesta lista por causa de duas mudanças de estado
+   * que se davam por cortes.
+   *
+   * O desfazer e a dica **acendem e apagam a meio do nível** — nascem
+   * desativados, ganham vida à primeira jogada, e voltam a apagar-se no fim. Com
+   * a opacidade a saltar de 0.45 para 1, um botão que passa a estar disponível
+   * lia-se como um botão que apareceu do nada; a transição diz que é o mesmo
+   * botão, noutro estado.
+   *
+   * A cor é a do segmentado das Definições. A pastilha branca já deslizava por
+   * `background`, mas o texto trocava de `--ink-muted` para `--ink` num
+   * fotograma, e a metade que ficava para trás era justamente a que se lê.
+   */
   transition:
     background var(--t-ui) linear,
-    border-color var(--t-ui) linear;
+    border-color var(--t-ui) linear,
+    color var(--t-ui) linear,
+    opacity var(--t-ui) linear;
 }
 
 /*
@@ -1537,6 +1645,40 @@ body::before {
 }
 
 /*
+ * ── Os três cartões assentam por ordem ──
+ *
+ * A Home entra como qualquer outro ecrã, e por cima disso os três cartões sobem
+ * com um degrau de `--t-escada` entre eles. O que o degrau diz é a hierarquia
+ * que a Home já tem desenhada: os Puzzles são o cartão largo e o primeiro a
+ * assentar, os dois modos de corrida vêm depois.
+ *
+ * Quatro píxeis, e não os oito do ecrã: é um ajuste dentro de uma página que já
+ * se está a mover, e ao mesmo tempo que ela. Somados, os dois davam um cartão a
+ * atravessar doze píxeis, que já é um cartão a voar.
+ *
+ * Só aqui. É o ecrã com três elementos principais e nenhuma lista — o único em
+ * que um degrau se lê como a página a compor-se e não como um efeito.
+ */
+.ecra.home[data-entrada] .home-modo {
+  animation: assentar-cartao var(--t-ecra) var(--suavizacao) backwards;
+}
+
+.ecra.home[data-entrada] .home-mosaico > .home-modo:first-child {
+  animation-delay: var(--t-escada);
+}
+
+.ecra.home[data-entrada] .home-mosaico > .home-modo:last-child {
+  animation-delay: calc(var(--t-escada) * 2);
+}
+
+@keyframes assentar-cartao {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+/*
  * O cartão largo: ícone, texto e seta, numa linha.
  *
  * É largo porque os Puzzles são a campanha — 143 níveis e progresso para
@@ -2279,8 +2421,7 @@ body::before {
   align-items: center;
 }
 
-.tempo-topo > .meta,
-.survival-topo > .meta {
+.tempo-topo > .meta {
   justify-self: end;
 }
 
@@ -2435,22 +2576,17 @@ body::before {
 }
 
 /*
- * A folga fala a língua da linha de fogo, que diz o mesmo no tabuleiro.
+ * O topo do Survival tem o cronómetro e mais nada.
  *
- * Antes o aviso era verde (`--face-5`) e o crítico cinzento (`--face-joker`):
- * verde lê-se como «está bem» e cinzento como «desativado», e nenhuma das duas
- * é uma ameaça. Agora o aviso ganha peso e o crítico ganha o vermelho do teto
- * — a cor que o jogo reserva para o perigo, e mais nada.
+ * Teve à direita um «2 linhas de folga», com cor a acompanhar o aperto. Dizia o
+ * mesmo que a linha de fogo — e dizia-o no sítio errado: um número no cabeçalho
+ * obriga a levantar os olhos do tabuleiro e a traduzi-lo de volta para o limite
+ * onde ele acontece. A linha está desenhada nesse limite e muda de cor com o
+ * mesmo grau. Ver `pintarRelogio`, em `SurvivalScreen.ts`.
+ *
+ * A grelha de três colunas fica: é ela que mantém o cronómetro **no meio do
+ * ecrã** e não a um terço, com ou sem alguma coisa à direita.
  */
-.survival-topo .meta[data-aperto="aviso"] {
-  color: var(--ink);
-  font-weight: 600;
-}
-
-.survival-topo .meta[data-aperto="critico"] {
-  color: var(--fogo);
-  font-weight: 700;
-}
 
 /* ─── A linha de fogo ─────────────────────────────────────────────────────── */
 
@@ -2913,6 +3049,17 @@ body::before {
     grid-area: rodape;
     justify-content: flex-end;
     min-width: 0;
+  }
+
+  /*
+   * O Contra-Relógio deixou de ter rodapé — sair está no cabeçalho, e a soma
+   * corrente saiu. Com as três colunas, a da direita ficava vazia e o tabuleiro
+   * jogava-se com menos `--calha` de largura por nada. Duas colunas, e o palco
+   * fica com o que sobra.
+   */
+  .ecra.jogo.tempo {
+    grid-template-columns: var(--calha) minmax(0, 1fr);
+    grid-template-areas: "topo palco";
   }
 
   /* As ações empilham-se: a calha é estreita, e cada uma fica com a largura toda. */

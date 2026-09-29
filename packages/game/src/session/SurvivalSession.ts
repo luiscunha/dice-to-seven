@@ -21,14 +21,33 @@
  * jogar bem. À largura cheia, o colapso é alívio: as peças que caem sobre o
  * vazio descem à base pela gravidade normal, e a largura repõe-se.
  *
- * Cheia quer dizer **sete**, do primeiro instante ao último.
+ * Cheia quer dizer **seis**, do primeiro instante ao último.
  *
- * Nem sempre foi assim: o tabuleiro arrancava com cinco colunas e ganhava uma a
- * cada quatro linhas caídas, porque com cinco colunas a peça mede 69px num
- * telemóvel de 375px e com sete mede 46px — a corrida começava com peças
- * grandes e ia-as encolhendo. Lia-se mal a jogar: a área de jogo mudava de
- * tamanho por baixo das mãos, e o tabuleiro parecia outro a meio da corrida.
- * Sete desde o início custa o tamanho da peça e paga em estabilidade.
+ * Nem sempre foi assim, e as duas mudanças foram por razões diferentes.
+ *
+ * Primeiro o tabuleiro arrancava com cinco colunas e ganhava uma a cada quatro
+ * linhas caídas. Lia-se mal a jogar: a área de jogo mudava de tamanho por baixo
+ * das mãos, e o tabuleiro parecia outro a meio da corrida. A largura passou a
+ * fixa, e paga-se em tamanho de peça o que se ganha em estabilidade.
+ *
+ * Depois foi de sete para seis, e isso já é o dedo. A peça mede-se pelo menor
+ * entre «palco a dividir pelas colunas» e «palco a dividir pelas linhas», e num
+ * telemóvel em pé quem manda é sempre a largura — o tabuleiro reserva altura
+ * para `alturaMaxima` e sobra-lhe sempre:
+ *
+ * | ecrã | 7 colunas | 6 colunas |
+ * |---|---|---|
+ * | 320px | **38px** | 45px |
+ * | 375px | 46px | 54px |
+ * | 411px | 51px | 60px |
+ *
+ * Com sete, um ecrã de 320px dava peças de 38px — **abaixo do piso de toque de
+ * 44px** que o projeto fixou, e o mesmo piso que já tinha decidido o
+ * `alturaMaxima`. Seis põe os três tamanhos acima dele.
+ *
+ * Custa área de jogo: 30 peças à partida em vez de 35, e uma coluna a menos é
+ * menos sítio onde encaixar uma linha que cai. O modo fica mais apertado — e é
+ * essa a troca, feita a jogar no telemóvel e não a olhar para números.
  *
  * O mecanismo fica montado — `larguraNoIndice` continua a ser a largura em
  * função do índice, e `larguraInicial` apenas passou a valer o mesmo que o teto.
@@ -108,9 +127,10 @@ export interface SurvivalConfig {
    *
    * É o que decide o tamanho da peça: a peça mede-se pelo menor de «palco a
    * dividir pelas colunas» e «palco a dividir pelas linhas», e num telemóvel
-   * quem manda é sempre a largura — a 375px, sete colunas dão 46px e cinco dão
-   * 69px. Arrancar estreito dava peças maiores no início, ao preço de a área de
-   * jogo mudar de tamanho durante a corrida; a estabilidade ganhou.
+   * quem manda é sempre a largura — a 375px, seis colunas dão 54px e sete dão
+   * 46px. Arrancar estreito e crescer dava peças maiores no início, ao preço de
+   * a área de jogo mudar de tamanho durante a corrida; a estabilidade ganhou, e
+   * o tamanho veio de baixar o teto. Ver a tabela no topo do ficheiro.
    */
   readonly larguraInicial: number;
 
@@ -124,6 +144,11 @@ export interface SurvivalConfig {
    * **Sete, e quem manda é o piso de toque.** A 320px de largura, o palco que
    * sobra depois da fila e do rodapé dá 348px de altura: com nove linhas a peça
    * ficava a 39px, abaixo dos 44 que o projeto fixou. Com sete dá 46px.
+   *
+   * Desde que a largura desceu a seis, quem prende a peça num telemóvel em pé é
+   * outra vez a largura — mas o número fica onde está: é ele que decide quantas
+   * linhas de folga há para ler, e subi-lo voltaria a apertar a peça no ecrã
+   * mais estreito.
    *
    * O custo mediu-se: 78 jogadas por corrida em vez de 92, com ramificação 9.2.
    * Quinze por cento mais curta, e jogável com o dedo — que não é uma troca
@@ -213,9 +238,9 @@ export interface SurvivalConfig {
 }
 
 export const DEFAULT_SURVIVAL: SurvivalConfig = {
-  largura: 7,
+  largura: 6,
   // Igual ao teto: a largura deixou de crescer durante a corrida.
-  larguraInicial: 7,
+  larguraInicial: 6,
   linhasPorColuna: 4,
   alturaInicial: 5,
   alturaMaxima: 7,

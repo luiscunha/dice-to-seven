@@ -106,16 +106,20 @@ describe("o arranque", () => {
 });
 
 /*
- * A largura é sete, do primeiro instante ao último.
+ * A largura é seis, do primeiro instante ao último.
  *
  * Cresceu, em tempos: arrancava em cinco e ganhava uma coluna a cada quatro
- * linhas caídas, para a peça poder começar grande — num telemóvel quem manda no
- * tamanho da peça é a largura, e a 375px sete colunas dão 46px contra 69px de
- * cinco. Custava a área de jogo mudar de tamanho por baixo das mãos, e trocou-se
- * o tamanho da peça pela estabilidade do tabuleiro.
+ * linhas caídas, para a peça poder começar grande. Custava a área de jogo mudar
+ * de tamanho por baixo das mãos, e trocou-se o tamanho da peça pela
+ * estabilidade do tabuleiro.
  *
- * O mecanismo ficou montado e continua testado aqui — `larguraInicial` é que
- * passou a valer o mesmo que o teto. É o que faz de voltar atrás uma linha.
+ * O teto ficou primeiro em sete, e desceu a seis por causa do dedo: a 320px,
+ * sete colunas davam peças de 38px, abaixo do piso de toque de 44 — seis dão 45.
+ * A tabela está no topo de `SurvivalSession.ts`.
+ *
+ * **Estes testes não fixam o número**, e é de propósito: lêem-no da config, e o
+ * que protegem é a forma — arranca no teto, e nada durante a corrida o muda. O
+ * mecanismo de crescer ficou montado, portanto voltar atrás é uma linha.
  */
 describe("a largura é constante durante a corrida", () => {
   const { alturaInicial, larguraInicial, linhasPorColuna, largura } =

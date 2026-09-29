@@ -271,6 +271,29 @@
    */
   --t-queda: 380ms;
   --t-ui: 120ms;
+
+  /*
+   * A entrada de um ecrã.
+   *
+   * O mesmo tempo do pop-up, e de propósito: são a mesma frase dita em escalas
+   * diferentes — «isto é novo, e veio de algum lado». Dois tempos parecidos mas
+   * diferentes leriam-se como descuido, não como distinção.
+   *
+   * Mais do que isto e a navegação começa a pedir para se esperar por ela, que é
+   * o contrário do que a animação existe para dizer.
+   */
+  --t-ecra: 200ms;
+
+  /*
+   * O degrau entre os cartões da Home, ao entrar.
+   *
+   * Três cartões, portanto o último arranca 90ms depois do primeiro e o conjunto
+   * fecha em 290ms. Só na Home, e só nos três: numa grelha de quarenta níveis o
+   * mesmo degrau desenhava uma onda a atravessar o ecrã, que é um efeito a
+   * olhar-se e não uma página a assentar.
+   */
+  --t-escada: 45ms;
+
   --suavizacao: cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
@@ -444,6 +467,22 @@ body {
 
 #app {
   height: 100%;
+  /*
+   * O ecrã que entra vem deslocado dez píxeis para o lado — ver a entrada dos
+   * ecrãs, em `app.css`. Deslocado para a direita, esses dez píxeis são largura
+   * de página: medidos, `scrollWidth` passava a 10px maior do que a janela
+   * durante a animação.
+   *
+   * Cortar não é cosmética. É a mesma razão que o palco documenta: no Chrome
+   * para Android, uma página que foi larga uma vez **fica a poder rolar para o
+   * lado** — e o jogo passava a deslizar horizontalmente por causa de uma
+   * animação que já tinha acabado.
+   *
+   * `clip` e não `hidden`: `hidden` faz do `#app` um contentor de rolagem, e o
+   * jogo deixava de poder ter nada a sair dele. Com `clip`, o eixo vertical
+   * continua `visible`.
+   */
+  overflow-x: clip;
 }
 
 :focus-visible {
@@ -463,5 +502,12 @@ body {
     --t-colapso: 0ms;
     --t-queda: 0ms;
     --t-ui: 0ms;
+    --t-ecra: 0ms;
+    /*
+     * O degrau também vai a zero, e não só a duração: com o degrau de pé, os
+     * cartões apareciam um a um, instantâneos, aos saltos de 45ms. Isso é pior
+     * do que a animação que se pediu para não haver.
+     */
+    --t-escada: 0ms;
   }
 }
