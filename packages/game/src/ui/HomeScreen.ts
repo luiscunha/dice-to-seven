@@ -5,17 +5,21 @@
  * o resto é uma escolha entre três coisas — e três coisas não precisam de mapa,
  * de metáfora, nem de arte que envelhece (desenho §5.6).
  *
- * **Na barra de cima está quem joga, além do que se joga.** O avatar e o nome
- * não são enfeite nem conta: são o sítio onde o jogo reconhece a pessoa que o
- * abriu, e o único do jogo inteiro que ela escolhe. Quem não se nomeou vê um
- * convite esmorecido, e o convite é o próprio botão — ninguém é baptizado à
- * revelia com um «Jogador» que tem género.
+ * **Quem joga está no rodapé, não na barra.** O avatar e o nome não são enfeite
+ * nem conta: são o sítio onde o jogo reconhece a pessoa que o abriu, e o único
+ * do jogo inteiro que ela escolhe. Estiveram na barra de cima e partilhavam-na
+ * com o nome do jogo — dois rótulos a disputar a mesma linha, e um nome comprido
+ * cortava os dois com reticências. Em baixo tem a largura toda, fica na zona do
+ * polegar, e lê-se como assinatura: *este jogo é jogado por esta pessoa*. Quem
+ * não se nomeou vê um convite esmorecido, e o convite é o próprio botão —
+ * ninguém é baptizado à revelia com um «Jogador» que tem género.
  *
- * **A marca vive na barra de cima, ao lado das definições.** Era um bloco
- * centrado com o símbolo grande, o nome e o lema, e ocupava o terço superior do
- * ecrã a dizer ao jogador o nome da aplicação que ele acabou de abrir. Numa
- * barra, diz o mesmo em 40px de altura — e os 130px que sobram são dos modos,
- * que são a razão de alguém estar aqui.
+ * **A marca ocupa a barra de cima por inteiro.** Era um bloco centrado com o
+ * símbolo grande, o nome e o lema, e ocupava o terço superior do ecrã a dizer ao
+ * jogador o nome da aplicação que ele acabou de abrir. Numa barra, diz o mesmo
+ * em 44px de altura — e o que sobra é dos modos, que são a razão de alguém estar
+ * aqui. O que ganhou com a mudança foi largura: o nome passou a caber inteiro,
+ * e com ele a pinta que lhe faz de «o».
  *
  * **Os três modos não são três linhas iguais.** Os Puzzles são a campanha, têm
  * 143 níveis e progresso para contar: ficam com um cartão largo. O
@@ -100,15 +104,18 @@ export class HomeScreen {
       this.mosaico(opcoes),
     );
 
+    const lema = elemento("p", "home-lema");
+    lema.append(
+      elemento("b", "home-lema-forte", "O teu objetivo é simples: Somar 7."),
+      " A execução é o verdadeiro desafio.",
+    );
+
     this.raiz.append(
       this.barra(opcoes),
-      elemento(
-        "p",
-        "home-lema",
-        "Elimina grupos ligados que somem exatamente 7.",
-      ),
+      lema,
       modos,
       this.ajuda(opcoes),
+      this.rodape(opcoes),
     );
 
     host.replaceChildren(this.raiz);
@@ -121,25 +128,70 @@ export class HomeScreen {
   /* ─── A barra ───────────────────────────────────────────────────────────── */
 
   /**
-   * O jogador à esquerda, a marca a seguir, as definições à direita.
+   * A marca à esquerda, as definições à direita.
    *
    * O símbolo e o nome do jogo vão dentro do mesmo elemento e não em dois: são
    * uma coisa só a olhar, e separá-los deixava o nome a escorregar num ecrã
    * estreito enquanto o símbolo ficava.
    */
   private barra(opcoes: OpcoesHome): HTMLElement {
-    const barra = elemento("div", "home-barra");
+    const barra = elemento("header", "home-barra");
 
     const marca = elemento("div", "home-marca");
-    marca.append(this.simbolo(), elemento("h1", "home-titulo", "DiceToSeven"));
+    marca.append(this.simbolo(), this.wordmark());
 
     barra.append(
-      this.jogador(opcoes),
       marca,
       botaoRedondo(iconeDefinicoes(), "Definições", opcoes.aoEscolherDefinicoes),
     );
 
     return barra;
+  }
+
+  /**
+   * O nome do jogo, com uma pinta no lugar do «o» de «To».
+   *
+   * A palavra estava escrita como qualquer outro título e não dizia nada sobre
+   * o jogo. A pinta diz: é a mesma marca preta que está nas faces, com o mesmo
+   * raio, e é o vocabulário do tabuleiro a aparecer na única palavra do ecrã que
+   * não é uma instrução. Custa um `span` e não há arte nova a manter.
+   *
+   * **O «o» continua no DOM**, apenas invisível, e a pinta é `aria-hidden`.
+   * Quem lê pelo ecrã ouve «DiceToSeven» inteiro; quem o vê lê o mesmo, porque
+   * um círculo na altura do x é um «o». Trocar o caráter por um desenho sem
+   * deixar o caráter lá seria uma marca que não se consegue soletrar — nem
+   * copiar, nem procurar.
+   *
+   * O «To» inteiro vai destacado, porque o nome do jogo é uma conta e a
+   * preposição é a única parte que o diz: dados **para** sete.
+   */
+  private wordmark(): HTMLElement {
+    const h = elemento("h1", "home-titulo");
+
+    const pinta = elemento("span", "home-titulo-pinta");
+    pinta.setAttribute("aria-hidden", "true");
+
+    const liga = elemento("span", "home-titulo-liga");
+    liga.append("T", pinta, elemento("span", "home-titulo-o", "o"));
+
+    h.append("Dice", liga, "Seven");
+    return h;
+  }
+
+  /* ─── O rodapé ──────────────────────────────────────────────────────────── */
+
+  /**
+   * Quem está a jogar, no fundo do ecrã.
+   *
+   * No fundo e não na barra de cima porque a barra é partilhada com o nome do
+   * jogo: dois rótulos de comprimento livre na mesma linha, e um nome de dez
+   * letras cortava os dois. Aqui tem a largura toda para si — e é onde o polegar
+   * já está, o que é o sítio certo para a única coisa da Home que se personaliza.
+   */
+  private rodape(opcoes: OpcoesHome): HTMLElement {
+    const el = elemento("footer", "home-rodape");
+    el.appendChild(this.jogador(opcoes));
+    return el;
   }
 
   /**
@@ -165,9 +217,9 @@ export class HomeScreen {
     avatar.appendChild(pecaDeAmostra(opcoes.avatar ?? 6, opcoes.modoFace ?? "pintas"));
 
     /*
-     * «Quem és?» e não «Dá-te um nome»: a barra partilha a largura com o nome
-     * do jogo, e o convite mais longo cortava com reticências — «Dá-te um
-     * no…» — justamente no estado em que ele tem de se ler inteiro.
+     * «Quem és?» e não «Dá-te um nome»: é a mesma pergunta que o campo do editor
+     * faz em seguida, palavra por palavra, e repeti-la é o que faz o toque
+     * parecer uma resposta em vez de um formulário novo.
      */
     const etiqueta = elemento(
       "span",

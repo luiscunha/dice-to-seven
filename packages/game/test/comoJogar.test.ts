@@ -77,6 +77,37 @@ describe("a Home", () => {
     ecra.destruir();
   });
 
+  /*
+   * A pinta faz de «o» aos olhos, mas o «o» tem de continuar escrito: é o que
+   * mantém o nome a soletrar-se para quem ouve o ecrã, e a copiar-se inteiro.
+   * O teste acima já garante o texto; este garante que não é o desenho a
+   * fornecê-lo.
+   */
+  it("a pinta do nome é decoração, e o «o» continua no texto", () => {
+    const ecra = home();
+
+    const titulo = host.querySelector(".home-titulo");
+    expect(
+      titulo?.querySelector(".home-titulo-pinta")?.getAttribute("aria-hidden"),
+    ).toBe("true");
+    expect(titulo?.querySelector(".home-titulo-o")?.textContent).toBe("o");
+
+    ecra.destruir();
+  });
+
+  /*
+   * Quem joga saiu da barra de cima — partilhava-a com o nome do jogo e os dois
+   * cortavam-se com reticências. No rodapé tem a largura toda.
+   */
+  it("a pastilha do jogador está no rodapé, e não na barra", () => {
+    const ecra = home();
+
+    expect(host.querySelector(".home-barra .home-jogador")).toBeNull();
+    expect(host.querySelector(".home-rodape .home-jogador")).not.toBeNull();
+
+    ecra.destruir();
+  });
+
   it("o cartão das regras leva às regras, e imprime a conta em peças", () => {
     const aoEscolherComoJogar = vi.fn();
     const ecra = home({ aoEscolherComoJogar });
