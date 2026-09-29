@@ -543,18 +543,32 @@ export class SurvivalScreen {
           ? `${relogio(tempo)} · ${String(this.estado.linhasInjetadas)} linhas aguentadas`
           : `${relogio(tempo)} até transbordar`,
       ),
-      // A seed é a corrida. Quem a passa a alguém passa exatamente esta partida.
-      elemento("p", "popup-texto", `Seed ${String(this.estado.seed)}`),
     );
 
     const acoes = elemento("div", "acoes");
-    acoes.append(
+    acoes.appendChild(
       botao("Outra corrida", "primario", () => {
         this.opcoes.aoRecomecar(novaSeed());
       }),
-      botao("Repetir esta", undefined, () => {
-        this.opcoes.aoRecomecar(this.estado.seed);
-      }),
+    );
+
+    /*
+     * Repetir a corrida só se oferece a quem perdeu.
+     *
+     * É um botão de segunda tentativa: existe para quem transbordou e acha que
+     * naquele tabuleiro fazia melhor. A quem limpou não serve de nada — refazer
+     * a partida que se acabou de ganhar é a única coisa que já se sabe fazer —
+     * e ao lado de «Outra corrida» só rouba a atenção ao passo seguinte.
+     */
+    if (!limpou) {
+      acoes.appendChild(
+        botao("Repetir esta", undefined, () => {
+          this.opcoes.aoRecomecar(this.estado.seed);
+        }),
+      );
+    }
+
+    acoes.appendChild(
       botao("Sair", undefined, () => {
         this.opcoes.aoSair();
       }),

@@ -21,11 +21,18 @@
  * jogar bem. À largura cheia, o colapso é alívio: as peças que caem sobre o
  * vazio descem à base pela gravidade normal, e a largura repõe-se.
  *
- * Cheia quer dizer a largura **daquele ponto da corrida**, não sete: ver
- * `larguraNoIndice`. O tabuleiro arranca com cinco colunas e ganha uma a cada
- * quatro linhas caídas, até sete. Com cinco colunas a peça mede 69px num
- * telemóvel de 375px e com sete mede 46px — é assim que a corrida começa com
- * peças grandes e as vai encolhendo até caber o 7×7.
+ * Cheia quer dizer **sete**, do primeiro instante ao último.
+ *
+ * Nem sempre foi assim: o tabuleiro arrancava com cinco colunas e ganhava uma a
+ * cada quatro linhas caídas, porque com cinco colunas a peça mede 69px num
+ * telemóvel de 375px e com sete mede 46px — a corrida começava com peças
+ * grandes e ia-as encolhendo. Lia-se mal a jogar: a área de jogo mudava de
+ * tamanho por baixo das mãos, e o tabuleiro parecia outro a meio da corrida.
+ * Sete desde o início custa o tamanho da peça e paga em estabilidade.
+ *
+ * O mecanismo fica montado — `larguraNoIndice` continua a ser a largura em
+ * função do índice, e `larguraInicial` apenas passou a valer o mesmo que o teto.
+ * Voltar a fazê-la crescer é mudar esse número.
  *
  * **Puxar a linha paga.** Um botão que só faz mal nunca é premido, e seria UI
  * morta. Puxar de vontade própria rende um multiplicador proporcional ao espaço
@@ -97,13 +104,13 @@ export interface SurvivalConfig {
   readonly largura: number;
 
   /**
-   * A largura com que a corrida arranca.
+   * A largura com que a corrida arranca. **Hoje é igual a `largura`.**
    *
-   * **É o que decide o tamanho da peça.** A peça é medida pelo menor de
-   * «palco a dividir pelas colunas» e «palco a dividir pelas linhas», e num
-   * telemóvel quem manda é sempre a largura: a 375px, sete colunas dão 46px e
-   * cinco dão 69px. Começar estreito é começar com peças grandes, e alargar é
-   * encolhê-las — até ao 7×7, que é onde param nos 46px.
+   * É o que decide o tamanho da peça: a peça mede-se pelo menor de «palco a
+   * dividir pelas colunas» e «palco a dividir pelas linhas», e num telemóvel
+   * quem manda é sempre a largura — a 375px, sete colunas dão 46px e cinco dão
+   * 69px. Arrancar estreito dava peças maiores no início, ao preço de a área de
+   * jogo mudar de tamanho durante a corrida; a estabilidade ganhou.
    */
   readonly larguraInicial: number;
 
@@ -207,7 +214,8 @@ export interface SurvivalConfig {
 
 export const DEFAULT_SURVIVAL: SurvivalConfig = {
   largura: 7,
-  larguraInicial: 5,
+  // Igual ao teto: a largura deixou de crescer durante a corrida.
+  larguraInicial: 7,
   linhasPorColuna: 4,
   alturaInicial: 5,
   alturaMaxima: 7,

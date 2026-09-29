@@ -483,8 +483,24 @@ function mostrarSurvival(seed: number | undefined): void {
       perfil = recordSurvival(perfil, limpou, tempoMs, linhas);
       guardarPerfil();
     },
+    /*
+     * **Repetir a mesma seed não passa pelo endereço.**
+     *
+     * `ir` escreve o hash e espera que o `hashchange` remonte o ecrã. Com a
+     * mesma seed o hash já é aquele, o evento não dispara, e o botão «Repetir
+     * esta» ficava sem efeito nenhum — a caixa de fim aberta por cima de um
+     * tabuleiro que não recomeçava. É o mesmo caso que o Contra-Relógio já
+     * tratava, e pela mesma razão.
+     *
+     * Montar o ecrã diretamente fecha o buraco: `mostrar` destrói o anterior,
+     * portanto não fica relógio nem tabuleiro velho para trás.
+     */
     aoRecomecar: (nova) => {
       guardarSurvival(undefined);
+      if (nova === seed) {
+        void mostrar({ ecra: "survival", seed: nova });
+        return;
+      }
       ir({ ecra: "survival", seed: nova });
     },
     aoSair: voltarA({ ecra: "home" }),
