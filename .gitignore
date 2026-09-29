@@ -82,6 +82,11 @@ yarn-error.log*
 # equipa e fica versionado.
 .claude/settings.local.json
 
+# As skills vivem em .agents/ e ficam versionadas com o skills-lock.json. O que
+# .claude/skills/ tem são symlinks para lá: regeneram-se na instalação, e um
+# clone em Windows sem developer mode transformá-los-ia em ficheiros de texto.
+.claude/skills/
+
 # ─── Sistema operativo ───────────────────────────────────────────────────────
 .DS_Store
 ._*
