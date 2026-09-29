@@ -29,8 +29,17 @@ export const CORRIDA_KEY = "dicetoseven.survival";
  * cálculo diz cinco. O ecrã dimensionava a peça para cinco e desenhava a caixa
  * para sete — 486px de caixa num telemóvel de 375. Um campo novo não teria
  * apanhado isto; o que está errado é a relação entre dois campos antigos.
+ *
+ * A 4 é o mesmo defeito outra vez, e é por isso que esta nota fica: o teto de
+ * largura desceu de sete para seis. Uma corrida da 3 tem um tabuleiro de sete
+ * colunas que o novo cálculo diz ter seis — a caixa era desenhada a seis e a
+ * sétima coluna ficava a jogar fora dela, e as linhas novas entravam estreitas
+ * numa área larga, sem nunca lá voltarem a chegar.
+ *
+ * Descartar é a resposta certa: é uma corrida a meio, não progresso conquistado,
+ * e o recorde vive no perfil, que não se toca.
  */
-const CORRIDA_VERSION = 3;
+export const CORRIDA_VERSION = 4;
 
 export interface CorridaGuardada {
   readonly estado: SurvivalState;

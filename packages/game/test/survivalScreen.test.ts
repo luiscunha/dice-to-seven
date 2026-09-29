@@ -112,6 +112,24 @@ describe("SurvivalScreen", () => {
     ecra.destruir();
   });
 
+  /*
+   * Duas leituras que saíram, e cada uma por sua razão.
+   *
+   * A soma corrente — «Toca nas peças para somar 7», depois «4 / 7» — é o
+   * andaime do Tutorial, e num modo contra o relógio é a conta a ser lida duas
+   * vezes: uma nas peças acesas, outra em texto no fundo do ecrã.
+   *
+   * A folga dizia o mesmo que a linha de fogo, e dizia-o no cabeçalho — longe
+   * do limite onde ela acontece. A linha fica, e continua a mudar de grau; é
+   * isso que o teste ao lado protege.
+   */
+  it("não repete no texto o que o tabuleiro já diz", () => {
+    expect(host.querySelector(".ecra.survival .soma")).toBeNull();
+    expect(host.querySelector(".survival-topo .meta")).toBeNull();
+    expect(host.querySelector(".survival-topo")?.children.length).toBe(2);
+    ecra.destruir();
+  });
+
   it("sair não deixa o modal de fim para trás", () => {
     const d = host.querySelector("dialog.confirmacao");
     ecra.destruir();

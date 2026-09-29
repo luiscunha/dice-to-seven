@@ -35,6 +35,26 @@ export function elemento(
 }
 
 /**
+ * Faz a animação de entrada correr outra vez, num elemento que já está no ecrã.
+ *
+ * Trocar o texto de um elemento não reinicia animação nenhuma: a animação
+ * pertence ao elemento, e o elemento não mudou. Isto interessa quando a mesma
+ * mensagem se repete — dois toques recusados seguidos pela mesma razão são duas
+ * recusas, e a segunda tem de se ver como a primeira. Sem isto, era a única vez
+ * em que o jogo não respondia a um toque.
+ *
+ * O `offsetWidth` não é lido por acaso: é ele que obriga o browser a recalcular
+ * o estilo entre as duas linhas. Sem essa leitura, remover e voltar a pôr a
+ * classe no mesmo instante conta como não ter mexido em nada. É o mesmo truque
+ * que o `BoardView` usa para separar as fases da jogada.
+ */
+export function reanimar(el: HTMLElement, classe: string): void {
+  el.classList.remove(classe);
+  void el.offsetWidth;
+  el.classList.add(classe);
+}
+
+/**
  * O cabeçalho de um ecrã que não é a Home: seta para trás e título.
  *
  * A seta chama `aoVoltar` em vez de `history.back()`. Voltar **na hierarquia** e

@@ -50,7 +50,7 @@ import {
   vibrarToque,
   vibrarVitoria,
 } from "../plataforma/nativo";
-import { botaoRedondo, confirmar } from "./dom";
+import { botaoRedondo, confirmar, reanimar } from "./dom";
 import {
   iconeDesfazer,
   iconeDica,
@@ -707,9 +707,26 @@ export class PuzzleScreen {
     const joker = jogo.selection.find((p) => cellAt(jogo.board, p) === JOKER);
     this.view.marcarJoker(joker, jogo.jokerAs);
 
+    /*
+     * ── Com o nível ganho, o rodapé fecha ──
+     *
+     * O painel de fim abre no palco, e os botões de corrigir ficavam **por baixo
+     * dele, vivos**. Desfazer depois de ganhar desfaz a vitória: o painel
+     * continuava aberto a anunciar um selo por cima de um tabuleiro que já não
+     * estava vazio. Reiniciar deitava fora a partida que o painel estava a
+     * mostrar — e o painel já oferece «Repetir», que faz o mesmo dizendo o que
+     * faz.
+     *
+     * Desativados e não só inertes: um botão que não responde ao toque mas
+     * continua com ar de botão lê-se como a aplicação a falhar. A dica já era
+     * assim, e agora as três dizem a mesma coisa.
+     */
+    const ganhou = isFinished(jogo);
+
     this.btDesfazer.disabled =
-      jogo.selection.length === 0 && jogo.history.length === 0;
-    this.btDica.disabled = this.estado.hintsLeft <= 0 || isFinished(jogo);
+      ganhou || (jogo.selection.length === 0 && jogo.history.length === 0);
+    this.btReiniciar.disabled = ganhou;
+    this.btDica.disabled = this.estado.hintsLeft <= 0 || ganhou;
 
     this.btDica.replaceChildren(
       iconeDica(),
@@ -805,6 +822,7 @@ export class PuzzleScreen {
     if (jogo.rejection === "over-target") {
       this.elAviso.dataset["tipo"] = "erro";
       this.elAviso.replaceChildren(marca("⚠"), texto("essa peça passava de 7"));
+      this.recusou();
       return;
     }
 
@@ -819,6 +837,7 @@ export class PuzzleScreen {
         marca("❄"),
         texto("uma peça gelada só sai com uma peça"),
       );
+      this.recusou();
       return;
     }
 
@@ -841,6 +860,22 @@ export class PuzzleScreen {
     }
 
     this.elAviso.replaceChildren();
+  }
+
+  /**
+   * A recusa aparece, em vez de já estar ali.
+   *
+   * É a única resposta que o jogo dá a um toque que não muda o tabuleiro: a peça
+   * não sai, nada se mexe, e a explicação era uma linha de texto que se
+   * materializava debaixo das peças — onde os olhos não estão. No telemóvel há a
+   * vibração, mas na web não há nada, e uma recusa que não se vê é
+   * indistinguível de um toque que não foi registado.
+   *
+   * O `faltam N` não passa por aqui de propósito: muda a cada peça que se toca, e
+   * um número que pisca a cada toque é um número que se deixa de ler.
+   */
+  private recusou(): void {
+    reanimar(this.elAviso, "surge");
   }
 
   private pintarFim(): void {

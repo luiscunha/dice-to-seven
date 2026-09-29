@@ -38,7 +38,6 @@ import type { Cell, Packed } from "@dicetoseven/engine";
 import { JOKER, cellAt, hasAnyGroup, isEmpty } from "@dicetoseven/engine";
 
 import type { JokerValue } from "../session/GameSession";
-import { selectionTotal } from "../session/GameSession";
 import type {
   SurvivalConfig,
   SurvivalState,
@@ -60,7 +59,7 @@ import type { CorridaGuardada } from "../session/corridaSurvival";
 import { BoardView } from "./BoardView";
 import { PASSO_RELOGIO, relogio } from "./tempo";
 import { criarPeca } from "./dice";
-import { botao, botaoRedondo, confirmar, elemento, texto } from "./dom";
+import { botao, botaoRedondo, confirmar, elemento } from "./dom";
 import { iconeReiniciar, iconeVoltar } from "./icones";
 import { JokerPicker } from "./JokerPicker";
 
@@ -100,9 +99,7 @@ export class SurvivalScreen {
   private readonly config: SurvivalConfig = DEFAULT_SURVIVAL;
 
   private readonly elRelogio: HTMLElement;
-  private readonly elMeta: HTMLElement;
   private readonly elFila: HTMLElement;
-  private readonly elSoma: HTMLElement;
   private readonly elResto: HTMLElement;
   private readonly btPuxar: HTMLButtonElement;
   private readonly btRecomecar: HTMLButtonElement;
@@ -174,9 +171,8 @@ export class SurvivalScreen {
 
     this.elRelogio = elemento("div", "relogio");
     this.elRelogio.setAttribute("role", "timer");
-    this.elMeta = elemento("div", "meta");
 
-    topo.append(sair, this.elRelogio, this.elMeta);
+    topo.append(sair, this.elRelogio);
 
     /* ── a próxima linha, entre o topo e o tabuleiro: é de lá que ela cai ── */
     this.elFila = elemento("div", "fila");
@@ -188,10 +184,21 @@ export class SurvivalScreen {
     /* ── rodapé ── */
     const rodape = elemento("footer", "rodape");
 
-    const linha = elemento("div", "linha-selecao");
-    this.elSoma = elemento("div", "soma");
+    /*
+     * ── Sem a soma corrente ──
+     *
+     * A linha dizia «Toca nas peças para somar 7» e depois «4 / 7». Nos modos de
+     * corrida isso é andaime a mais: quem chega aqui já jogou a campanha, e a
+     * conta que está a fazer está nas peças que acabou de acender — lê-la
+     * outra vez em texto, no fundo do ecrã, é trabalho a dobrar contra o
+     * relógio. O andaime fica onde foi desenhado para estar: no Tutorial.
+     *
+     * O resto fica, porque diz outra coisa: quanto falta para o tabuleiro poder
+     * **esvaziar**, que não se tira de olhar para a seleção.
+     */
+    const linha = elemento("div", "linha-selecao sem-soma");
     this.elResto = elemento("div", "resto");
-    linha.append(this.elSoma, this.elResto);
+    linha.append(this.elResto);
 
     const acoes = elemento("div", "acoes");
     this.btPuxar = botao("Puxar linha", "primario", () => {
@@ -285,12 +292,16 @@ export class SurvivalScreen {
    * linhas de folga que se veem por cima das peças são a margem que resta, e é
    * essa a leitura que o modo inteiro precisa de dar.
    *
-   * A **largura** acompanha `larguraAtual`, e é isso que faz a peça começar
-   * grande e ir encolhendo: num telemóvel quem manda no tamanho da peça é
-   * sempre a largura. Cinco colunas dão 69px a 375px, sete dão 46px.
+   * A **largura** acompanha `larguraAtual`, que hoje devolve sempre o mesmo
+   * número — a corrida deixou de ganhar colunas, e a peça deixou de encolher
+   * por baixo das mãos. Continua a vir daí e não de uma constante porque o
+   * mecanismo de crescer ficou montado, e é o que faz de o ligar uma linha.
+   *
+   * É a largura que decide o tamanho da peça num telemóvel em pé: seis colunas
+   * dão 54px a 375px, contra 46px de sete. Ver a tabela em `SurvivalSession.ts`.
    *
    * Chamar isto a cada pintura é barato — o `BoardView` só repõe o CSS quando
-   * os números mudam de facto, e eles mudam uma vez a cada quatro linhas.
+   * os números mudam de facto, e com a largura fixa eles já não mudam.
    */
   private dimensionar(): void {
     this.view.dimensionarPara(
@@ -601,20 +612,21 @@ export class SurvivalScreen {
     this.elRelogio.textContent = relogio(this.decorridoMs());
 
     const espaco = folga(this.estado, this.config);
-    this.elMeta.replaceChildren(
-      texto(espaco === 1 ? "1 linha de folga" : `${String(espaco)} linhas de folga`),
-    );
     const aperto = espaco <= 1 ? "critico" : espaco <= 2 ? "aviso" : "folgado";
-    this.elMeta.dataset["aperto"] = aperto;
 
     this.pintarContagem();
 
     /*
-     * A linha de fogo diz a mesma coisa que o texto, no sítio onde ela acontece.
+     * ── A folga diz-se no tabuleiro, e só lá ──
      *
-     * As duas leituras não são redundantes: o número diz **quanto** falta, a
-     * linha diz **onde**. Quem está a decidir se puxa mais uma linha precisa das
-     * duas, e nenhuma delas pode chegar só no fim.
+     * Havia um número no topo — «2 linhas de folga» — a dizer o mesmo que a
+     * linha de fogo. Duas leituras da mesma coisa, e a do texto era a pior: um
+     * número no cabeçalho obriga a levantar os olhos do tabuleiro e a traduzi-lo
+     * de volta para o sítio onde ele acontece.
+     *
+     * A linha de fogo não precisa de tradução — está desenhada **no limite**,
+     * por cima das peças, e muda de cor com o mesmo `aperto` que o número usava.
+     * Quem está a decidir se puxa mais uma linha lê isso sem desviar o olhar.
      */
     this.view.marcarTeto(aperto);
   }
@@ -669,11 +681,6 @@ export class SurvivalScreen {
 
   private pintarRodape(): void {
     const jogo = this.estado.game;
-
-    this.elSoma.textContent =
-      jogo.selection.length === 0
-        ? "Toca nas peças para somar 7"
-        : `${String(selectionTotal(jogo))} / 7`;
 
     /*
      * O resto. `0` é a única leitura acionável, e por isso é a única com cor —
