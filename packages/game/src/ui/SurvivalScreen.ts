@@ -78,15 +78,15 @@ export interface OpcoesSurvival {
   readonly retomar?: CorridaGuardada;
   /** Chamado ao sair, para que a corrida sobreviva à navegação. */
   readonly aoGuardar: (corrida: CorridaGuardada) => void;
-  /** Melhor pontuação, ou 0 se ainda não há. */
-  readonly melhorPontuacao: number;
+  /** Maior tempo sobrevivido, em ms, ou 0 se ainda não há. */
+  readonly melhorTempo: number;
   /**
    * A corrida acabou. **Chamado também quando o tabuleiro transbordou**, que é
    * como a maioria das corridas acaba — ver `recordSurvival`.
    */
   readonly aoTerminar: (info: {
     readonly limpou: boolean;
-    readonly pontos: number;
+    readonly tempoMs: number;
   }) => void;
   readonly aoSair: () => void;
   /** Recomeçar com outra seed. Sem isto, acabar é um beco. */
@@ -102,7 +102,6 @@ export class SurvivalScreen {
   private readonly config: SurvivalConfig = DEFAULT_SURVIVAL;
 
   private readonly elRelogio: HTMLElement;
-  private readonly elMeta: HTMLElement;
   private readonly elFila: HTMLElement;
   private readonly elResto: HTMLElement;
   private readonly btPuxar: HTMLButtonElement;
@@ -176,18 +175,7 @@ export class SurvivalScreen {
     this.elRelogio = elemento("div", "relogio");
     this.elRelogio.setAttribute("role", "timer");
 
-    /*
-     * A pontuação, à direita, no lugar onde o Contra-Relógio a tem.
-     *
-     * Não é o «2 linhas de folga» a voltar disfarçado. Esse número dizia o que a
-     * linha de fogo já desenhava no sítio certo, e foi por isso que saiu. A
-     * pontuação **não se lê em mais nenhum lado** do ecrã, e é a marca da
-     * corrida: sem ela à vista, decidir se vale a pena puxar uma linha pelo
-     * multiplicador é decidir às escuras.
-     */
-    this.elMeta = elemento("div", "meta");
-
-    topo.append(sair, this.elRelogio, this.elMeta);
+topo.append(sair, this.elRelogio);
 
     /* ── a próxima linha, entre o topo e o tabuleiro: é de lá que ela cai ── */
     this.elFila = elemento("div", "fila");
@@ -538,7 +526,7 @@ export class SurvivalScreen {
 
     this.opcoes.aoTerminar({
       limpou: this.estado.limpo,
-      pontos: this.estado.score,
+      tempoMs: this.decorridoMs(),
     });
 
     this.pintarFim();
@@ -547,47 +535,47 @@ export class SurvivalScreen {
   /**
    * O fim da corrida.
    *
-   * **O recorde é a pontuação, e não depende de ter limpado.** Antes dependia, e
-   * era esse o defeito: a corrida que transbordava ao fim de vinte e cinco
-   * linhas acabava com o mesmo silêncio que uma corrida de dez segundos. Quem
-   * transborda também joga, e a pontuação que fez é dele.
+   * **O recorde é o tempo, e conta transborde ou não.** Antes só contava a
+   * corrida limpa, e entre essas ganhava a mais curta: a corrida que transbordava
+   * ao fim de quatro minutos acabava com o mesmo silêncio que uma de dez
+   * segundos. Sobreviver é o que o modo pede, e quem transborda sobreviveu até
+   * ali.
    *
-   * O tempo e as linhas ficam no texto porque contam a corrida — mas contam-na,
-   * não a pontuam. Nenhum dos dois é comparado com nada.
+   * O tempo é o que o cronómetro do topo esteve a contar a corrida inteira —
+   * portanto o painel não introduz número nenhum, só fixa o que já se via.
    */
   private pintarFim(): void {
     const limpou = this.estado.limpo;
     const tempo = this.decorridoMs();
-    const pontos = this.estado.score;
-    const recorde =
-      pontos > 0 && pontos > this.opcoes.melhorPontuacao;
+    const recorde = tempo > 0 && tempo > this.opcoes.melhorTempo;
+
+    /*
+     * O recorde marca-se **ao lado do tempo**, e não no título.
+     *
+     * No título, substituía-o: «Recorde!» sozinho deixava de dizer se o
+     * tabuleiro foi limpo ou transbordou, que é a primeira coisa que o jogador
+     * quer ler. E como agora transbordar também pode dar recorde, as duas
+     * informações deixaram de andar juntas — o título fica com o desfecho, que é
+     * o que não se adivinha, e o recorde fica encostado ao número que ele
+     * qualifica.
+     */
+    const marca = elemento("p", "popup-marca", relogio(tempo));
+    if (recorde) marca.append(elemento("span", "selo-recorde", "recorde"));
 
     const corpo = elemento("div", "popup-corpo");
     corpo.append(
-      /*
-       * O recorde **acrescenta-se** ao desfecho, não o substitui. «Recorde!»
-       * sozinho deixava de dizer se o tabuleiro foi limpo ou transbordou, que é
-       * a primeira coisa que o jogador quer ler — e agora que transbordar também
-       * pode dar recorde, as duas informações deixaram de andar juntas.
-       */
       elemento(
         "h2",
         "popup-titulo",
-        limpou
-          ? recorde
-            ? "Recorde! Tabuleiro limpo."
-            : "Tabuleiro limpo!"
-          : recorde
-            ? "Recorde! Mas transbordou."
-            : "O tabuleiro transbordou",
+        limpou ? "Tabuleiro limpo!" : "O tabuleiro transbordou",
       ),
-      elemento("p", "popup-pontos", `${String(pontos)} pontos`),
+      marca,
       elemento(
         "p",
         "popup-texto",
         limpou
-          ? `Limpo em ${relogio(tempo)} · ${String(this.estado.linhasInjetadas)} linhas aguentadas`
-          : `${relogio(tempo)} · ${String(this.estado.linhasInjetadas)} linhas aguentadas`,
+          ? `Limpo, com ${String(this.estado.linhasInjetadas)} linhas aguentadas`
+          : `${String(this.estado.linhasInjetadas)} linhas aguentadas`,
       ),
     );
 
@@ -633,7 +621,6 @@ export class SurvivalScreen {
     // desta pintura desenha-se dentro da caixa que isto fixa.
     this.dimensionar();
     this.pintarRelogio();
-    this.pintarMeta();
     this.pintarFila();
     this.pintarRodape();
     const jogo = this.estado.game;
@@ -642,41 +629,6 @@ export class SurvivalScreen {
     // Mostra na peça o valor que o jogador deu ao joker nesta seleção.
     const joker = jogo.selection.find((p) => cellAt(jogo.board, p) === JOKER);
     this.view.marcarJoker(joker, jogo.jokerAs);
-  }
-
-  /**
-   * A pontuação, e o multiplicador só enquanto durar.
-   *
-   * Cada contagem no seu `<span>`: dois nós de texto seguidos não são itens de
-   * flex, o `gap` da `.meta` não lhes chegaria e o cabeçalho leria
-   * «120 pontos×2». É o mesmo defeito que o Contra-Relógio já tinha corrigido.
-   *
-   * O multiplicador aparece **e desaparece**, porque é isso que ele é: uma
-   * janela de jogadas comprada ao puxar uma linha. Um mostrador permanente a
-   * dizer «×1» não informa de nada, e ensina a não olhar para ali.
-   */
-  private pintarMeta(): void {
-    const partes = [
-      elemento("span", undefined, `${String(this.estado.score)} pontos`),
-    ];
-
-    if (this.estado.jogadasComBonus > 0) {
-      /*
-       * `String` e não `toFixed`: o multiplicador anda de quarto em quarto
-       * (`1 + folga × 0,25`), e os quartos são exatos em vírgula flutuante
-       * binária. Dá «1,5» onde `toFixed(2)` dava «1,50» e `toFixed(1)` cortava
-       * o «1,25» a meio.
-       */
-      partes.push(
-        elemento(
-          "span",
-          "bonus",
-          `×${String(this.estado.multiplicador)} · ${String(this.estado.jogadasComBonus)} jogadas`,
-        ),
-      );
-    }
-
-    this.elMeta.replaceChildren(...partes);
   }
 
   private pintarRelogio(): void {

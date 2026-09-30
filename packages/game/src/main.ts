@@ -246,6 +246,7 @@ async function montar(rota: Rota): Promise<void> {
       atual = new HomeScreen(app as HTMLElement, {
         perfil,
         totalNiveis: campanha.reduce((n, c) => n + c.niveis.length, 0),
+        melhorTempoSurvival: relogio(perfil.bestSurvivalMs),
         /*
          * Só conta como «a meio» uma corrida que chegou a começar. Entrar no
          * modo e sair sem tocar também grava — é o mesmo tabuleiro de partida,
@@ -512,11 +513,11 @@ function mostrarSurvival(seed: number | undefined): void {
     // `exactOptionalPropertyTypes`: a chave omite-se, não se põe a `undefined`.
     ...(corridaSurvival?.estado.seed === seed ? { retomar: corridaSurvival } : {}),
     aoGuardar: guardarSurvival,
-    melhorPontuacao: perfil.bestSurvivalScore,
-    aoTerminar: ({ limpou, pontos }) => {
+    melhorTempo: perfil.bestSurvivalMs,
+    aoTerminar: ({ limpou, tempoMs }) => {
       // A corrida acabou: não há nada para retomar.
       guardarSurvival(undefined);
-      perfil = recordSurvival(perfil, limpou, pontos);
+      perfil = recordSurvival(perfil, limpou, tempoMs);
       guardarPerfil();
     },
     /*

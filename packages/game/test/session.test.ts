@@ -773,39 +773,50 @@ describe("progresso", () => {
    * portanto nada o disse.
    */
   describe("guarda os melhores do Survival", () => {
-    it("transbordar também grava a pontuação", () => {
-      const p = recordSurvival(emptyProfile(), false, 820);
+    it("transbordar também grava o tempo", () => {
+      const p = recordSurvival(emptyProfile(), false, 244_000);
 
-      expect(p.bestSurvivalScore).toBe(820);
+      // Morrer ao fim de quatro minutos é ter sobrevivido quatro minutos.
+      expect(p.bestSurvivalMs).toBe(244_000);
       expect(p.survivalClears).toBe(0);
     });
 
-    it("a pontuação e as limpezas não se estorvam", () => {
-      // A grande corrida: muitos pontos, mas o tabuleiro transbordou.
-      let p = recordSurvival(emptyProfile(), false, 1500);
-      // A pequena: limpou o tabuleiro cedo, com pouca pontuação.
-      p = recordSurvival(p, true, 300);
+    it("maior é melhor, e não menor", () => {
+      let p = recordSurvival(emptyProfile(), false, 244_000);
+      // A limpeza-relâmpago do arranque: um bom desfecho, mas não uma sobrevida.
+      p = recordSurvival(p, true, 20_000);
+
+      expect(p.bestSurvivalMs).toBe(244_000);
+    });
+
+    it("o tempo e as limpezas não se estorvam", () => {
+      // A grande corrida aguentou muito, mas transbordou.
+      let p = recordSurvival(emptyProfile(), false, 300_000);
+      // A pequena limpou o tabuleiro cedo.
+      p = recordSurvival(p, true, 20_000);
 
       // Cada uma guarda o que fez de melhor, sem anular a outra.
-      expect(p.bestSurvivalScore).toBe(1500);
+      expect(p.bestSurvivalMs).toBe(300_000);
       expect(p.survivalClears).toBe(1);
     });
 
-    it("as limpezas somam-se, e a pontuação fica no máximo", () => {
-      let p = recordSurvival(emptyProfile(), true, 900);
-      p = recordSurvival(p, true, 400);
-      p = recordSurvival(p, false, 50);
+    it("as limpezas somam-se", () => {
+      let p = recordSurvival(emptyProfile(), true, 90_000);
+      p = recordSurvival(p, true, 40_000);
+      p = recordSurvival(p, false, 5_000);
 
       expect(p.survivalClears).toBe(2);
-      expect(p.bestSurvivalScore).toBe(900);
+      expect(p.bestSurvivalMs).toBe(90_000);
     });
 
     /*
-     * Um perfil gravado antes de a pontuação existir não traz os campos novos.
-     * Zero é a leitura certa — e não se sobe a `PROFILE_VERSION` por isto,
-     * porque subi-la apagava a campanha inteira.
+     * O `bestSurvivalMs` é campo antigo com significado novo: era o tempo mais
+     * curto a limpar, e passou a ser o maior tempo sobrevivido. É o caso que
+     * costuma obrigar a descartar o gravado — e aqui não obriga, porque quem
+     * limpou em 91 segundos também sobreviveu 91 segundos. O valor antigo
+     * continua verdadeiro na leitura nova.
      */
-    it("um perfil antigo lê-se com as marcas a zero, e a campanha intacta", () => {
+    it("um perfil antigo continua a valer, e a campanha fica intacta", () => {
       const antigo = JSON.stringify({
         version: PROFILE_VERSION,
         levels: { "inicio-000001": { seal: "perfect", bestTimeMs: 4000 } },
@@ -818,7 +829,8 @@ describe("progresso", () => {
 
       const p = load({ getItem: () => antigo, setItem: () => undefined });
 
-      expect(p.bestSurvivalScore).toBe(0);
+      expect(p.bestSurvivalMs).toBe(91_000);
+      // Campo novo: ninguém tinha limpezas contadas antes de elas se contarem.
       expect(p.survivalClears).toBe(0);
       expect(p.levels["inicio-000001"]?.seal).toBe("perfect");
       expect(p.bestTimeAttackScore).toBe(1200);

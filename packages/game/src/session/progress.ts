@@ -46,26 +46,32 @@ export interface Profile {
   readonly bestBoardsCleared: number;
 
   /**
-   * Melhor pontuação do Survival. `0` = ainda nenhuma.
+   * O maior tempo sobrevivido numa corrida, em ms. `0` = ainda nenhuma.
    *
-   * ── Porque deixou de ser o tempo ──
+   * **Maior é melhor, e conta em qualquer desfecho.** Já foi o contrário — o
+   * tempo *mais curto* a limpar o tabuleiro — e media a coisa errada duas vezes:
+   * só gravava quem limpava, e entre esses premiava o que limpasse mais cedo,
+   * ou seja a corrida mais curta e menos exigente.
    *
-   * A marca do modo foi, até aqui, o **tempo a limpar o tabuleiro**, e media a
-   * coisa errada: o tabuleiro começa com cinco linhas e as linhas continuam a
-   * cair, portanto a limpeza mais rápida possível é a do arranque, com o
-   * tabuleiro pequeno e antes de a pressão começar. O recorde premiava a corrida
-   * mais curta e castigava quem aguentava — o contrário do nome do modo.
+   * ── Porque o tempo não premeia arrastar a corrida ──
    *
-   * A pontuação premeia grupos grandes e o multiplicador de puxar, que são as
-   * duas decisões do modo. Mede habilidade, não paciência.
+   * Premiava, no desenho antigo: as linhas caíam **por jogada**, portanto jogar
+   * devagar era receber menos linhas e durar mais. Quem faz cair passou a ser o
+   * relógio (`avancarRelogio`), e com ele a aritmética inverteu-se — quem para,
+   * enche o tabuleiro e morre. A cadência ainda acelera por degraus, portanto
+   * cada minuto a mais custa mais do que o anterior.
+   *
+   * O tempo é a marca certa porque é a única que mede aquilo que o modo pede:
+   * aguentar.
    */
-  readonly bestSurvivalScore: number;
+  readonly bestSurvivalMs: number;
   /**
    * Quantas vezes o tabuleiro foi esvaziado, somadas.
    *
-   * Uma contagem e não um máximo, e é o estado que o obriga: limpar **acaba** a
-   * corrida (`limpo: true`), portanto `limpezas` nunca passa de um por corrida e
-   * um máximo só saberia dizer «já aconteceu alguma vez».
+   * O outro desfecho — «até eliminar todas as peças» — e por isso uma marca
+   * própria, e não um empate com o tempo. Uma contagem e não um máximo porque
+   * limpar **acaba** a corrida, portanto `limpezas` nunca passa de um por
+   * corrida e um máximo só saberia dizer «já aconteceu alguma vez».
    */
   readonly survivalClears: number;
 
@@ -85,7 +91,7 @@ export const emptyProfile = (): Profile => ({
   levels: {},
   bestTimeAttackScore: 0,
   bestBoardsCleared: 0,
-  bestSurvivalScore: 0,
+  bestSurvivalMs: 0,
   survivalClears: 0,
   sawJokerTutorial: false,
 });
@@ -188,26 +194,24 @@ export const recordTimeAttack = (
 /**
  * Guarda o melhor do Survival.
  *
- * **Os dois campos são independentes, e toda a corrida grava.** É a mesma forma
- * do `recordTimeAttack`, e por uma razão que se pagou caro: estavam os dois
- * presos a uma condição única — limpar o tabuleiro, e mais depressa do que a
- * melhor limpeza anterior. Quem transbordasse não gravava nada, e quem limpasse
- * devagar também não. Uma corrida de vinte e cinco linhas que esvaziou o
- * tabuleiro perdia para uma de duas linhas que o esvaziou em vinte segundos, e o
- * jogador via a marca ficar quieta depois da melhor corrida que já tinha feito.
+ * **As duas marcas são independentes, e toda a corrida grava.** É a forma do
+ * `recordTimeAttack`, e é a correção de um defeito que se pagou caro: estavam as
+ * duas presas a uma condição única — ter limpado o tabuleiro, e mais depressa do
+ * que a melhor limpeza anterior. Quem transbordava não gravava nada, que é como
+ * quase toda a corrida acaba; e entre quem limpava, ganhava o que limpasse mais
+ * cedo. O jogador via a marca ficar quieta depois da melhor corrida que já tinha
+ * feito.
  *
- * Transbordar passa a contar. A objeção antiga — «premeia jogar devagar» — era
- * contra gravar o *tempo* aguentado, e continua a valer; contra a pontuação não
- * vale, porque a pontuação não paga tempo nenhum. Paga grupos grandes e o
- * multiplicador de puxar, e esses não se conseguem a arrastar a corrida.
+ * O tempo conta transborde ou não: sobreviver é o que o modo pede, e morrer ao
+ * fim de quatro minutos é tê-lo feito melhor do que morrer ao fim de um.
  */
 export const recordSurvival = (
   profile: Profile,
   limpou: boolean,
-  pontos: number,
+  tempoMs: number,
 ): Profile => ({
   ...profile,
-  bestSurvivalScore: Math.max(profile.bestSurvivalScore, pontos),
+  bestSurvivalMs: Math.max(profile.bestSurvivalMs, tempoMs),
   survivalClears: profile.survivalClears + (limpou ? 1 : 0),
 });
 
@@ -244,12 +248,22 @@ export function load(storage: ProfileStorage): Profile {
     bestTimeAttackScore: finiteOrZero(p.bestTimeAttackScore),
     bestBoardsCleared: finiteOrZero(p.bestBoardsCleared),
     /*
-     * Campos novos num perfil antigo dão zero, e é a leitura certa: quem
-     * jogou antes de a pontuação ser gravada não tem pontuação gravada. Não se
-     * sobe a `PROFILE_VERSION` por isto — subi-la apagava a campanha inteira
-     * para acrescentar duas contagens que já sabem nascer vazias.
+     * ── Sem migração, e sem subir a `PROFILE_VERSION` ──
+     *
+     * O `survivalClears` é campo novo: num perfil antigo dá zero, que é a
+     * leitura certa — ninguém tinha limpezas contadas antes de elas se contarem.
+     *
+     * O `bestSurvivalMs` é campo antigo com significado novo, e é o caso que
+     * costuma obrigar a descartar: era o tempo **mais curto** a limpar o
+     * tabuleiro, e passou a ser o **maior** tempo sobrevivido. Aqui não obriga,
+     * porque quem limpou o tabuleiro em 91 segundos também sobreviveu 91
+     * segundos. O valor antigo continua verdadeiro na leitura nova; é só uma
+     * marca modesta, que a primeira corrida a sério há de bater.
+     *
+     * Subir a versão apagava a campanha inteira — o `load` devolve perfil vazio
+     * a qualquer versão que não conheça — para não ganhar nada com isso.
      */
-    bestSurvivalScore: finiteOrZero(p.bestSurvivalScore),
+    bestSurvivalMs: finiteOrZero(p.bestSurvivalMs),
     survivalClears: finiteOrZero(p.survivalClears),
     sawJokerTutorial: p.sawJokerTutorial === true,
   };

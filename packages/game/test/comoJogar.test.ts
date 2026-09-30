@@ -39,6 +39,7 @@ const home = (
   new HomeScreen(host, {
     perfil,
     totalNiveis: 143,
+    melhorTempoSurvival: "2:31.4",
     aoEscolherNiveis: () => undefined,
     aoEscolherTempo: () => undefined,
     aoEscolherSurvival: () => undefined,
