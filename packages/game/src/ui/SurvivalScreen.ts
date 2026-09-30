@@ -78,12 +78,15 @@ export interface OpcoesSurvival {
   readonly retomar?: CorridaGuardada;
   /** Chamado ao sair, para que a corrida sobreviva à navegação. */
   readonly aoGuardar: (corrida: CorridaGuardada) => void;
-  /** Melhor tempo em milissegundos, ou 0 se ainda não há. */
+  /** Maior tempo sobrevivido, em ms, ou 0 se ainda não há. */
   readonly melhorTempo: number;
+  /**
+   * A corrida acabou. **Chamado também quando o tabuleiro transbordou**, que é
+   * como a maioria das corridas acaba — ver `recordSurvival`.
+   */
   readonly aoTerminar: (info: {
     readonly limpou: boolean;
     readonly tempoMs: number;
-    readonly linhas: number;
   }) => void;
   readonly aoSair: () => void;
   /** Recomeçar com outra seed. Sem isto, acabar é um beco. */
@@ -172,7 +175,7 @@ export class SurvivalScreen {
     this.elRelogio = elemento("div", "relogio");
     this.elRelogio.setAttribute("role", "timer");
 
-    topo.append(sair, this.elRelogio);
+topo.append(sair, this.elRelogio);
 
     /* ── a próxima linha, entre o topo e o tabuleiro: é de lá que ela cai ── */
     this.elFila = elemento("div", "fila");
@@ -524,35 +527,55 @@ export class SurvivalScreen {
     this.opcoes.aoTerminar({
       limpou: this.estado.limpo,
       tempoMs: this.decorridoMs(),
-      linhas: this.estado.linhasInjetadas,
     });
 
     this.pintarFim();
   }
 
+  /**
+   * O fim da corrida.
+   *
+   * **O recorde é o tempo, e conta transborde ou não.** Antes só contava a
+   * corrida limpa, e entre essas ganhava a mais curta: a corrida que transbordava
+   * ao fim de quatro minutos acabava com o mesmo silêncio que uma de dez
+   * segundos. Sobreviver é o que o modo pede, e quem transborda sobreviveu até
+   * ali.
+   *
+   * O tempo é o que o cronómetro do topo esteve a contar a corrida inteira —
+   * portanto o painel não introduz número nenhum, só fixa o que já se via.
+   */
   private pintarFim(): void {
     const limpou = this.estado.limpo;
     const tempo = this.decorridoMs();
-    const recorde =
-      limpou && (this.opcoes.melhorTempo === 0 || tempo < this.opcoes.melhorTempo);
+    const recorde = tempo > 0 && tempo > this.opcoes.melhorTempo;
+
+    /*
+     * O recorde marca-se **ao lado do tempo**, e não no título.
+     *
+     * No título, substituía-o: «Recorde!» sozinho deixava de dizer se o
+     * tabuleiro foi limpo ou transbordou, que é a primeira coisa que o jogador
+     * quer ler. E como agora transbordar também pode dar recorde, as duas
+     * informações deixaram de andar juntas — o título fica com o desfecho, que é
+     * o que não se adivinha, e o recorde fica encostado ao número que ele
+     * qualifica.
+     */
+    const marca = elemento("p", "popup-marca", relogio(tempo));
+    if (recorde) marca.append(elemento("span", "selo-recorde", "recorde"));
 
     const corpo = elemento("div", "popup-corpo");
     corpo.append(
       elemento(
         "h2",
         "popup-titulo",
-        limpou
-          ? recorde
-            ? "Recorde! Tabuleiro limpo."
-            : "Tabuleiro limpo!"
-          : "O tabuleiro transbordou",
+        limpou ? "Tabuleiro limpo!" : "O tabuleiro transbordou",
       ),
+      marca,
       elemento(
         "p",
         "popup-texto",
         limpou
-          ? `${relogio(tempo)} · ${String(this.estado.linhasInjetadas)} linhas aguentadas`
-          : `${relogio(tempo)} até transbordar`,
+          ? `Limpo, com ${String(this.estado.linhasInjetadas)} linhas aguentadas`
+          : `${String(this.estado.linhasInjetadas)} linhas aguentadas`,
       ),
     );
 

@@ -45,10 +45,35 @@ export interface Profile {
   /** Melhor número de tabuleiros limpos numa corrida. */
   readonly bestBoardsCleared: number;
 
-  /** Melhor tempo a limpar o tabuleiro no Survival, em ms. `0` = ainda nenhum. */
+  /**
+   * O maior tempo sobrevivido numa corrida, em ms. `0` = ainda nenhuma.
+   *
+   * **Maior é melhor, e conta em qualquer desfecho.** Já foi o contrário — o
+   * tempo *mais curto* a limpar o tabuleiro — e media a coisa errada duas vezes:
+   * só gravava quem limpava, e entre esses premiava o que limpasse mais cedo,
+   * ou seja a corrida mais curta e menos exigente.
+   *
+   * ── Porque o tempo não premeia arrastar a corrida ──
+   *
+   * Premiava, no desenho antigo: as linhas caíam **por jogada**, portanto jogar
+   * devagar era receber menos linhas e durar mais. Quem faz cair passou a ser o
+   * relógio (`avancarRelogio`), e com ele a aritmética inverteu-se — quem para,
+   * enche o tabuleiro e morre. A cadência ainda acelera por degraus, portanto
+   * cada minuto a mais custa mais do que o anterior.
+   *
+   * O tempo é a marca certa porque é a única que mede aquilo que o modo pede:
+   * aguentar.
+   */
   readonly bestSurvivalMs: number;
-  /** Linhas aguentadas nessa corrida. */
-  readonly bestSurvivalRows: number;
+  /**
+   * Quantas vezes o tabuleiro foi esvaziado, somadas.
+   *
+   * O outro desfecho — «até eliminar todas as peças» — e por isso uma marca
+   * própria, e não um empate com o tempo. Uma contagem e não um máximo porque
+   * limpar **acaba** a corrida, portanto `limpezas` nunca passa de um por
+   * corrida e um máximo só saberia dizer «já aconteceu alguma vez».
+   */
+  readonly survivalClears: number;
 
   /**
    * O tutorial do joker já correu uma vez.
@@ -67,7 +92,7 @@ export const emptyProfile = (): Profile => ({
   bestTimeAttackScore: 0,
   bestBoardsCleared: 0,
   bestSurvivalMs: 0,
-  bestSurvivalRows: 0,
+  survivalClears: 0,
   sawJokerTutorial: false,
 });
 
@@ -169,24 +194,26 @@ export const recordTimeAttack = (
 /**
  * Guarda o melhor do Survival.
  *
- * **Só conta a corrida que limpou o tabuleiro.** Transbordar não é uma marca, é
- * uma tentativa — e um recorde de «quanto tempo aguentei antes de perder» premeia
- * jogar devagar, que é o contrário do que o modo pede.
+ * **As duas marcas são independentes, e toda a corrida grava.** É a forma do
+ * `recordTimeAttack`, e é a correção de um defeito que se pagou caro: estavam as
+ * duas presas a uma condição única — ter limpado o tabuleiro, e mais depressa do
+ * que a melhor limpeza anterior. Quem transbordava não gravava nada, que é como
+ * quase toda a corrida acaba; e entre quem limpava, ganhava o que limpasse mais
+ * cedo. O jogador via a marca ficar quieta depois da melhor corrida que já tinha
+ * feito.
  *
- * Menor é melhor, portanto o zero significa «ainda nenhum» e não «instantâneo».
+ * O tempo conta transborde ou não: sobreviver é o que o modo pede, e morrer ao
+ * fim de quatro minutos é tê-lo feito melhor do que morrer ao fim de um.
  */
 export const recordSurvival = (
   profile: Profile,
   limpou: boolean,
   tempoMs: number,
-  rows: number,
-): Profile => {
-  if (!limpou) return profile;
-  if (profile.bestSurvivalMs !== 0 && tempoMs >= profile.bestSurvivalMs) {
-    return profile;
-  }
-  return { ...profile, bestSurvivalMs: tempoMs, bestSurvivalRows: rows };
-};
+): Profile => ({
+  ...profile,
+  bestSurvivalMs: Math.max(profile.bestSurvivalMs, tempoMs),
+  survivalClears: profile.survivalClears + (limpou ? 1 : 0),
+});
 
 export const save = (storage: ProfileStorage, profile: Profile): void => {
   storage.setItem(PROFILE_KEY, JSON.stringify(profile));
@@ -220,8 +247,24 @@ export function load(storage: ProfileStorage): Profile {
     levels: sanitizeLevels(p.levels),
     bestTimeAttackScore: finiteOrZero(p.bestTimeAttackScore),
     bestBoardsCleared: finiteOrZero(p.bestBoardsCleared),
+    /*
+     * ── Sem migração, e sem subir a `PROFILE_VERSION` ──
+     *
+     * O `survivalClears` é campo novo: num perfil antigo dá zero, que é a
+     * leitura certa — ninguém tinha limpezas contadas antes de elas se contarem.
+     *
+     * O `bestSurvivalMs` é campo antigo com significado novo, e é o caso que
+     * costuma obrigar a descartar: era o tempo **mais curto** a limpar o
+     * tabuleiro, e passou a ser o **maior** tempo sobrevivido. Aqui não obriga,
+     * porque quem limpou o tabuleiro em 91 segundos também sobreviveu 91
+     * segundos. O valor antigo continua verdadeiro na leitura nova; é só uma
+     * marca modesta, que a primeira corrida a sério há de bater.
+     *
+     * Subir a versão apagava a campanha inteira — o `load` devolve perfil vazio
+     * a qualquer versão que não conheça — para não ganhar nada com isso.
+     */
     bestSurvivalMs: finiteOrZero(p.bestSurvivalMs),
-    bestSurvivalRows: finiteOrZero(p.bestSurvivalRows),
+    survivalClears: finiteOrZero(p.survivalClears),
     sawJokerTutorial: p.sawJokerTutorial === true,
   };
 }

@@ -1016,6 +1016,37 @@ body::before {
   color: var(--ink-muted);
 }
 
+/*
+ * A marca, no fim de uma corrida: o tempo que se aguentou.
+ *
+ * É a maior coisa do painel a seguir ao título, porque é o que fica gravado. As
+ * linhas aguentadas ficam na `.popup-texto` por baixo — contam a corrida, mas
+ * não a marcam.
+ */
+.popup-marca {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+/*
+ * «recorde», encostado ao tempo que qualifica. Minúsculas e pequeno de
+ * propósito: é uma nota sobre o número, não um segundo título a competir com o
+ * desfecho que está por cima.
+ */
+.selo-recorde {
+  margin-left: 8px;
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  vertical-align: middle;
+  color: var(--ink-muted);
+}
+
 /* O `✕` não é decoração: é ele que impede o modal de tapar a lição para sempre. */
 .popup-corpo > .btn.redondo {
   position: absolute;
@@ -2578,11 +2609,14 @@ body::before {
 /*
  * O topo do Survival tem o cronómetro e mais nada.
  *
- * Teve à direita um «2 linhas de folga», com cor a acompanhar o aperto. Dizia o
- * mesmo que a linha de fogo — e dizia-o no sítio errado: um número no cabeçalho
- * obriga a levantar os olhos do tabuleiro e a traduzi-lo de volta para o limite
- * onde ele acontece. A linha está desenhada nesse limite e muda de cor com o
- * mesmo grau. Ver `pintarRelogio`, em `SurvivalScreen.ts`.
+ * Teve à direita um «2 linhas de folga», que saiu porque dizia o mesmo que a
+ * linha de fogo e dizia-o no sítio errado: um número no cabeçalho obriga a
+ * levantar os olhos do tabuleiro e a traduzi-lo de volta para o limite onde ele
+ * acontece.
+ *
+ * Teve depois a pontuação, enquanto a pontuação foi a marca do modo. Deixou de
+ * ser — a marca é o tempo, e o tempo já é o cronómetro no meio do ecrã. Um
+ * segundo número ao lado dele não media nada que ficasse gravado.
  *
  * A grelha de três colunas fica: é ela que mantém o cronómetro **no meio do
  * ecrã** e não a um terço, com ou sem alguma coisa à direita.

@@ -407,6 +407,11 @@ export class HomeScreen {
       return { estado: `A meio · ${opcoes.corridaAMeio}`, aoMeio: true };
     }
 
+    /*
+     * O maior tempo aguentado. Era o tempo da melhor **limpeza**, e esse ficava
+     * quieto na maioria das corridas, porque a maioria transborda — ver
+     * `recordSurvival`.
+     */
     if (opcoes.perfil.bestSurvivalMs > 0) {
       return { estado: `Melhor ${opcoes.melhorTempoSurvival}` };
     }

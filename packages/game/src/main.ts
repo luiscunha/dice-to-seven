@@ -514,10 +514,10 @@ function mostrarSurvival(seed: number | undefined): void {
     ...(corridaSurvival?.estado.seed === seed ? { retomar: corridaSurvival } : {}),
     aoGuardar: guardarSurvival,
     melhorTempo: perfil.bestSurvivalMs,
-    aoTerminar: ({ limpou, tempoMs, linhas }) => {
+    aoTerminar: ({ limpou, tempoMs }) => {
       // A corrida acabou: não há nada para retomar.
       guardarSurvival(undefined);
-      perfil = recordSurvival(perfil, limpou, tempoMs, linhas);
+      perfil = recordSurvival(perfil, limpou, tempoMs);
       guardarPerfil();
     },
     /*

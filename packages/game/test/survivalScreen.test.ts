@@ -125,6 +125,7 @@ describe("SurvivalScreen", () => {
    */
   it("não repete no texto o que o tabuleiro já diz", () => {
     expect(host.querySelector(".ecra.survival .soma")).toBeNull();
+
     expect(host.querySelector(".survival-topo .meta")).toBeNull();
     expect(host.querySelector(".survival-topo")?.children.length).toBe(2);
     ecra.destruir();
