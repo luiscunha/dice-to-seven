@@ -1016,6 +1016,21 @@ body::before {
   color: var(--ink-muted);
 }
 
+/*
+ * A pontuação, no fim de uma corrida. É a marca que fica gravada, portanto é a
+ * maior coisa do painel a seguir ao título — o tempo e as linhas, que contam a
+ * corrida mas não a pontuam, ficam na `.popup-texto` por baixo.
+ */
+.popup-pontos {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
 /* O `✕` não é decoração: é ele que impede o modal de tapar a lição para sempre. */
 .popup-corpo > .btn.redondo {
   position: absolute;
@@ -2576,17 +2591,34 @@ body::before {
 }
 
 /*
- * O topo do Survival tem o cronómetro e mais nada.
+ * À direita do cronómetro: a pontuação, e o multiplicador enquanto durar.
  *
- * Teve à direita um «2 linhas de folga», com cor a acompanhar o aperto. Dizia o
- * mesmo que a linha de fogo — e dizia-o no sítio errado: um número no cabeçalho
- * obriga a levantar os olhos do tabuleiro e a traduzi-lo de volta para o limite
- * onde ele acontece. A linha está desenhada nesse limite e muda de cor com o
- * mesmo grau. Ver `pintarRelogio`, em `SurvivalScreen.ts`.
+ * Aqui esteve um «2 linhas de folga», e saiu com razão — dizia o mesmo que a
+ * linha de fogo, e dizia-o no sítio errado: um número no cabeçalho obriga a
+ * levantar os olhos do tabuleiro e a traduzi-lo de volta para o limite onde ele
+ * acontece. A linha está desenhada nesse limite e muda de cor com o mesmo grau.
  *
- * A grelha de três colunas fica: é ela que mantém o cronómetro **no meio do
+ * A pontuação passa o teste que a folga falhou: **não se lê em mais nenhum
+ * sítio do ecrã**, e é a marca da corrida. Quem decide se puxa uma linha pelo
+ * multiplicador precisa de ver o que ele está a multiplicar.
+ *
+ * A grelha de três colunas era já a que mantinha o cronómetro **no meio do
  * ecrã** e não a um terço, com ou sem alguma coisa à direita.
  */
+.survival-topo > .meta {
+  justify-self: end;
+}
+
+/*
+ * O multiplicador destaca-se da pontuação por **tinta cheia**, não por cor
+ * própria. A `--modo-survival` é uma cor de placa, clara: como texto sobre o
+ * papel do cabeçalho não tem contraste que chegue, e um token novo só para isto
+ * seria uma cor a viver fora do lugar onde as cores se decidem.
+ */
+.survival-topo .meta > .bonus {
+  color: var(--ink);
+  font-weight: 650;
+}
 
 /* ─── A linha de fogo ─────────────────────────────────────────────────────── */
 

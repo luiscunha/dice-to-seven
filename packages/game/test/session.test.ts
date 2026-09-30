@@ -52,6 +52,7 @@ import {
   emptyProfile,
   load,
   recordLevel,
+  recordSurvival,
   recordTimeAttack,
   save,
 } from "../src/session/progress";
@@ -760,6 +761,68 @@ describe("progresso", () => {
 
     expect(p.bestTimeAttackScore).toBe(5000);
     expect(p.bestBoardsCleared).toBe(9);
+  });
+
+  /*
+   * ── O Survival não tinha um único teste aqui, e custou ──
+   *
+   * A `recordSurvival` gravava as duas marcas presas a uma condição só: ter
+   * limpado o tabuleiro, e mais depressa do que a melhor limpeza anterior. Quem
+   * transbordava não gravava nada — que é como a esmagadora maioria das corridas
+   * acaba — e quem limpava devagar também não. Nada exercitava a função,
+   * portanto nada o disse.
+   */
+  describe("guarda os melhores do Survival", () => {
+    it("transbordar também grava a pontuação", () => {
+      const p = recordSurvival(emptyProfile(), false, 820);
+
+      expect(p.bestSurvivalScore).toBe(820);
+      expect(p.survivalClears).toBe(0);
+    });
+
+    it("a pontuação e as limpezas não se estorvam", () => {
+      // A grande corrida: muitos pontos, mas o tabuleiro transbordou.
+      let p = recordSurvival(emptyProfile(), false, 1500);
+      // A pequena: limpou o tabuleiro cedo, com pouca pontuação.
+      p = recordSurvival(p, true, 300);
+
+      // Cada uma guarda o que fez de melhor, sem anular a outra.
+      expect(p.bestSurvivalScore).toBe(1500);
+      expect(p.survivalClears).toBe(1);
+    });
+
+    it("as limpezas somam-se, e a pontuação fica no máximo", () => {
+      let p = recordSurvival(emptyProfile(), true, 900);
+      p = recordSurvival(p, true, 400);
+      p = recordSurvival(p, false, 50);
+
+      expect(p.survivalClears).toBe(2);
+      expect(p.bestSurvivalScore).toBe(900);
+    });
+
+    /*
+     * Um perfil gravado antes de a pontuação existir não traz os campos novos.
+     * Zero é a leitura certa — e não se sobe a `PROFILE_VERSION` por isto,
+     * porque subi-la apagava a campanha inteira.
+     */
+    it("um perfil antigo lê-se com as marcas a zero, e a campanha intacta", () => {
+      const antigo = JSON.stringify({
+        version: PROFILE_VERSION,
+        levels: { "inicio-000001": { seal: "perfect", bestTimeMs: 4000 } },
+        bestTimeAttackScore: 1200,
+        bestBoardsCleared: 4,
+        bestSurvivalMs: 91_000,
+        bestSurvivalRows: 3,
+        sawJokerTutorial: true,
+      });
+
+      const p = load({ getItem: () => antigo, setItem: () => undefined });
+
+      expect(p.bestSurvivalScore).toBe(0);
+      expect(p.survivalClears).toBe(0);
+      expect(p.levels["inicio-000001"]?.seal).toBe("perfect");
+      expect(p.bestTimeAttackScore).toBe(1200);
+    });
   });
 
   /*

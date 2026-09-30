@@ -72,8 +72,6 @@ export interface OpcoesHome {
   readonly perfil: Profile;
   /** Total de níveis do pack, para o «x de y». */
   readonly totalNiveis: number;
-  /** Já formatado: a Home não sabe converter milissegundos em tempo. */
-  readonly melhorTempoSurvival: string;
   /**
    * O tempo da corrida de Survival que ficou a meio, já formatado — ou nada.
    *
@@ -407,8 +405,13 @@ export class HomeScreen {
       return { estado: `A meio · ${opcoes.corridaAMeio}`, aoMeio: true };
     }
 
-    if (opcoes.perfil.bestSurvivalMs > 0) {
-      return { estado: `Melhor ${opcoes.melhorTempoSurvival}` };
+    /*
+     * O recorde é a pontuação, como no Contra-Relógio. Era o tempo da melhor
+     * limpeza, e esse ficava quieto na maioria das corridas — ver
+     * `recordSurvival`.
+     */
+    if (opcoes.perfil.bestSurvivalScore > 0) {
+      return { estado: `Recorde ${String(opcoes.perfil.bestSurvivalScore)}` };
     }
 
     return { estado: undefined };

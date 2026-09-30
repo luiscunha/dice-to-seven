@@ -473,7 +473,6 @@ describe("onde é que eu ia", () => {
     new HomeScreen(host, {
       perfil,
       totalNiveis: 143,
-      melhorTempoSurvival: "2:31.4",
       ...(corridaAMeio === undefined ? {} : { corridaAMeio }),
       aoEscolherNiveis: () => undefined,
       aoEscolherTempo: () => undefined,

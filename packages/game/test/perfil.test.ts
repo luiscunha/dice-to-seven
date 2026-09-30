@@ -120,7 +120,6 @@ describe("a pastilha do jogador", () => {
     new HomeScreen(host, {
       perfil: emptyProfile(),
       totalNiveis: 143,
-      melhorTempoSurvival: "2:31.4",
       nome,
       avatar: 4,
       aoEditarPerfil,

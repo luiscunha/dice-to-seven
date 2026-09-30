@@ -45,10 +45,29 @@ export interface Profile {
   /** Melhor número de tabuleiros limpos numa corrida. */
   readonly bestBoardsCleared: number;
 
-  /** Melhor tempo a limpar o tabuleiro no Survival, em ms. `0` = ainda nenhum. */
-  readonly bestSurvivalMs: number;
-  /** Linhas aguentadas nessa corrida. */
-  readonly bestSurvivalRows: number;
+  /**
+   * Melhor pontuação do Survival. `0` = ainda nenhuma.
+   *
+   * ── Porque deixou de ser o tempo ──
+   *
+   * A marca do modo foi, até aqui, o **tempo a limpar o tabuleiro**, e media a
+   * coisa errada: o tabuleiro começa com cinco linhas e as linhas continuam a
+   * cair, portanto a limpeza mais rápida possível é a do arranque, com o
+   * tabuleiro pequeno e antes de a pressão começar. O recorde premiava a corrida
+   * mais curta e castigava quem aguentava — o contrário do nome do modo.
+   *
+   * A pontuação premeia grupos grandes e o multiplicador de puxar, que são as
+   * duas decisões do modo. Mede habilidade, não paciência.
+   */
+  readonly bestSurvivalScore: number;
+  /**
+   * Quantas vezes o tabuleiro foi esvaziado, somadas.
+   *
+   * Uma contagem e não um máximo, e é o estado que o obriga: limpar **acaba** a
+   * corrida (`limpo: true`), portanto `limpezas` nunca passa de um por corrida e
+   * um máximo só saberia dizer «já aconteceu alguma vez».
+   */
+  readonly survivalClears: number;
 
   /**
    * O tutorial do joker já correu uma vez.
@@ -66,8 +85,8 @@ export const emptyProfile = (): Profile => ({
   levels: {},
   bestTimeAttackScore: 0,
   bestBoardsCleared: 0,
-  bestSurvivalMs: 0,
-  bestSurvivalRows: 0,
+  bestSurvivalScore: 0,
+  survivalClears: 0,
   sawJokerTutorial: false,
 });
 
@@ -169,24 +188,28 @@ export const recordTimeAttack = (
 /**
  * Guarda o melhor do Survival.
  *
- * **Só conta a corrida que limpou o tabuleiro.** Transbordar não é uma marca, é
- * uma tentativa — e um recorde de «quanto tempo aguentei antes de perder» premeia
- * jogar devagar, que é o contrário do que o modo pede.
+ * **Os dois campos são independentes, e toda a corrida grava.** É a mesma forma
+ * do `recordTimeAttack`, e por uma razão que se pagou caro: estavam os dois
+ * presos a uma condição única — limpar o tabuleiro, e mais depressa do que a
+ * melhor limpeza anterior. Quem transbordasse não gravava nada, e quem limpasse
+ * devagar também não. Uma corrida de vinte e cinco linhas que esvaziou o
+ * tabuleiro perdia para uma de duas linhas que o esvaziou em vinte segundos, e o
+ * jogador via a marca ficar quieta depois da melhor corrida que já tinha feito.
  *
- * Menor é melhor, portanto o zero significa «ainda nenhum» e não «instantâneo».
+ * Transbordar passa a contar. A objeção antiga — «premeia jogar devagar» — era
+ * contra gravar o *tempo* aguentado, e continua a valer; contra a pontuação não
+ * vale, porque a pontuação não paga tempo nenhum. Paga grupos grandes e o
+ * multiplicador de puxar, e esses não se conseguem a arrastar a corrida.
  */
 export const recordSurvival = (
   profile: Profile,
   limpou: boolean,
-  tempoMs: number,
-  rows: number,
-): Profile => {
-  if (!limpou) return profile;
-  if (profile.bestSurvivalMs !== 0 && tempoMs >= profile.bestSurvivalMs) {
-    return profile;
-  }
-  return { ...profile, bestSurvivalMs: tempoMs, bestSurvivalRows: rows };
-};
+  pontos: number,
+): Profile => ({
+  ...profile,
+  bestSurvivalScore: Math.max(profile.bestSurvivalScore, pontos),
+  survivalClears: profile.survivalClears + (limpou ? 1 : 0),
+});
 
 export const save = (storage: ProfileStorage, profile: Profile): void => {
   storage.setItem(PROFILE_KEY, JSON.stringify(profile));
@@ -220,8 +243,14 @@ export function load(storage: ProfileStorage): Profile {
     levels: sanitizeLevels(p.levels),
     bestTimeAttackScore: finiteOrZero(p.bestTimeAttackScore),
     bestBoardsCleared: finiteOrZero(p.bestBoardsCleared),
-    bestSurvivalMs: finiteOrZero(p.bestSurvivalMs),
-    bestSurvivalRows: finiteOrZero(p.bestSurvivalRows),
+    /*
+     * Campos novos num perfil antigo dão zero, e é a leitura certa: quem
+     * jogou antes de a pontuação ser gravada não tem pontuação gravada. Não se
+     * sobe a `PROFILE_VERSION` por isto — subi-la apagava a campanha inteira
+     * para acrescentar duas contagens que já sabem nascer vazias.
+     */
+    bestSurvivalScore: finiteOrZero(p.bestSurvivalScore),
+    survivalClears: finiteOrZero(p.survivalClears),
     sawJokerTutorial: p.sawJokerTutorial === true,
   };
 }

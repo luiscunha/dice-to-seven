@@ -56,7 +56,7 @@ describe("SurvivalScreen", () => {
     document.body.appendChild(host);
     ecra = new SurvivalScreen(host, {
       seed: SEED,
-      melhorTempo: 0,
+      melhorPontuacao: 0,
       aoGuardar: () => undefined,
       aoTerminar: () => undefined,
       aoSair: () => undefined,
@@ -125,8 +125,17 @@ describe("SurvivalScreen", () => {
    */
   it("não repete no texto o que o tabuleiro já diz", () => {
     expect(host.querySelector(".ecra.survival .soma")).toBeNull();
-    expect(host.querySelector(".survival-topo .meta")).toBeNull();
-    expect(host.querySelector(".survival-topo")?.children.length).toBe(2);
+
+    /*
+     * O cabeçalho voltou a ter algo à direita, e a distinção é o ponto do teste:
+     * a folga saiu porque a linha de fogo já a desenhava, a pontuação entrou
+     * porque não se lê em mais lado nenhum. O que não pode voltar é o número de
+     * linhas no topo.
+     */
+    const meta = host.querySelector(".survival-topo .meta");
+    expect(meta?.textContent).toContain("pontos");
+    expect(meta?.textContent).not.toContain("folga");
+    expect(meta?.textContent).not.toContain("linha");
     ecra.destruir();
   });
 
@@ -161,7 +170,7 @@ describe("o joker no Survival", () => {
       seed: SEED,
       retomar: comJoker(),
       aoGuardar: () => undefined,
-      melhorTempo: 0,
+      melhorPontuacao: 0,
       aoTerminar: () => undefined,
       aoSair: () => undefined,
       aoRecomecar: () => undefined,
@@ -189,7 +198,7 @@ describe("o joker no Survival", () => {
       seed: SEED,
       retomar: comJoker(),
       aoGuardar: () => undefined,
-      melhorTempo: 0,
+      melhorPontuacao: 0,
       aoTerminar: () => undefined,
       aoSair: () => undefined,
       aoRecomecar: () => undefined,
@@ -235,7 +244,7 @@ describe("sair não perde a corrida", () => {
         aoGuardar: (c) => {
           guardado = c as typeof guardado;
         },
-        melhorTempo: 0,
+        melhorPontuacao: 0,
         aoTerminar: () => undefined,
         aoSair: () => undefined,
         aoRecomecar: () => undefined,
@@ -280,7 +289,7 @@ describe("recomeçar pergunta antes", () => {
     const ecra = new SurvivalScreen(host, {
       seed: SEED,
       aoGuardar: () => undefined,
-      melhorTempo: 0,
+      melhorPontuacao: 0,
       aoTerminar: () => undefined,
       aoSair: () => undefined,
       aoRecomecar: () => {
@@ -347,7 +356,7 @@ describe("a queda da linha injetada", () => {
     document.body.appendChild(host);
     ecra = new SurvivalScreen(host, {
       seed: SEED,
-      melhorTempo: 0,
+      melhorPontuacao: 0,
       aoGuardar: () => undefined,
       aoTerminar: () => undefined,
       aoSair: () => undefined,
@@ -405,7 +414,7 @@ describe("a linha de fogo", () => {
     document.body.appendChild(host);
     ecra = new SurvivalScreen(host, {
       seed: SEED,
-      melhorTempo: 0,
+      melhorPontuacao: 0,
       aoGuardar: () => undefined,
       aoTerminar: () => undefined,
       aoSair: () => undefined,
@@ -489,7 +498,7 @@ describe("a caixa de fim de corrida", () => {
     new SurvivalScreen(host, {
       seed: SEED,
       retomar: corridaCom(board),
-      melhorTempo: 0,
+      melhorPontuacao: 0,
       aoGuardar: () => undefined,
       aoTerminar: () => undefined,
       aoSair: () => undefined,
