@@ -275,7 +275,7 @@ export class ComoJogarScreen {
       ],
       [
         "Survival",
-        "De vez em quando entra uma linha nova por baixo. Vês qual é antes de ela cair; acaba quando a pilha chega ao teto. Algumas linhas trazem uma bomba: tira-a antes de o pavio acabar, ou cai mais uma linha.",
+        "De vez em quando cai uma linha nova por cima. Vês qual é antes de ela cair; acaba quando a pilha chega ao teto. Algumas linhas trazem uma bomba: tira-a antes de o pavio acabar, ou cai mais uma linha.",
       ],
     ];
 
