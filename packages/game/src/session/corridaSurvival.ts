@@ -11,8 +11,10 @@
  * princípio. Perder uma partida a meio é mau; não abrir o jogo é pior.
  */
 
-import { SEM_MARCAS, checkInvariants } from "@dicetoseven/engine";
+import type { Board, Packed } from "@dicetoseven/engine";
+import { SEM_MARCAS, cellAt, checkInvariants } from "@dicetoseven/engine";
 
+import type { Bomba } from "./bomba";
 import type { SurvivalState } from "./SurvivalSession";
 import type { ProfileStorage } from "./progress";
 
@@ -83,22 +85,50 @@ export function limparCorrida(storage: ProfileStorage): void {
  * vazio, e descartar a corrida seria castigar o jogador por uma refatoração.
  */
 function normalizar(corrida: CorridaGuardada): CorridaGuardada {
-  const game = corrida.estado.game;
-  if (game.marcas !== undefined && game.historyMarcas !== undefined) {
-    return corrida;
-  }
+  const estado = corrida.estado;
+  const game = estado.game;
 
   return {
     ...corrida,
     estado: {
-      ...corrida.estado,
-      game: {
-        ...game,
-        marcas: game.marcas ?? SEM_MARCAS,
-        historyMarcas: game.historyMarcas ?? game.history.map(() => SEM_MARCAS),
-      },
+      ...estado,
+      game:
+        game.marcas !== undefined && game.historyMarcas !== undefined
+          ? game
+          : {
+              ...game,
+              marcas: game.marcas ?? SEM_MARCAS,
+              historyMarcas:
+                game.historyMarcas ?? game.history.map(() => SEM_MARCAS),
+            },
+      /*
+       * Corridas gravadas antes das bombas chegam sem estes dois campos. Pela
+       * mesma razão das marcas, preenchem-se em vez de se subir a versão: o
+       * valor certo para uma corrida antiga é exatamente «sem bomba, contador
+       * a zero», e descartá-la seria castigar o jogador por uma mecânica nova.
+       */
+      linhasDesdeBomba: Number.isFinite(estado.linhasDesdeBomba)
+        ? estado.linhasDesdeBomba
+        : 0,
+      bomba: bombaValida(estado.bomba, game.board) ? estado.bomba : undefined,
     },
   };
+}
+
+/**
+ * A bomba guardada aponta para uma peça que existe, e tem prazo?
+ *
+ * Uma que não aponte — de um armazenamento mexido à mão — perde-se, e a corrida
+ * não. Rebentar sobre uma coordenada fora do tabuleiro não fazia mal nenhum à
+ * engine, mas desenhava um pavio em lado nenhum.
+ */
+function bombaValida(bomba: unknown, board: Board): bomba is Bomba {
+  if (typeof bomba !== "object" || bomba === null) return false;
+
+  const { at, rebentaEm } = bomba as Partial<Bomba>;
+  if (!Number.isInteger(at) || !Number.isFinite(rebentaEm)) return false;
+
+  return cellAt(board, at as Packed) !== undefined;
 }
 
 /**

@@ -14,19 +14,23 @@ import { describe, expect, it } from "vitest";
 
 import {
   boardKey,
+  cellAt,
   findAllGroups,
+  packed,
   pieceCount,
   tallestColumn,
   totalSum,
   width,
 } from "@dicetoseven/engine";
 
-import type { Board, Group } from "@dicetoseven/engine";
+import type { Board, Group, Packed } from "@dicetoseven/engine";
 
 import {
   DEFAULT_SURVIVAL,
   avancarRelogio,
+  bombaNaFila,
   cadencia,
+  colunaDaBomba,
   injectRow,
   larguraAtual,
   larguraNoIndice,
@@ -37,6 +41,7 @@ import {
   restoParaLimpar,
   startSurvival,
   survivalTap,
+  trazBomba,
   trazJoker,
 } from "../src/session/SurvivalSession";
 import type { SurvivalState } from "../src/session/SurvivalSession";
@@ -482,5 +487,180 @@ describe("limpar o tabuleiro acaba a corrida", () => {
     expect(s.linhasInjetadas).toBe(quase.linhasInjetadas);
     // E depois de limpo nada mais conta.
     expect(injectRow(s, true)).toBe(s);
+  });
+});
+
+describe("a bomba", () => {
+  /** Seis colunas de uma peça: espaço para várias linhas sem transbordar. */
+  const BAIXO: Board = [[1], [1], [1], [1], [1], [1]];
+
+  const baixo = (extra: Partial<SurvivalState> = {}): SurvivalState => {
+    const base = startSurvival(SEED);
+    return { ...base, game: { ...base.game, board: BAIXO }, ...extra };
+  };
+
+  const semBomba = { ...DEFAULT_SURVIVAL, comBomba: false };
+
+  it("**chega numa linha, uma em cada quatro**", () => {
+    let s = baixo();
+
+    for (let i = 0; i < DEFAULT_SURVIVAL.linhasEntreBombas; i++) {
+      expect(bombaNaFila(s)).toBeUndefined();
+      s = injectRow(s, false, DEFAULT_SURVIVAL, i * 1000);
+      expect(s.bomba).toBeUndefined();
+    }
+
+    expect(bombaNaFila(s)).toBeDefined();
+    s = injectRow(s, false, DEFAULT_SURVIVAL, 9_000);
+
+    expect(s.bomba).toBeDefined();
+    expect(s.bomba?.rebentaEm).toBe(9_000 + DEFAULT_SURVIVAL.pavioBombaMs);
+    expect(s.linhasDesdeBomba).toBe(0);
+  });
+
+  /*
+   * A promessa do modo, outra vez: o que se vê é o que se recebe. A fila diz a
+   * coluna, e a bomba aterra no topo dessa coluna, na peça que a fila mostrava.
+   */
+  it("**a fila mostra-a antes de cair**, na peça onde ela aterra", () => {
+    const s = baixo({ linhasDesdeBomba: DEFAULT_SURVIVAL.linhasEntreBombas });
+    const coluna = bombaNaFila(s);
+    const linha = proximaLinha(s);
+    if (coluna === undefined) throw new Error("a linha devia trazer bomba");
+
+    const depois = injectRow(s, false);
+    const at = depois.bomba?.at;
+
+    expect(at).toBe(packed(coluna, 1));
+    expect(cellAt(depois.game.board, at as Packed)).toBe(linha[coluna]);
+  });
+
+  it("nunca vai no joker", () => {
+    const comJoker = linhaDe(SEED, 7, DEFAULT_SURVIVAL, true);
+    const joker = comJoker.indexOf(0);
+
+    for (let i = 0; i < 200; i++) {
+      expect(colunaDaBomba(SEED + i, i, comJoker)).not.toBe(joker);
+    }
+  });
+
+  it("a mesma seed põe a bomba na mesma coluna", () => {
+    const linha = linhaDe(SEED, 12);
+    expect(colunaDaBomba(SEED, 12, linha)).toBe(colunaDaBomba(SEED, 12, linha));
+  });
+
+  it("**uma de cada vez**: com bomba armada, nenhuma linha traz outra", () => {
+    const armada = { at: packed(0, 0), rebentaEm: 50_000 };
+    const s = baixo({ bomba: armada, linhasDesdeBomba: 10 });
+
+    expect(trazBomba(s)).toBe(false);
+    expect(bombaNaFila(s)).toBeUndefined();
+
+    const depois = injectRow(s, false);
+    // Entrar por cima não mexe na peça armada.
+    expect(depois.bomba).toEqual(armada);
+    expect(depois.linhasDesdeBomba).toBe(11);
+  });
+
+  it("desligada na configuração, não aparece nunca", () => {
+    const s = baixo({ linhasDesdeBomba: 99 });
+    expect(trazBomba(s, semBomba)).toBe(false);
+    expect(injectRow(s, false, semBomba).bomba).toBeUndefined();
+  });
+
+  /*
+   * O castigo. Uma linha **a mais**: o prazo da linha marcada fica onde estava.
+   * Se a explosão só antecipasse a próxima, rebentar a um segundo dela não
+   * custava nada.
+   */
+  it("**rebentar faz cair uma linha a mais**, e o prazo da marcada não se mexe", () => {
+    const s = baixo({
+      bomba: { at: packed(2, 0), rebentaEm: 5_000 },
+      proximaLinhaMs: 30_000,
+    });
+
+    const r = avancarRelogio(s, 5_000, semBomba);
+
+    expect(r.caiu).toBe(true);
+    expect(r.rebentou).toBe(packed(2, 0));
+    expect(r.state.bomba).toBeUndefined();
+    expect(r.state.linhasInjetadas).toBe(s.linhasInjetadas + 1);
+    expect(r.state.proximaLinhaMs).toBe(30_000);
+    // A peça fica: tirá-la seria um alívio, e não um castigo.
+    expect(cellAt(r.state.game.board, packed(2, 0))).toBe(1);
+  });
+
+  it("antes do fim do pavio não rebenta", () => {
+    const s = baixo({
+      bomba: { at: packed(2, 0), rebentaEm: 5_000 },
+      proximaLinhaMs: 30_000,
+    });
+
+    const r = avancarRelogio(s, 4_999);
+    expect(r.caiu).toBe(false);
+    expect(r.state).toBe(s);
+  });
+
+  it("se a bomba e a linha marcada vencerem juntas, caem as duas — uma de cada vez", () => {
+    const s = baixo({
+      bomba: { at: packed(2, 0), rebentaEm: 5_000 },
+      proximaLinhaMs: 5_000,
+    });
+
+    const primeira = avancarRelogio(s, 6_000, semBomba);
+    expect(primeira.rebentou).toBe(packed(2, 0));
+    expect(primeira.state.linhasInjetadas).toBe(s.linhasInjetadas + 1);
+
+    const segunda = avancarRelogio(primeira.state, 6_000, semBomba);
+    expect(segunda.caiu).toBe(true);
+    expect(segunda.rebentou).toBeUndefined();
+    expect(segunda.state.linhasInjetadas).toBe(s.linhasInjetadas + 2);
+  });
+
+  it("a linha da explosão pode ser a que transborda", () => {
+    const cheio: Board = Array.from({ length: 6 }, () =>
+      Array.from({ length: DEFAULT_SURVIVAL.alturaMaxima }, () => 1 as const),
+    );
+    const base = startSurvival(SEED);
+    const s: SurvivalState = {
+      ...base,
+      game: { ...base.game, board: cheio },
+      bomba: { at: packed(0, 0), rebentaEm: 1_000 },
+    };
+
+    expect(avancarRelogio(s, 1_000).state.morto).toBe(true);
+  });
+
+  it("**jogá-la desarma-a**, e depois já não rebenta", () => {
+    const base = startSurvival(SEED);
+    const s: SurvivalState = {
+      ...base,
+      game: { ...base.game, board: [[3], [4], [1]] },
+      bomba: { at: packed(0, 0), rebentaEm: 5_000 },
+      proximaLinhaMs: 30_000,
+    };
+
+    let r = survivalTap(s, packed(0, 0));
+    r = survivalTap(r.state, packed(1, 0));
+
+    expect(r.desarmou).toBe(true);
+    expect(r.state.bomba).toBeUndefined();
+    expect(avancarRelogio(r.state, 5_000).caiu).toBe(false);
+  });
+
+  it("**acompanha a peça na gravidade**", () => {
+    const base = startSurvival(SEED);
+    const s: SurvivalState = {
+      ...base,
+      game: { ...base.game, board: [[3, 5], [4]] },
+      bomba: { at: packed(0, 1), rebentaEm: 5_000 },
+    };
+
+    let r = survivalTap(s, packed(0, 0));
+    r = survivalTap(r.state, packed(1, 0));
+
+    expect(r.desarmou).toBe(false);
+    expect(r.state.bomba?.at).toBe(packed(0, 0));
+    expect(cellAt(r.state.game.board, packed(0, 0))).toBe(5);
   });
 });

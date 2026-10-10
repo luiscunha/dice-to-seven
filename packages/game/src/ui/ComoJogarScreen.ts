@@ -271,11 +271,11 @@ export class ComoJogarScreen {
       ],
       [
         "Contra-Relógio",
-        "Um relógio só, que nunca pára. Cada tabuleiro limpo dá tempo de volta, e os tabuleiros vão crescendo.",
+        "Um relógio só, que nunca pára. Cada tabuleiro limpo dá tempo de volta, mas cada vez menos, e os tabuleiros vão crescendo. Uma peça que passe de 7 custa tempo. E cuidado com as bombas: tira-as antes de o pavio acabar.",
       ],
       [
         "Survival",
-        "De vez em quando entra uma linha nova por baixo. Vês qual é antes de ela cair; acaba quando a pilha chega ao teto.",
+        "De vez em quando cai uma linha nova por cima. Vês qual é antes de ela cair; acaba quando a pilha chega ao teto. Algumas linhas trazem uma bomba: tira-a antes de o pavio acabar, ou cai mais uma linha.",
       ],
     ];
 

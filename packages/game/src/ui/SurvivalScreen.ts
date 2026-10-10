@@ -45,6 +45,7 @@ import type {
 import {
   DEFAULT_SURVIVAL,
   avancarRelogio,
+  bombaNaFila,
   faltaParaLinha,
   folga,
   fracaoParaLinha,
@@ -55,7 +56,10 @@ import {
   startSurvival,
   survivalTap,
 } from "../session/SurvivalSession";
+import { pavioAcabou, pavioDe } from "../session/bomba";
 import type { CorridaGuardada } from "../session/corridaSurvival";
+import { vibrarExplosao } from "../plataforma/nativo";
+import { anunciar } from "./anuncio";
 import { BoardView } from "./BoardView";
 import { PASSO_RELOGIO, relogio } from "./tempo";
 import { criarPeca } from "./dice";
@@ -97,6 +101,7 @@ export type { CorridaGuardada };
 
 export class SurvivalScreen {
   private readonly raiz: HTMLElement;
+  private readonly palco: HTMLElement;
   private readonly view: BoardView;
   private readonly opcoes: OpcoesSurvival;
   private readonly config: SurvivalConfig = DEFAULT_SURVIVAL;
@@ -183,6 +188,7 @@ topo.append(sair, this.elRelogio);
     this.elFila.setAttribute("role", "timer");
 
     const palco = elemento("div", "palco");
+    this.palco = palco;
 
     /* ── rodapé ── */
     const rodape = elemento("footer", "rodape");
@@ -236,6 +242,9 @@ topo.append(sair, this.elRelogio);
 
     this.dimensionar();
     this.view.montar(this.estado.game.board);
+    // A pintura de cima correu sem peças: a bomba de uma corrida retomada não
+    // tinha onde se marcar, e só aparecia ao primeiro tique.
+    this.pintarBomba();
 
     /*
      * Gravar também quando o ecrã se esconde.
@@ -340,6 +349,7 @@ topo.append(sair, this.elRelogio);
    */
   private tique(): void {
     this.pintarRelogio();
+    this.pintarBomba();
     void this.verificarLinha();
   }
 
@@ -393,6 +403,9 @@ topo.append(sair, this.elRelogio);
     this.picker.fechar();
     this.jokerPendente = undefined;
 
+    // A linha caiu por causa da bomba: diz-se antes de ela cair, na peça.
+    if (r.rebentou !== undefined) this.rebentar(r.rebentou);
+
     try {
       this.estado = r.state;
       await this.view.injetarLinha(this.estado.game.board);
@@ -409,6 +422,17 @@ topo.append(sair, this.elRelogio);
 
   private async tocar(p: Packed, jokerAs?: JokerValue): Promise<void> {
     if (this.terminado || this.ocupado) return;
+
+    /*
+     * O pavio acabou e o tique ainda não deu por isso — há no máximo um décimo
+     * de segundo em que isto acontece. A bomba ganha: o toque perde-se, como
+     * qualquer toque durante a queda de uma linha. Sem isto, um toque que
+     * chegasse nesse décimo desarmava uma bomba que já tinha rebentado.
+     */
+    if (pavioAcabou(this.estado.bomba, this.decorridoMs())) {
+      void this.verificarLinha();
+      return;
+    }
 
     this.arrancar();
 
@@ -436,6 +460,7 @@ topo.append(sair, this.elRelogio);
 
     if (r.moved && grupo !== undefined) {
       this.ocupado = true;
+      if (r.desarmou) this.view.desarmarBomba();
 
       /*
        * `finally`, e não uma atribuição no fim. O `ocupado` trava o ecrã
@@ -513,6 +538,21 @@ topo.append(sair, this.elRelogio);
     this.verificarFim();
   }
 
+  /**
+   * A bomba rebentou: a peça estala, o tabuleiro estremece, e o `+1 linha` sobe
+   * dela — a linha que cai a seguir é por causa disto, e o jogador tem de ligar
+   * uma coisa à outra.
+   *
+   * A mesma linguagem do Contra-Relógio, com a moeda deste modo: lá a perda é
+   * tempo, aqui é uma linha.
+   */
+  private rebentar(at: Packed): void {
+    const caixa = this.view.caixaDe(at);
+    anunciar(this.palco, caixa === undefined ? [] : [caixa], "+1 linha", "perda grande");
+    this.view.rebentarBomba(at);
+    vibrarExplosao();
+  }
+
   /* ─── fim ───────────────────────────────────────────────────────────────── */
 
   private verificarFim(): void {
@@ -523,6 +563,8 @@ topo.append(sair, this.elRelogio);
     this.fimMs = Date.now();
     this.parar();
     this.pintarRelogio();
+    // Um pavio parado por baixo do painel de fim lia-se como uma bomba por rebentar.
+    this.pintarBomba();
 
     this.opcoes.aoTerminar({
       limpou: this.estado.limpo,
@@ -629,6 +671,32 @@ topo.append(sair, this.elRelogio);
     // Mostra na peça o valor que o jogador deu ao joker nesta seleção.
     const joker = jogo.selection.find((p) => cellAt(jogo.board, p) === JOKER);
     this.view.marcarJoker(joker, jogo.jokerAs);
+
+    this.pintarBomba();
+  }
+
+  /**
+   * O pavio, à décima de segundo, no tempo da corrida.
+   *
+   * O tabuleiro é remontado depois de cada jogada e de cada linha, e a montagem
+   * leva as marcas com as peças velhas. É por isso que isto corre em todas as
+   * pinturas e não só quando a bomba aparece: a marca volta sempre a partir do
+   * estado, que é onde a bomba vive.
+   */
+  private pintarBomba(): void {
+    const bomba = this.estado.bomba;
+    const resta = pavioDe(bomba, this.decorridoMs());
+
+    if (this.terminado || bomba === undefined || resta === undefined) {
+      this.view.marcarBomba(undefined);
+      return;
+    }
+
+    this.view.marcarBomba(
+      bomba.at,
+      resta / this.config.pavioBombaMs,
+      Math.ceil(resta / 1000),
+    );
   }
 
   private pintarRelogio(): void {
@@ -675,9 +743,11 @@ topo.append(sair, this.elRelogio);
 
     if (segundos !== this.ultimoSegundo) {
       this.ultimoSegundo = segundos;
+      const bomba =
+        bombaNaFila(this.estado, this.config) === undefined ? "" : ", com bomba";
       this.elFila.setAttribute(
         "aria-label",
-        `próxima linha em ${String(segundos)} segundos`,
+        `próxima linha em ${String(segundos)} segundos${bomba}`,
       );
     }
   }
@@ -691,12 +761,23 @@ topo.append(sair, this.elRelogio);
    */
   private pintarFila(): void {
     const linha = proximaLinha(this.estado, this.config);
+    const bomba = bombaNaFila(this.estado, this.config);
 
     this.elFila.replaceChildren(
-      ...linha.map((v) => {
+      ...linha.map((v, c) => {
         const el = criarPeca(v, "pintas");
         el.classList.add("na-fila");
         el.removeAttribute("role");
+
+        /*
+         * A bomba vê-se na fila **antes** de cair, com o mesmo anel e o mesmo
+         * pavio do tabuleiro — mas apagado: ainda não está a arder. O jogador
+         * tem uma linha de avanço para preparar o sítio onde ela aterra.
+         */
+        if (c === bomba) {
+          el.classList.add("bomba");
+          el.appendChild(elemento("span", "pavio"));
+        }
         return el;
       }),
     );

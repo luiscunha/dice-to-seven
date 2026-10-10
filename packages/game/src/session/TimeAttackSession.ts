@@ -17,9 +17,11 @@
  * por parâmetro, que é o que torna isto testável (plano, fase 7).
  */
 
-import type { Level, Packed, Rng } from "@dicetoseven/engine";
-import { jokerAt, pieceCount, shuffled } from "@dicetoseven/engine";
+import type { Board, Level, Packed, Rng } from "@dicetoseven/engine";
+import { jokerAt, pick, pieceCount, shuffled, totalSum } from "@dicetoseven/engine";
 
+import type { Bomba } from "./bomba";
+import { pavioAcabou, pavioDe, pecasJogaveis, saiNaJogada, seguirBomba } from "./bomba";
 import type { ComboState } from "./combos";
 import { DEFAULT_COMBO_CONFIG, breakCombo, registerMove, startCombo } from "./combos";
 import type { ComboConfig } from "./combos";
@@ -28,49 +30,140 @@ import { isFinished, startGame, tap } from "./GameSession";
 import type { ScoringConfig } from "./scoring";
 import { DEFAULT_SCORING, moveScore } from "./scoring";
 
+export type { Bomba };
+
+/**
+ * A bomba do Contra-Relógio — o mecanismo comum está em `bomba.ts`.
+ *
+ * Os tabuleiros deste modo são greedy-safe, portanto **qualquer ordem resolve**.
+ * Era essa a promessa do modo, e era também o que o deixava sem decisão
+ * nenhuma: só contava a velocidade. A bomba põe uma pergunta de volta —
+ * *que grupo tiro primeiro?* — sem tocar na promessa, porque não mexe no que é
+ * jogada legal. Mexe só no relógio: rebentar custa tempo.
+ */
+export interface ConfigBomba {
+  /**
+   * Quantos tabuleiros limpos antes de poder aparecer a primeira bomba.
+   *
+   * Os primeiros tabuleiros são onde o jogador entra no ritmo, e uma ameaça
+   * nova antes disso é ruído e não decisão.
+   */
+  readonly desdeTabuleiro: number;
+  /** Probabilidade de um tabuleiro elegível trazer bomba. */
+  readonly probabilidade: number;
+  /** Quanto tempo a bomba dá ao jogador, desde que o tabuleiro aparece. */
+  readonly pavioMs: number;
+  /** O que custa deixá-la rebentar. */
+  readonly penalizacaoMs: number;
+}
+
 export interface TimeAttackConfig {
   /** Generoso, para o jogador entrar em flow antes da pressão (plano §6.3). */
   readonly initialMs: number;
-  /** Tempo concedido pelo primeiro tabuleiro limpo. */
-  readonly perBoardMs: number;
+
   /**
-   * Quanto o prémio por tabuleiro encolhe a cada tabuleiro já limpo.
+   * O **ritmo-alvo** do primeiro tabuleiro: o tempo que cada jogada dele
+   * devolve ao relógio.
    *
-   * É isto que faz a corrida acabar: sem decaimento, um jogador competente
-   * jogaria para sempre. O plano pede que o prémio decresça, ou pelo menos que
-   * cresça mais devagar do que a exigência.
+   * ── Porque não um prémio fixo por tabuleiro ──
    *
-   * **O decaimento e a escada de tamanho aterram juntos.** O prémio chega ao
-   * piso no mesmo tabuleiro em que os tabuleiros deixam de crescer, e daí para
-   * a frente as duas coisas ficam quietas: tabuleiro no máximo, prémio no piso.
-   * Ver `escadaDeTamanho`.
+   * Era assim: 30s pelo primeiro, a descer 4s por tabuleiro até um piso de 10s.
+   * Com o piso, o modo tinha um ponto de equilíbrio — e quem jogava abaixo dele
+   * nunca perdia. Medido com o pack publicado, a 2s por jogada um tabuleiro do
+   * cume dava **+9s de saldo**, todos os tabuleiros, para sempre. O modo era
+   * fácil porque, para quem joga bem, não tinha fim.
+   *
+   * Agora o prémio é `jogadas × ritmo`, e o ritmo aperta a cada tabuleiro sem
+   * piso nenhum. A corrida acaba exatamente quando o jogador deixa de
+   * acompanhar o ritmo que se lhe pede — e acaba sempre, seja qual for a
+   * velocidade dele. Ver `ritmoExigido`.
+   *
+   * Multiplicar pelas jogadas, e não pelas peças, é o que mantém isto justo
+   * quando os tabuleiros crescem: um tabuleiro de vinte peças pede seis
+   * jogadas, e é a jogada que custa tempo, não a peça.
    */
-  readonly perBoardDecayMs: number;
-  /** Piso do prémio por tabuleiro. Daqui para baixo não desce mais. */
-  readonly minPerBoardMs: number;
+  readonly ritmoInicialMs: number;
+
+  /**
+   * Por quanto se multiplica o ritmo a cada tabuleiro limpo.
+   *
+   * **Geométrico, e não linear, e a diferença foi medida.** A descer um valor
+   * fixo por tabuleiro, a curva comprimia os jogadores rápidos — o de 1,5s e o
+   * de 1s por jogada acabavam quase no mesmo tabuleiro — e esticava as
+   * corridas lentas. A multiplicar, cada 20% de velocidade a mais compra mais
+   * ou menos o mesmo número de tabuleiros, seja onde for na escala: a
+   * classificação quer dizer alguma coisa tanto para quem começa como para
+   * quem já é rápido.
+   */
+  readonly ritmoFator: number;
+
   /** Tempo por cada nível de combo acima do primeiro. */
   readonly comboBonusMs: number;
+
+  /**
+   * O máximo que o combo devolve **por jogada**.
+   *
+   * Sem teto, o combo era a outra metade do defeito: `(count − 1) × 750ms`
+   * cresce com o quadrado das jogadas encadeadas, e o tempo gasto a jogá-las
+   * cresce em linha. Num tabuleiro de seis jogadas o combo sozinho devolvia
+   * 11s — mais do que as jogadas custavam. E quanto maior o tabuleiro, maior o
+   * saldo: a escada de tamanho, que devia endurecer o modo, aliviava-o.
+   *
+   * Com teto, o combo continua a valer — o encadeamento sobe o prémio das
+   * primeiras jogadas — mas deixa de poder pagar a corrida sozinho.
+   */
+  readonly comboTetoMs: number;
+
   /** Tempo por peça acima do limiar, num grupo grande. */
   readonly bigGroupBonusMs: number;
+
+  /**
+   * O que custa um toque que passaria de 7.
+   *
+   * Sem custo nenhum, tocar ao calhas era uma estratégia: a peça errada era
+   * recusada, e a recusa não tirava nada. Num modo que mede reconhecimento, o
+   * erro tem de pesar — senão mede-se velocidade de dedo.
+   *
+   * Quebra também o combo. Um encadeamento com uma peça errada no meio não é o
+   * ritmo que o combo existe para premiar.
+   */
+  readonly penalizacaoMs: number;
+
+  readonly bomba: ConfigBomba;
 }
 
 /**
- * Valores de partida. **Os dois primeiros são os parâmetros que o plano manda
- * afinar em playtest**, e é por isso que vivem em configuração e não no código.
+ * Valores de partida — **todos de playtest**, e é por isso que vivem em
+ * configuração e não no código.
+ *
+ * O ritmo foi escolhido por simulação contra o pack publicado, com 1s de
+ * leitura por tabuleiro novo e 60s de arranque (o valor das definições):
+ *
+ * | ritmo do jogador | tabuleiros | duração |
+ * |---|---|---|
+ * | 4 s/jogada | ~7 | ~3 min |
+ * | 3 s/jogada | ~12 | ~4 min |
+ * | 2 s/jogada | ~28 | ~6 min |
+ * | 1,5 s/jogada | ~42 | ~7 min |
+ * | 1 s/jogada | ~69 | ~8 min |
+ *
+ * Com a configuração anterior, todas as linhas de 2,5 s/jogada para baixo
+ * davam corridas sem fim.
  */
 export const DEFAULT_TIME_ATTACK: TimeAttackConfig = {
   initialMs: 90_000,
-  perBoardMs: 30_000,
-  /*
-   * De 30s a 10s em cinco passos, que é o comprimento da escada de tamanho —
-   * ver `DEGRAUS`. Antes eram 1,5s por tabuleiro até 8s, um piso que só chegava
-   * ao décimo quinto tabuleiro, muito depois de a exigência ter parado de
-   * subir: os dois eixos nunca se encontravam.
-   */
-  perBoardDecayMs: 4_000,
-  minPerBoardMs: 10_000,
-  comboBonusMs: 750,
+  ritmoInicialMs: 4_000,
+  ritmoFator: 0.92,
+  comboBonusMs: 250,
+  comboTetoMs: 500,
   bigGroupBonusMs: 400,
+  penalizacaoMs: 1_500,
+  bomba: {
+    desdeTabuleiro: 3,
+    probabilidade: 0.5,
+    pavioMs: 6_000,
+    penalizacaoMs: 5_000,
+  },
 };
 
 export interface TimeAttackState {
@@ -81,6 +174,8 @@ export interface TimeAttackState {
   /** Instante em que a corrida acaba, se nada mais for ganho. */
   readonly deadlineAt: number;
   readonly startedAt: number;
+  /** A bomba armada neste tabuleiro, se houver. Ver `Bomba`. */
+  readonly bomba: Bomba | undefined;
 }
 
 export class JokerInTimeAttackError extends Error {
@@ -106,6 +201,7 @@ export function startTimeAttack(
     boardsCleared: 0,
     deadlineAt: now + config.initialMs,
     startedAt: now,
+    bomba: undefined,
   };
 }
 
@@ -115,16 +211,122 @@ export const remainingMs = (s: TimeAttackState, now: number): number =>
 export const isOver = (s: TimeAttackState, now: number): boolean =>
   now >= s.deadlineAt;
 
-/** Prémio do `n`-ésimo tabuleiro limpo, contando de 0. */
-export function boardReward(
+/**
+ * O tempo por jogada que o `n`-ésimo tabuleiro devolve, contando de 0.
+ *
+ * **Sem piso, e é de propósito.** Um piso é um ponto de equilíbrio, e um ponto
+ * de equilíbrio é uma corrida infinita para quem joga mais depressa do que
+ * ele. Ver `ritmoInicialMs`.
+ */
+export function ritmoExigido(
   cleared: number,
   config: TimeAttackConfig = DEFAULT_TIME_ATTACK,
 ): number {
-  return Math.max(
-    config.minPerBoardMs,
-    config.perBoardMs - cleared * config.perBoardDecayMs,
-  );
+  return config.ritmoInicialMs * Math.pow(config.ritmoFator, cleared);
 }
+
+/**
+ * Quantas jogadas leva a limpar o tabuleiro — **qualquer** limpeza, por
+ * qualquer ordem.
+ *
+ * Cada jogada tira exatamente 7, portanto são sempre `soma / 7`. Não se lê da
+ * solução guardada: é aritmética sobre o tabuleiro, e vale para um nível que não
+ * traga solução nenhuma.
+ */
+export const jogadasDe = (board: Board): number =>
+  Math.round(totalSum(board) / 7);
+
+/** Prémio do `n`-ésimo tabuleiro limpo, contando de 0: jogadas × ritmo. */
+export function boardReward(
+  cleared: number,
+  board: Board,
+  config: TimeAttackConfig = DEFAULT_TIME_ATTACK,
+): number {
+  return Math.round(jogadasDe(board) * ritmoExigido(cleared, config));
+}
+
+/* ─── A bomba ─────────────────────────────────────────────────────────────── */
+
+/**
+ * Arma uma bomba no tabuleiro de agora, se o sorteio o pedir.
+ *
+ * Chama-se ao mostrar um tabuleiro novo, e não dentro de `nextBoard`: é uma
+ * camada por cima do modo, com o seu próprio sorteio, e quem não a quiser
+ * — os testes do relógio, por exemplo — simplesmente não a chama.
+ *
+ * **A peça armada está sempre num grupo que se pode jogar já.** Uma bomba numa
+ * peça sem parceiro à vista seria uma penalização garantida para quem não
+ * descobriu a ordem exata de a soltar, e a bomba existe para pôr uma
+ * prioridade, não um enigma. Depois de armada, gastar o parceiro dela noutra
+ * jogada é um erro do jogador — e é esse o erro que a bomba ensina a ver.
+ *
+ * O `rng` é o da corrida: nada aqui chama `Math.random()`.
+ */
+export function armarBomba(
+  s: TimeAttackState,
+  now: number,
+  rng: Rng,
+  config: TimeAttackConfig = DEFAULT_TIME_ATTACK,
+): TimeAttackState {
+  const cfg = config.bomba;
+
+  if (s.boardsCleared < cfg.desdeTabuleiro) return s;
+  if (rng() >= cfg.probabilidade) return s;
+
+  const alvo = pick(rng, pecasJogaveis(s.game.board));
+  if (alvo === undefined) return s;
+
+  return { ...s, bomba: { at: alvo, rebentaEm: now + cfg.pavioMs } };
+}
+
+export interface Rebentamento {
+  readonly state: TimeAttackState;
+  /** Onde estava a bomba que rebentou agora. `undefined` se não rebentou nada. */
+  readonly rebentou: Packed | undefined;
+  readonly perdidoMs: number;
+}
+
+/**
+ * Faz a bomba rebentar, se o pavio já acabou.
+ *
+ * O relógio entra por parâmetro, como em tudo o resto: é o ecrã que chama isto
+ * a cada tique, e `tapTimeAttack` chama-o antes de olhar para o toque — um toque
+ * que chega depois do fim do pavio já não desarma nada.
+ *
+ * Depois do fim da corrida não rebenta: o tempo que a bomba tiraria já não
+ * existe.
+ */
+export function resolverBomba(
+  s: TimeAttackState,
+  now: number,
+  config: TimeAttackConfig = DEFAULT_TIME_ATTACK,
+): Rebentamento {
+  const bomba = s.bomba;
+
+  if (bomba === undefined || !pavioAcabou(bomba, now) || isOver(s, now)) {
+    return { state: s, rebentou: undefined, perdidoMs: 0 };
+  }
+
+  const perdidoMs = config.bomba.penalizacaoMs;
+
+  return {
+    state: {
+      ...s,
+      bomba: undefined,
+      deadlineAt: s.deadlineAt - perdidoMs,
+      // Rebentar é perder o fio: o encadeamento acaba aqui.
+      combo: breakCombo(s.combo),
+    },
+    rebentou: bomba.at,
+    perdidoMs,
+  };
+}
+
+/** Quanto falta para a bomba rebentar. `undefined` sem bomba armada. */
+export const pavioRestante = (
+  s: TimeAttackState,
+  now: number,
+): number | undefined => pavioDe(s.bomba, now);
 
 /* ─── A escada de tamanho ─────────────────────────────────────────────────── */
 
@@ -154,16 +356,18 @@ export function boardReward(
 /**
  * Quantos tabuleiros o jogador sobe antes de o tamanho parar de crescer.
  *
- * **Seis, e não é um número solto**: é o mesmo que leva o prémio de tempo de
- * 30s ao piso de 10s, a 4s por tabuleiro. Os dois eixos aterram juntos — o
- * tabuleiro para de crescer no tabuleiro em que o prémio para de encolher — e
- * o pack tem seis janelas de tamanho pela mesma razão. Mexer num destes três
- * números sem mexer nos outros dois desalinha a corrida inteira, e há um teste
- * de cada lado a exigi-lo.
+ * **Seis, e não é um número solto**: o pack tem seis janelas de tamanho, uma
+ * por degrau, e há um teste em `tools` a exigir que os dois coincidam.
  *
  * Seis é o que a garantia do modo permite, não o que se desejava. O tabuleiro
  * vai de 10 a 20 peças; acima disso não há tabuleiros impossíveis de bloquear
  * para gerar. Ver o comentário da banda `tempo`, em `tools/src/bands.ts`.
+ *
+ * **O prémio já não para com a escada.** Parava: o prémio chegava ao piso no
+ * mesmo tabuleiro em que o tamanho deixava de crescer, e daí para a frente nada
+ * mudava — a corrida ficava num patamar, e quem o aguentava aguentava-o para
+ * sempre. Agora o tamanho para aqui, porque não há tabuleiros maiores para
+ * gerar, mas o ritmo exigido continua a apertar. Ver `ritmoExigido`.
  */
 export const DEGRAUS = 6;
 
@@ -267,6 +471,18 @@ export interface TimeAttackTap {
   readonly gainedMs: number;
   /** O tabuleiro ficou limpo com esta jogada. */
   readonly cleared: boolean;
+
+  /**
+   * Tempo perdido neste toque: a penalização por passar de 7, a bomba que
+   * rebentou antes de ele chegar, ou as duas. Sempre positivo ou zero.
+   */
+  readonly perdidoMs: number;
+  /** O toque passava de 7 e custou tempo. */
+  readonly penalizado: boolean;
+  /** A bomba rebentou antes deste toque, e estava aqui. */
+  readonly rebentou: Packed | undefined;
+  /** A jogada levou a bomba consigo. */
+  readonly desarmou: boolean;
 }
 
 /**
@@ -274,6 +490,10 @@ export interface TimeAttackTap {
  *
  * Depois do fim do tempo nada mais conta — a corrida acabou, e aceitar jogadas
  * seria pontuar tempo que o jogador já não tinha.
+ *
+ * **A bomba resolve-se antes do toque.** Um toque que chega depois do fim do
+ * pavio encontra a bomba já rebentada: desarmá-la nesse toque seria dar razão a
+ * quem chegou tarde só porque o ecrã ainda não tinha repintado.
  */
 export function tapTimeAttack(
   s: TimeAttackState,
@@ -283,26 +503,56 @@ export function tapTimeAttack(
 ): TimeAttackTap {
   const time = configs.time ?? DEFAULT_TIME_ATTACK;
 
+  const nada = {
+    moved: false,
+    gainedScore: 0,
+    gainedMs: 0,
+    cleared: false,
+    penalizado: false,
+    desarmou: false,
+  } as const;
+
   if (isOver(s, now)) {
-    return { state: s, moved: false, gainedScore: 0, gainedMs: 0, cleared: false };
+    return { ...nada, state: s, perdidoMs: 0, rebentou: undefined };
   }
 
-  const before = s.game;
+  const bomba = resolverBomba(s, now, time);
+  const antes = bomba.state;
+
+  // A bomba pode ter levado o resto do relógio consigo.
+  if (isOver(antes, now)) {
+    return {
+      ...nada,
+      state: antes,
+      perdidoMs: bomba.perdidoMs,
+      rebentou: bomba.rebentou,
+    };
+  }
+
+  const before = antes.game;
   const groupSize = before.selection.length + 1;
   const game = tap(before, p);
   const moved = game.history.length > before.history.length;
 
   if (!moved) {
+    const penalizado = game.rejection === "over-target";
+    const multaMs = penalizado ? time.penalizacaoMs : 0;
+
     return {
-      state: { ...s, game },
-      moved: false,
-      gainedScore: 0,
-      gainedMs: 0,
-      cleared: false,
+      ...nada,
+      state: {
+        ...antes,
+        game,
+        deadlineAt: antes.deadlineAt - multaMs,
+        combo: penalizado ? breakCombo(antes.combo) : antes.combo,
+      },
+      perdidoMs: bomba.perdidoMs + multaMs,
+      penalizado,
+      rebentou: bomba.rebentou,
     };
   }
 
-  const event = registerMove(s.combo, groupSize, now, configs.combo);
+  const event = registerMove(antes.combo, groupSize, now, configs.combo);
   const scoring = configs.scoring ?? DEFAULT_SCORING;
   const comboCfg = configs.combo ?? DEFAULT_COMBO_CONFIG;
 
@@ -310,12 +560,15 @@ export function tapTimeAttack(
 
   /*
    * Combos devolvem tempo — é o loop de reforço que sustenta o modo: jogar bem
-   * compra espaço para jogar mais. E os grupos grandes valem mais por peça
-   * acima do limiar, para dar razão ao jogador para os procurar em vez de
-   * limpar só os pares.
+   * compra espaço para jogar mais. Mas **com teto por jogada**: sem ele, o
+   * combo crescia com o quadrado do encadeamento e pagava a corrida sozinho.
+   * Ver `comboTetoMs`.
+   *
+   * Os grupos grandes valem mais por peça acima do limiar, para dar razão ao
+   * jogador para os procurar em vez de limpar só os pares.
    */
   const comboMs = event.chained
-    ? (event.state.count - 1) * time.comboBonusMs
+    ? Math.min((event.state.count - 1) * time.comboBonusMs, time.comboTetoMs)
     : 0;
 
   const bigMs = event.big
@@ -323,22 +576,33 @@ export function tapTimeAttack(
     : 0;
 
   const cleared = isFinished(game);
-  const clearMs = cleared ? boardReward(s.boardsCleared, time) : 0;
+  const clearMs = cleared
+    ? boardReward(antes.boardsCleared, before.level.board, time)
+    : 0;
   const gainedMs = comboMs + bigMs + clearMs;
+
+  // `moved` garante que há jogada; o `?? []` é só para o compilador.
+  const jogada = game.lastMove ?? [];
+  const desarmou = saiNaJogada(antes.bomba, jogada);
 
   return {
     state: {
-      ...s,
+      ...antes,
       game,
       combo: event.state,
-      score: s.score + gainedScore,
-      boardsCleared: s.boardsCleared + (cleared ? 1 : 0),
-      deadlineAt: s.deadlineAt + gainedMs,
+      score: antes.score + gainedScore,
+      boardsCleared: antes.boardsCleared + (cleared ? 1 : 0),
+      deadlineAt: antes.deadlineAt + gainedMs,
+      bomba: desarmou ? undefined : seguirBomba(antes.bomba, before.board, jogada),
     },
     moved: true,
     gainedScore,
     gainedMs,
     cleared,
+    perdidoMs: bomba.perdidoMs,
+    penalizado: false,
+    rebentou: bomba.rebentou,
+    desarmou,
   };
 }
 
@@ -347,6 +611,8 @@ export function tapTimeAttack(
  *
  * O combo **não** atravessa tabuleiros: o intervalo entre a última jogada de um
  * e a primeira do seguinte inclui a transição, que não é ritmo do jogador.
+ *
+ * O tabuleiro chega sem bomba. Armá-la é `armarBomba`, à parte.
  */
 export function nextBoard(
   s: TimeAttackState,
@@ -358,6 +624,7 @@ export function nextBoard(
     ...s,
     game: startGame(level),
     combo: breakCombo(s.combo),
+    bomba: undefined,
   };
 }
 

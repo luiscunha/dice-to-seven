@@ -36,6 +36,7 @@ import type { PieceMove } from "../session/transition";
 import { midpointOf, transition } from "../session/transition";
 import type { ModoFace } from "./dice";
 import { criarPeca, desenharFace, marcaDeJoker } from "./dice";
+import { reanimar } from "./dom";
 
 /** Lado máximo de uma peça. Acima disto o tabuleiro fica esparso e estranho. */
 const LADO_MAX = 72;
@@ -81,6 +82,43 @@ const MARGEM_DA_QUEDA = 60;
  * documento fariam o leitor de ecrã anunciar a peça errada.
  */
 let idsDePeca = 0;
+
+/** O que o leitor de ecrã acrescenta ao nome de uma peça com bomba. */
+const SUFIXO_BOMBA = ", bomba";
+
+/**
+ * O pavio da bomba: um mostrador redondo no canto da peça, que se esvazia.
+ *
+ * Escondido do leitor de ecrã — o número muda a cada segundo, e anunciá-lo era
+ * ruído. A peça diz que tem bomba no próprio nome; ver `marcarBomba`.
+ */
+function criarPavio(): HTMLElement {
+  const el = document.createElement("span");
+  el.className = "pavio";
+  el.setAttribute("aria-hidden", "true");
+  return el;
+}
+
+/**
+ * Um efeito que corre uma vez e **sai** quando acaba.
+ *
+ * Deixar a classe depois da animação parecia inofensivo, e não era: o estalo e o
+ * abanão são duas regras `animation` com a mesma especificidade, e a que vem
+ * depois no CSS ganha. Uma peça que já tinha rebentado ficava com o estalo
+ * agarrado, e um toque errado nela deixava de abanar.
+ */
+function efeito(el: HTMLElement, classe: string): void {
+  reanimar(el, classe);
+
+  // Sem `once`: o `animationend` borbulha, e no tabuleiro o fim do abanão de
+  // uma peça chegava primeiro e gastava o ouvinte sem tirar a classe.
+  const fim = (ev: AnimationEvent): void => {
+    if (ev.target !== el) return;
+    el.classList.remove(classe);
+    el.removeEventListener("animationend", fim);
+  };
+  el.addEventListener("animationend", fim);
+}
 
 export interface OpcoesBoardView {
   readonly aoTocar: (p: Packed) => void;
@@ -143,6 +181,10 @@ export class BoardView {
 
   /** A linha de fogo, quando o modo a pede. Ver `marcarTeto`. */
   private teto: HTMLElement | undefined;
+
+  /** A peça com a bomba, e o pavio que lhe está pendurado. Ver `marcarBomba`. */
+  private pecaBomba: HTMLElement | undefined;
+  private pavio: HTMLElement | undefined;
 
   /**
    * O cursor do teclado: a peça onde o Enter toca.
@@ -226,6 +268,8 @@ export class BoardView {
 
     this.board = board;
     this.pecas = new Map();
+    // A peça da bomba foi-se com as outras. Quem a quiser arma-a no novo.
+    this.pecaBomba = undefined;
     this.grelha.replaceChildren();
 
     const largura = width(board);
@@ -560,6 +604,102 @@ export class BoardView {
   marcarSugestao(grupo: readonly Packed[] | undefined): void {
     for (const el of this.pecas.values()) el.classList.remove("sugerida");
     for (const p of grupo ?? []) this.pecas.get(p)?.classList.add("sugerida");
+  }
+
+  /**
+   * A peça-bomba do Contra-Relógio, com o pavio a arder.
+   *
+   * `fracao` é o pavio que resta, de 1 a 0; `segundos` é o mesmo em segundos
+   * inteiros, para o número dentro do pavio.
+   *
+   * ── Chama-se a cada tique, e tem de ser barato ──
+   *
+   * O ecrã repinta isto dez vezes por segundo. A classe e o pavio só mudam de
+   * peça quando a bomba muda de peça, e o número só se reescreve quando muda de
+   * segundo — o resto é uma variável de CSS.
+   *
+   * Como a casca do gelo, a marca vive **na própria peça**: depois de uma
+   * jogada a peça cai ou desliza, e a bomba vai com ela sem ninguém a mover.
+   *
+   * O pavio é um filho da peça e não um pseudo-elemento. O `::before` é do gelo
+   * e o `::after` é das soldas, e um modo que um dia junte as três coisas não
+   * pode descobrir isso por uma bomba que apaga uma solda.
+   */
+  marcarBomba(
+    p: Packed | undefined,
+    fracao = 1,
+    segundos = 0,
+  ): void {
+    const el = p === undefined ? undefined : this.pecas.get(p);
+
+    if (el !== this.pecaBomba) {
+      const antiga = this.pecaBomba;
+      if (antiga !== undefined) {
+        antiga.classList.remove("bomba", "a-rebentar");
+        antiga.style.removeProperty("--pavio");
+        const nome = antiga.getAttribute("aria-label") ?? "";
+        if (nome.endsWith(SUFIXO_BOMBA)) {
+          antiga.setAttribute("aria-label", nome.slice(0, -SUFIXO_BOMBA.length));
+        }
+      }
+      this.pavio?.remove();
+      this.pecaBomba = el;
+
+      if (el !== undefined) {
+        el.setAttribute("aria-label", `${el.getAttribute("aria-label") ?? ""}${SUFIXO_BOMBA}`);
+      }
+    }
+
+    if (el === undefined) return;
+
+    el.classList.add("bomba");
+    el.classList.toggle("a-rebentar", fracao <= 1 / 3);
+    el.style.setProperty("--pavio", fracao.toFixed(3));
+
+    // `desenharFace` apaga os filhos, e o modo de face pode mudar a meio da
+    // corrida: o pavio volta a entrar se tiver sido levado.
+    const pavio = (this.pavio ??= criarPavio());
+    if (pavio.parentElement !== el) el.appendChild(pavio);
+
+    const texto = String(segundos);
+    if (pavio.textContent !== texto) pavio.textContent = texto;
+  }
+
+  /**
+   * A bomba saiu numa jogada: o pavio apaga-se em vez de arder até ao fim.
+   *
+   * Chama-se **antes** de `aplicarJogada`, enquanto a peça ainda está no
+   * tabuleiro — é na saída dela que o jogador tem de ver que a desarmou.
+   */
+  desarmarBomba(): void {
+    this.pecaBomba?.classList.add("desarmada");
+    if (this.pavio !== undefined) this.pavio.textContent = "✓";
+    this.pecaBomba = undefined;
+  }
+
+  /**
+   * A bomba rebentou: a peça estala e o tabuleiro estremece.
+   *
+   * A peça **fica** — perder tempo é o castigo, e tirar-lhe a peça deixava o
+   * tabuleiro sem solução. Por isso o efeito é curto e volta ao repouso: é um
+   * acontecimento, não um estado novo da peça.
+   *
+   * O abanão é do tabuleiro e não das peças: as peças têm `transform` próprio, a
+   * posição, e um abanão nele lutava com a gravidade. O tabuleiro só tem o
+   * `translate`, e com `prefers-reduced-motion` o CSS tira-o.
+   */
+  rebentarBomba(p: Packed): void {
+    const el = this.pecas.get(p);
+
+    this.marcarBomba(undefined);
+    if (el !== undefined) efeito(el, "rebentou");
+    efeito(this.grelha, "abanao");
+  }
+
+  /** A peça recusou o toque: abana, como quem diz que não. */
+  recusarPeca(p: Packed): void {
+    const el = this.pecas.get(p);
+    if (el !== undefined) efeito(el, "recusada");
   }
 
   trocarModoFace(modo: ModoFace): void {

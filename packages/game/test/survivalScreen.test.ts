@@ -9,13 +9,18 @@
  * aconteceu a testar no browser.
  */
 
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Board } from "@dicetoseven/engine";
-import { findAllGroups } from "@dicetoseven/engine";
+import { findAllGroups, packed } from "@dicetoseven/engine";
 
 import type { CorridaGuardada } from "../src/session/corridaSurvival";
-import { DEFAULT_SURVIVAL, startSurvival } from "../src/session/SurvivalSession";
+import type { SurvivalState } from "../src/session/SurvivalSession";
+import {
+  DEFAULT_SURVIVAL,
+  bombaNaFila,
+  startSurvival,
+} from "../src/session/SurvivalSession";
 import { SurvivalScreen } from "../src/ui/SurvivalScreen";
 
 const SEED = 424242;
@@ -570,5 +575,107 @@ describe("a caixa de fim de corrida", () => {
     expect(caixa()?.textContent).not.toContain("Seed");
 
     ecra.destruir();
+  });
+});
+
+describe("a bomba no ecrã do Survival", () => {
+  let host: HTMLElement;
+  let ecra: SurvivalScreen | undefined;
+
+  const pecas = (): number => host.querySelectorAll(".tabuleiro .peca").length;
+  const pavio = (): string | null | undefined =>
+    host.querySelector(".tabuleiro .peca.bomba .pavio")?.textContent;
+
+  /** Retoma uma corrida a meio, para o cronómetro já estar a andar. */
+  const abrir = (estado: SurvivalState, decorridoMs = 1_000): SurvivalScreen =>
+    new SurvivalScreen(host, {
+      seed: SEED,
+      retomar: { estado, decorridoMs },
+      melhorTempo: 0,
+      aoGuardar: () => undefined,
+      aoTerminar: () => undefined,
+      aoSair: () => undefined,
+      aoRecomecar: () => undefined,
+    });
+
+  /** O tabuleiro da seed, com uma bomba no canto e a linha marcada longe. */
+  const comBomba = (rebentaEm: number): SurvivalState => ({
+    ...startSurvival(SEED),
+    bomba: { at: packed(0, 0), rebentaEm },
+    proximaLinhaMs: 60_000,
+  });
+
+  const esconder = (estado: "hidden" | "visible"): void => {
+    Object.defineProperty(document, "visibilityState", {
+      value: estado,
+      configurable: true,
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+  };
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+    document.body.replaceChildren();
+    host = document.createElement("div");
+    document.body.appendChild(host);
+  });
+
+  afterEach(() => {
+    ecra?.destruir();
+    ecra = undefined;
+    esconder("visible");
+    vi.useRealTimers();
+  });
+
+  it("a fila mostra a bomba antes de ela cair, na coluna onde vai aterrar", () => {
+    const s: SurvivalState = {
+      ...startSurvival(SEED),
+      linhasDesdeBomba: DEFAULT_SURVIVAL.linhasEntreBombas,
+    };
+    ecra = abrir(s);
+
+    const coluna = bombaNaFila(s);
+    const naFila = host.querySelectorAll(".fila .peca");
+
+    expect(host.querySelectorAll(".fila .peca.bomba")).toHaveLength(1);
+    expect(naFila[coluna ?? -1]?.classList.contains("bomba")).toBe(true);
+  });
+
+  it("o pavio arde no tabuleiro, no tempo da corrida", () => {
+    ecra = abrir(comBomba(11_000));
+    expect(pavio()).toBe("10");
+
+    vi.advanceTimersByTime(3_100);
+    expect(pavio()).toBe("7");
+  });
+
+  it("**rebentar faz cair uma linha a mais**, e o «+1 linha» diz porquê", async () => {
+    ecra = abrir(comBomba(2_000));
+    const antes = pecas();
+
+    await vi.advanceTimersByTimeAsync(1_100);
+
+    expect(pecas()).toBe(antes + DEFAULT_SURVIVAL.largura);
+    expect(host.querySelector(".ganho.perda.grande")?.textContent).toBe("+1 linha");
+    expect(host.querySelector(".tabuleiro .peca.bomba")).toBeNull();
+  });
+
+  /*
+   * A razão de o pavio estar no tempo da corrida e não nas horas: sair da
+   * aplicação a meio não pode deixar a bomba a arder sozinha.
+   */
+  it("**o pavio pára com a pausa**", () => {
+    ecra = abrir(comBomba(11_000));
+    vi.advanceTimersByTime(2_000);
+    expect(pavio()).toBe("8");
+
+    esconder("hidden");
+    vi.advanceTimersByTime(60_000);
+    esconder("visible");
+    vi.advanceTimersByTime(100);
+
+    expect(pavio()).toBe("8");
+    expect(pecas()).toBe(DEFAULT_SURVIVAL.largura * DEFAULT_SURVIVAL.alturaInicial);
   });
 });

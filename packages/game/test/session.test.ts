@@ -9,7 +9,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import type { Board, Group, Level } from "@dicetoseven/engine";
+import type { Board, Cell, Group, Level } from "@dicetoseven/engine";
 import { boardKey, mulberry32, packed } from "@dicetoseven/engine";
 
 import {
@@ -31,16 +31,22 @@ import {
   undoPuzzle,
   usePuzzleHint,
 } from "../src/session/PuzzleSession";
+import type { TimeAttackState } from "../src/session/TimeAttackSession";
 import {
   DEFAULT_TIME_ATTACK,
   DEGRAUS,
   JokerInTimeAttackError,
+  armarBomba,
   boardReward,
   escadaDeTamanho,
+  jogadasDe,
   nivelDoTabuleiro,
   isOver,
   nextBoard,
+  pavioRestante,
   remainingMs,
+  resolverBomba,
+  ritmoExigido,
   startTimeAttack,
   tapTimeAttack,
 } from "../src/session/TimeAttackSession";
@@ -591,22 +597,276 @@ describe("TimeAttackSession (plano §6.3)", () => {
     expect(r.state.deadlineAt).toBeGreaterThan(prazo);
   });
 
-  it("o prémio por tabuleiro decresce, e tem piso", () => {
-    expect(boardReward(0)).toBeGreaterThan(boardReward(1));
-    expect(boardReward(999)).toBe(DEFAULT_TIME_ATTACK.minPerBoardMs);
+  it("um tabuleiro leva sempre soma / 7 jogadas", () => {
+    expect(jogadasDe(BOARD)).toBe(1);
+    expect(jogadasDe([[1, 6], [2, 5], [3, 4]])).toBe(3);
+  });
+
+  it("o prémio é jogadas × ritmo exigido", () => {
+    const seis: Board = [[1, 6], [2, 5], [3, 4], [1, 6], [2, 5], [3, 4]];
+
+    expect(boardReward(0, seis)).toBe(6 * DEFAULT_TIME_ATTACK.ritmoInicialMs);
+    expect(boardReward(5, seis)).toBe(Math.round(6 * ritmoExigido(5)));
+  });
+
+  it("limpar o primeiro tabuleiro devolve exatamente o seu prémio", () => {
+    let s = startTimeAttack(level(BOARD), 0);
+    const prazo = s.deadlineAt;
+
+    s = tapTimeAttack(s, packed(0, 0), 0).state;
+    s = tapTimeAttack(s, packed(0, 1), 10).state;
+    const r = tapTimeAttack(s, packed(1, 0), 20);
+
+    // Uma jogada só: não há combo, e o prémio é uma jogada ao ritmo inicial.
+    expect(r.gainedMs).toBe(boardReward(0, BOARD));
+    expect(r.state.deadlineAt).toBe(prazo + boardReward(0, BOARD));
   });
 
   /*
-   * O decaimento e a escada de tamanho aterram no mesmo tabuleiro: o prémio
-   * chega ao piso quando o tabuleiro para de crescer. Não é coincidência nem
-   * afinação — é a relação que dá sentido aos dois, e um teste é o único sítio
-   * onde ela não se perde quando alguém mexer num dos números.
+   * O defeito que isto corrige: o prémio tinha piso, e o piso era um ponto de
+   * equilíbrio. Quem jogava abaixo dele nunca perdia. A escada de tamanho para
+   * no sexto degrau — não há tabuleiros maiores para gerar — mas o ritmo tem de
+   * continuar a apertar depois dela, senão a corrida volta a ter um patamar.
    */
-  it("**o piso do prémio chega no último degrau da escada**, nem antes nem depois", () => {
-    expect(boardReward(DEGRAUS - 2)).toBeGreaterThan(
-      DEFAULT_TIME_ATTACK.minPerBoardMs,
-    );
-    expect(boardReward(DEGRAUS - 1)).toBe(DEFAULT_TIME_ATTACK.minPerBoardMs);
+  it("**o ritmo exigido aperta a cada tabuleiro, e nunca para** — nem depois da escada", () => {
+    for (let n = 0; n < 200; n++) {
+      expect(ritmoExigido(n + 1)).toBeLessThan(ritmoExigido(n));
+    }
+    expect(ritmoExigido(DEGRAUS + 10)).toBeLessThan(ritmoExigido(DEGRAUS));
+  });
+
+  /*
+   * O combo devolvia `(n − 1) × 750ms` por jogada, sem teto: num encadeamento
+   * longo pagava a corrida sozinho.
+   */
+  it("o tempo do combo tem teto por jogada", () => {
+    const pares = level(Array.from({ length: 8 }, (): Cell[] => [1, 6]));
+    let s = startTimeAttack(pares, 0);
+    const ganhos: number[] = [];
+
+    for (let k = 0; k < 8; k++) {
+      s = tapTimeAttack(s, packed(0, 0), k * 1000).state;
+      const r = tapTimeAttack(s, packed(0, 1), k * 1000 + 500);
+      s = r.state;
+      if (!r.cleared) ganhos.push(r.gainedMs);
+    }
+
+    expect(Math.max(...ganhos)).toBe(DEFAULT_TIME_ATTACK.comboTetoMs);
+  });
+
+  /*
+   * A propriedade que importa, medida pelo caminho todo: um jogador
+   * impossivelmente rápido — uma jogada por segundo, sempre em combo — acaba
+   * por perder. Com o prémio antigo, esta corrida não acabava.
+   */
+  it("**nenhum ritmo aguenta para sempre**: a 1s por jogada, a corrida acaba", () => {
+    const pares = level(Array.from({ length: 6 }, (): Cell[] => [1, 6]));
+    let s = startTimeAttack(pares, 0);
+    let agora = 0;
+
+    while (!isOver(s, agora) && s.boardsCleared < 1000) {
+      s = tapTimeAttack(s, packed(0, 0), agora).state;
+      agora += 500;
+      const r = tapTimeAttack(s, packed(0, 1), agora);
+      agora += 500;
+      s = r.cleared ? nextBoard(r.state, pares) : r.state;
+    }
+
+    expect(isOver(s, agora)).toBe(true);
+    expect(s.boardsCleared).toBeLessThan(1000);
+    // E vai bem além da escada: acaba por causa do ritmo, não do tamanho.
+    expect(s.boardsCleared).toBeGreaterThan(DEGRAUS * 5);
+  });
+
+  describe("passar de 7 custa tempo", () => {
+    /** 5+2 e 3+4, em colunas soltas: o 5 seguido do 3 passa de 7. */
+    const QUATRO: Board = [[5], [3], [4], [2]];
+
+    it("um toque que passaria de 7 tira tempo e quebra o combo", () => {
+      let s = startTimeAttack(level(QUATRO), 0);
+      s = { ...s, combo: { count: 3, best: 3, lastMoveAt: 0 } };
+      s = tapTimeAttack(s, packed(0, 0), 100).state;
+
+      const r = tapTimeAttack(s, packed(1, 0), 200);
+
+      expect(r.penalizado).toBe(true);
+      expect(r.perdidoMs).toBe(DEFAULT_TIME_ATTACK.penalizacaoMs);
+      expect(r.state.deadlineAt).toBe(s.deadlineAt - DEFAULT_TIME_ATTACK.penalizacaoMs);
+      expect(r.state.combo.count).toBe(0);
+      // A recusa não mexe na seleção: o 5 continua lá, à espera do 2.
+      expect(r.state.game.selection).toEqual([packed(0, 0)]);
+    });
+
+    it("cada toque errado custa outra vez", () => {
+      let s = startTimeAttack(level(QUATRO), 0);
+      s = tapTimeAttack(s, packed(0, 0), 0).state;
+      const prazo = s.deadlineAt;
+
+      s = tapTimeAttack(s, packed(1, 0), 10).state;
+      s = tapTimeAttack(s, packed(2, 0), 20).state;
+
+      expect(s.deadlineAt).toBe(prazo - 2 * DEFAULT_TIME_ATTACK.penalizacaoMs);
+    });
+
+    it("tirar uma peça da seleção, ou tocar fora das peças, não custa nada", () => {
+      let s = startTimeAttack(level(QUATRO), 0);
+      const prazo = s.deadlineAt;
+
+      s = tapTimeAttack(s, packed(0, 0), 0).state;
+      const fora = tapTimeAttack(s, packed(0, 0), 10);
+      const vazio = tapTimeAttack(fora.state, packed(9, 9), 20);
+
+      expect(fora.penalizado).toBe(false);
+      expect(vazio.penalizado).toBe(false);
+      expect(vazio.state.deadlineAt).toBe(prazo);
+    });
+  });
+});
+
+describe("a peça-bomba", () => {
+  /** 3+4 numa base comum; o 5 em cima do 3 não entra em grupo nenhum. */
+  const TORRE: Board = [[3, 4, 5], [4], [2]];
+
+  const sempre = {
+    ...DEFAULT_TIME_ATTACK,
+    bomba: { ...DEFAULT_TIME_ATTACK.bomba, probabilidade: 1 },
+  };
+
+  /** Uma corrida já com tabuleiros limpos que cheguem para haver bomba. */
+  const elegivel = (board: Board, now = 0): TimeAttackState => ({
+    ...startTimeAttack(level(board), now),
+    boardsCleared: DEFAULT_TIME_ATTACK.bomba.desdeTabuleiro,
+  });
+
+  const armada = (board: Board, at: number, rebentaEm: number): TimeAttackState => ({
+    ...elegivel(board),
+    bomba: { at, rebentaEm },
+  });
+
+  it("não aparece nos primeiros tabuleiros", () => {
+    const s = startTimeAttack(level(TORRE), 0);
+    expect(armarBomba(s, 0, mulberry32(1), sempre).bomba).toBeUndefined();
+  });
+
+  it("com probabilidade zero, nunca aparece", () => {
+    const nunca = {
+      ...DEFAULT_TIME_ATTACK,
+      bomba: { ...DEFAULT_TIME_ATTACK.bomba, probabilidade: 0 },
+    };
+    for (let seed = 0; seed < 50; seed++) {
+      expect(armarBomba(elegivel(TORRE), 0, mulberry32(seed), nunca).bomba).toBeUndefined();
+    }
+  });
+
+  it("arma com o pavio a contar a partir de agora", () => {
+    const s = armarBomba(elegivel(TORRE, 1000), 1000, mulberry32(1), sempre);
+
+    expect(s.bomba?.rebentaEm).toBe(1000 + DEFAULT_TIME_ATTACK.bomba.pavioMs);
+    expect(pavioRestante(s, 1000)).toBe(DEFAULT_TIME_ATTACK.bomba.pavioMs);
+  });
+
+  /*
+   * Uma bomba numa peça sem parceiro à vista seria uma penalização garantida, e
+   * não uma prioridade. Em `[[6], [6], [1]]` o primeiro 6 não tem com quem
+   * somar 7.
+   */
+  it("**só arma peças que se podem jogar já**", () => {
+    const vistas = new Set<number>();
+    for (let seed = 0; seed < 100; seed++) {
+      const s = armarBomba(elegivel([[6], [6], [1]]), 0, mulberry32(seed), sempre);
+      if (s.bomba !== undefined) vistas.add(s.bomba.at);
+    }
+
+    expect(vistas).toEqual(new Set([packed(1, 0), packed(2, 0)]));
+  });
+
+  it("a mesma seed arma sempre a mesma peça", () => {
+    const a = armarBomba(elegivel(TORRE), 0, mulberry32(42), sempre);
+    const b = armarBomba(elegivel(TORRE), 0, mulberry32(42), sempre);
+    expect(a.bomba).toEqual(b.bomba);
+  });
+
+  it("antes do fim do pavio não acontece nada", () => {
+    const s = armada(TORRE, packed(0, 0), 5000);
+    const r = resolverBomba(s, 4999);
+
+    expect(r.rebentou).toBeUndefined();
+    expect(r.state).toBe(s);
+  });
+
+  it("ao fim do pavio rebenta: tira tempo, quebra o combo, e a peça fica", () => {
+    let s = armada(TORRE, packed(0, 0), 5000);
+    s = { ...s, combo: { count: 4, best: 4, lastMoveAt: 4000 } };
+
+    const r = resolverBomba(s, 5000);
+
+    expect(r.rebentou).toBe(packed(0, 0));
+    expect(r.perdidoMs).toBe(DEFAULT_TIME_ATTACK.bomba.penalizacaoMs);
+    expect(r.state.bomba).toBeUndefined();
+    expect(r.state.deadlineAt).toBe(s.deadlineAt - DEFAULT_TIME_ATTACK.bomba.penalizacaoMs);
+    expect(r.state.combo.count).toBe(0);
+    // A peça não sai: sem ela a soma deixava de dar múltiplo de 7.
+    expect(r.state.game.board).toBe(s.game.board);
+  });
+
+  it("um toque depois do fim do pavio já não desarma", () => {
+    let s = armada(TORRE, packed(0, 0), 5000);
+    s = tapTimeAttack(s, packed(0, 0), 4000).state;
+
+    const r = tapTimeAttack(s, packed(1, 0), 6000);
+
+    expect(r.moved).toBe(true);
+    expect(r.desarmou).toBe(false);
+    expect(r.rebentou).toBe(packed(0, 0));
+    expect(r.perdidoMs).toBe(DEFAULT_TIME_ATTACK.bomba.penalizacaoMs);
+  });
+
+  it("sair numa jogada desarma-a, e depois disso já não rebenta", () => {
+    let s = armada(TORRE, packed(0, 0), 5000);
+    s = tapTimeAttack(s, packed(0, 0), 1000).state;
+    const r = tapTimeAttack(s, packed(1, 0), 2000);
+
+    expect(r.desarmou).toBe(true);
+    expect(r.state.bomba).toBeUndefined();
+    expect(resolverBomba(r.state, 99_999).rebentou).toBeUndefined();
+  });
+
+  /*
+   * Tirar o 3 de baixo e a coluna do 4 faz o 5 descer uma linha. A bomba tem
+   * de ir com ele — senão passava a ameaçar a peça que caiu para o sítio antigo.
+   */
+  it("**acompanha a peça na gravidade e no colapso**", () => {
+    let s = armada(TORRE, packed(0, 2), 50_000);
+    s = tapTimeAttack(s, packed(0, 0), 0).state;
+    const r = tapTimeAttack(s, packed(1, 0), 10);
+
+    expect(r.moved).toBe(true);
+    expect(r.desarmou).toBe(false);
+    expect(r.state.bomba?.at).toBe(packed(0, 1));
+    expect(r.state.game.board[0]?.[1]).toBe(5);
+  });
+
+  it("o tabuleiro seguinte chega sem bomba", () => {
+    const s = nextBoard(armada(TORRE, packed(0, 0), 5000), level(TORRE));
+    expect(s.bomba).toBeUndefined();
+  });
+
+  it("depois do fim da corrida já não rebenta", () => {
+    const s = armada(TORRE, packed(0, 0), 5000);
+    const r = resolverBomba(s, s.deadlineAt + 1);
+    expect(r.rebentou).toBeUndefined();
+  });
+
+  it("se rebentar leva o resto do relógio, o toque já não conta", () => {
+    const base = armada(TORRE, packed(0, 0), 5000);
+    let s = { ...base, deadlineAt: 8000 };
+    s = tapTimeAttack(s, packed(0, 0), 1000).state;
+
+    const r = tapTimeAttack(s, packed(1, 0), 6000);
+
+    expect(r.rebentou).toBe(packed(0, 0));
+    expect(r.moved).toBe(false);
+    expect(isOver(r.state, 6000)).toBe(true);
   });
 });
 

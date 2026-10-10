@@ -79,6 +79,19 @@ export function vibrarRecusa(): void {
   );
 }
 
+/**
+ * A bomba do Contra-Relógio rebentou.
+ *
+ * O padrão de erro, e não o de recusa: custa cinco segundos, mais do que três
+ * toques errados juntos, e o dedo tem de sentir a diferença sem olhar.
+ */
+export function vibrarExplosao(): void {
+  if (!podeVibrar()) return;
+  void Haptics.notification({ type: NotificationType.Error }).catch(
+    () => undefined,
+  );
+}
+
 /** O tabuleiro ficou limpo. */
 export function vibrarVitoria(): void {
   if (!podeVibrar()) return;

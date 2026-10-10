@@ -99,6 +99,8 @@ import {
   isEmpty,
   jokerAt,
   mulberry32,
+  packed,
+  pick,
   pushRow,
   randInt,
   tallestColumn,
@@ -106,6 +108,8 @@ import {
   weightedIndex,
 } from "@dicetoseven/engine";
 
+import type { Bomba } from "./bomba";
+import { pavioAcabou, saiNaJogada, seguirBomba } from "./bomba";
 import type { GameState, JokerValue } from "./GameSession";
 import { startGame, tap } from "./GameSession";
 import type { ScoringConfig } from "./scoring";
@@ -235,6 +239,29 @@ export interface SurvivalConfig {
    * não admite dois, e `pushRow` recusa-o.
    */
   readonly pecasPorJoker: number;
+
+  /**
+   * As linhas novas trazem bombas. Ver `trazBomba`.
+   *
+   * Desligável pela mesma razão que o joker: os testes de outras regras não
+   * podem depender de uma bomba que rebenta a meio deles.
+   */
+  readonly comBomba: boolean;
+  /**
+   * Linhas sem bomba entre duas que a trazem. Com 3, uma em cada quatro.
+   *
+   * Conta linhas e não tempo, e a diferença importa: puxar de vontade própria
+   * traz as bombas mais depressa. Quem compra espaço puxando também compra
+   * ameaças, e é essa a conta que o botão de puxar já pedia.
+   */
+  readonly linhasEntreBombas: number;
+  /**
+   * O pavio, em tempo de corrida, a contar de quando a linha aterra.
+   *
+   * Mais longo do que no Contra-Relógio (6s). Aqui a peça armada chega no topo
+   * da pilha, e o tabuleiro tem o dobro das peças onde procurar o parceiro.
+   */
+  readonly pavioBombaMs: number;
 }
 
 export const DEFAULT_SURVIVAL: SurvivalConfig = {
@@ -256,6 +283,9 @@ export const DEFAULT_SURVIVAL: SurvivalConfig = {
   pesos: [4, 3, 2, 1, 1, 1],
   comJoker: true,
   pecasPorJoker: 25,
+  comBomba: true,
+  linhasEntreBombas: 3,
+  pavioBombaMs: 10_000,
 };
 
 export interface SurvivalState {
@@ -290,6 +320,11 @@ export interface SurvivalState {
 
   readonly morto: boolean;
   readonly seed: number;
+
+  /** A bomba armada no tabuleiro, se houver. Uma de cada vez. */
+  readonly bomba: Bomba | undefined;
+  /** Linhas entradas sem bomba desde a última que a trouxe. Ver `trazBomba`. */
+  readonly linhasDesdeBomba: number;
 }
 
 /* ─── A fila ──────────────────────────────────────────────────────────────── */
@@ -362,6 +397,65 @@ export const proximaLinha = (
   config: SurvivalConfig = DEFAULT_SURVIVAL,
 ): readonly Cell[] =>
   linhaDe(s.seed, s.linhasInjetadas, config, trazJoker(s, config));
+
+/* ─── A bomba ─────────────────────────────────────────────────────────────── */
+
+/**
+ * A linha seguinte traz bomba?
+ *
+ * **A bomba chega numa linha, e vê-se na fila antes de cair.** É a promessa do
+ * modo — o que se vê é o que se recebe — aplicada a ela: o jogador sabe com
+ * uma linha de avanço que peça vem armada e em que coluna, e pode preparar o
+ * sítio onde ela aterra. No Contra-Relógio a bomba arma-se numa peça já
+ * jogável; aqui não há essa garantia, e a fila é o que a substitui.
+ *
+ * O mesmo desenho do joker, e pela mesma razão: **uma de cada vez**. Enquanto
+ * houver bomba armada nenhuma linha traz outra, e o contador espera. É a mesma
+ * função que a fila e a injeção usam, portanto a bomba que se vê é a que cai.
+ */
+export const trazBomba = (
+  s: SurvivalState,
+  config: SurvivalConfig = DEFAULT_SURVIVAL,
+): boolean =>
+  config.comBomba &&
+  s.bomba === undefined &&
+  s.linhasDesdeBomba >= config.linhasEntreBombas;
+
+/**
+ * Sal da seed da bomba. A coluna sai de um gerador **à parte** do da linha: se
+ * partilhassem o gerador, sortear a coluna da bomba mudava as faces que se
+ * sorteiam a seguir, e uma linha com bomba seria outra linha.
+ */
+const SAL_BOMBA = 0x0b0b0;
+
+/**
+ * Em que coluna da linha `i` vai a bomba, se a linha a trouxer.
+ *
+ * Pura na seed e no índice, como a linha — e nunca no joker: uma bomba no joker
+ * obrigava a escolher o valor dele à pressa, e o joker existe para ser
+ * pensado.
+ */
+export function colunaDaBomba(
+  seed: number,
+  i: number,
+  linha: readonly Cell[],
+): number | undefined {
+  const rng = mulberry32(deriveSeed(seed ^ SAL_BOMBA, i));
+  const candidatas: number[] = [];
+  linha.forEach((v, c) => {
+    if (v !== JOKER) candidatas.push(c);
+  });
+  return pick(rng, candidatas);
+}
+
+/** A coluna da bomba na linha da fila, ou `undefined` se ela não trouxer. */
+export const bombaNaFila = (
+  s: SurvivalState,
+  config: SurvivalConfig = DEFAULT_SURVIVAL,
+): number | undefined =>
+  trazBomba(s, config)
+    ? colunaDaBomba(s.seed, s.linhasInjetadas, proximaLinha(s, config))
+    : undefined;
 
 /* ─── Leituras ────────────────────────────────────────────────────────────── */
 
@@ -467,6 +561,8 @@ export function startSurvival(
     jogadasComBonus: 0,
     morto: false,
     seed,
+    bomba: undefined,
+    linhasDesdeBomba: 0,
   };
 }
 
@@ -513,7 +609,21 @@ export function injectRow(
     : { multiplicador: s.multiplicador, jogadasComBonus: s.jogadasComBonus };
 
   const comJoker = trazJoker(s, config);
+  const colBomba = bombaNaFila(s, config);
   const board = pushRow(s.game.board, proximaLinha(s, config));
+
+  /*
+   * A peça armada é a da linha que acabou de entrar: o topo da sua coluna.
+   * Entrar por cima não mexe em mais nada, portanto uma bomba que já lá
+   * estivesse continuaria na mesma coordenada — mas não está, por `trazBomba`.
+   */
+  const bomba: Bomba | undefined =
+    colBomba === undefined
+      ? s.bomba
+      : {
+          at: packed(colBomba, (board[colBomba]?.length ?? 1) - 1),
+          rebentaEm: agoraMs + config.pavioBombaMs,
+        };
 
   const seguinte: SurvivalState = {
     ...comTabuleiro(s, board),
@@ -529,6 +639,9 @@ export function injectRow(
       : s.pecasDesdeJoker + larguraNoIndice(s.linhasInjetadas, config),
     morto: tallestColumn(board) > config.alturaMaxima,
     proximaLinhaMs: s.proximaLinhaMs,
+    bomba,
+    // Conta as linhas que **podiam** ter trazido bomba e não trouxeram.
+    linhasDesdeBomba: colBomba === undefined ? s.linhasDesdeBomba + 1 : 0,
   };
 
   // A cadência lê-se **depois** de a linha entrar: é ela que conta para o degrau.
@@ -556,12 +669,50 @@ export function avancarRelogio(
   s: SurvivalState,
   agoraMs: number,
   config: SurvivalConfig = DEFAULT_SURVIVAL,
-): { readonly state: SurvivalState; readonly caiu: boolean } {
-  if (s.morto || s.limpo || agoraMs < s.proximaLinhaMs) {
-    return { state: s, caiu: false };
+): {
+  readonly state: SurvivalState;
+  readonly caiu: boolean;
+  /** A linha caiu porque a bomba rebentou, e a bomba estava aqui. */
+  readonly rebentou: Packed | undefined;
+} {
+  if (s.morto || s.limpo) {
+    return { state: s, caiu: false, rebentou: undefined };
   }
 
-  return { state: injectRow(s, false, config, agoraMs), caiu: true };
+  /*
+   * ── A bomba rebenta: cai uma linha **a mais** ──
+   *
+   * A mais, e não a próxima antecipada. Antecipar a próxima fazia o castigo
+   * depender da sorte: uma bomba que rebentasse a um segundo da linha marcada
+   * não custava quase nada, e quem desse por isso deixava de se preocupar com
+   * bombas perto do fim da contagem. Uma linha extra custa sempre o mesmo, e o
+   * prazo da linha marcada fica onde estava.
+   *
+   * Vem antes da linha marcada, se as duas vencerem juntas. Cai no máximo uma
+   * linha por chamada, como sempre: a marcada cai no tique seguinte.
+   *
+   * A peça da bomba fica no tabuleiro. Ver `bomba.ts`.
+   */
+  if (pavioAcabou(s.bomba, agoraMs)) {
+    const rebentou = s.bomba?.at;
+    const comLinha = injectRow({ ...s, bomba: undefined }, false, config, agoraMs);
+
+    return {
+      state: { ...comLinha, proximaLinhaMs: s.proximaLinhaMs },
+      caiu: true,
+      rebentou,
+    };
+  }
+
+  if (agoraMs < s.proximaLinhaMs) {
+    return { state: s, caiu: false, rebentou: undefined };
+  }
+
+  return {
+    state: injectRow(s, false, config, agoraMs),
+    caiu: true,
+    rebentou: undefined,
+  };
 }
 
 /* ─── Jogada ──────────────────────────────────────────────────────────────── */
@@ -573,6 +724,8 @@ export interface SurvivalTap {
   readonly gainedScore: number;
   /** A jogada esvaziou o tabuleiro. */
   readonly cleared: boolean;
+  /** A jogada levou a bomba consigo. */
+  readonly desarmou: boolean;
 }
 
 const parado = (s: SurvivalState): SurvivalTap => ({
@@ -580,6 +733,7 @@ const parado = (s: SurvivalState): SurvivalTap => ({
   moved: false,
   gainedScore: 0,
   cleared: false,
+  desarmou: false,
 });
 
 /**
@@ -627,6 +781,10 @@ export function survivalTap(
 
   const restantes = comBonus ? s.jogadasComBonus - 1 : 0;
 
+  // `jogou` garante que há jogada; o `?? []` é só para o compilador.
+  const jogada = game.lastMove ?? [];
+  const desarmou = saiNaJogada(s.bomba, jogada);
+
   /*
    * **Limpar o tabuleiro acaba a corrida**, e acaba-a bem. É o objetivo do modo:
    * o relógio corre até lá, e o tempo é a marca. `avancarRelogio` vê o `limpo`
@@ -640,6 +798,7 @@ export function survivalTap(
     limpo: limpou,
     jogadasComBonus: restantes,
     multiplicador: restantes > 0 ? s.multiplicador : 1,
+    bomba: desarmou ? undefined : seguirBomba(s.bomba, antes.board, jogada),
   };
 
   return {
@@ -647,6 +806,7 @@ export function survivalTap(
     moved: true,
     gainedScore: ganho,
     cleared: limpou,
+    desarmou,
   };
 }
 

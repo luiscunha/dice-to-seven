@@ -43,6 +43,9 @@ export {
 } from "./session/PuzzleSession";
 
 export type {
+  Bomba,
+  ConfigBomba,
+  Rebentamento,
   TimeAttackConfig,
   TimeAttackConfigs,
   TimeAttackState,
@@ -51,10 +54,15 @@ export type {
 export {
   DEFAULT_TIME_ATTACK,
   JokerInTimeAttackError,
+  armarBomba,
   boardReward,
   isOver,
+  jogadasDe,
   nextBoard,
+  pavioRestante,
   remainingMs,
+  resolverBomba,
+  ritmoExigido,
   startTimeAttack,
   tapTimeAttack,
 } from "./session/TimeAttackSession";

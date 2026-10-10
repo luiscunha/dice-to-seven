@@ -142,3 +142,61 @@ describe("ler nunca falha", () => {
     expect(lerCorrida(s)).toBeUndefined();
   });
 });
+
+describe("a bomba sobrevive à pausa", () => {
+  /*
+   * O pavio está no relógio da corrida, e o decorrido grava-se com ela: quem
+   * sai com seis segundos de pavio volta com seis segundos de pavio.
+   */
+  it("uma corrida com bomba armada volta com ela", () => {
+    const s = memoria();
+    const estado: SurvivalState = {
+      ...emJogo(),
+      bomba: { at: 0, rebentaEm: 20_000 },
+      linhasDesdeBomba: 0,
+    };
+
+    guardarCorrida(s, { estado, decorridoMs: 14_000 });
+    const lida = lerCorrida(s);
+
+    expect(lida?.estado.bomba).toEqual({ at: 0, rebentaEm: 20_000 });
+    expect(lida?.decorridoMs).toBe(14_000);
+  });
+
+  /*
+   * Quem tinha uma corrida a meio quando as bombas entraram não a perde. O
+   * estado antigo não traz os campos, e o valor certo para ele é exatamente
+   * «sem bomba, contador a zero».
+   */
+  it("uma corrida gravada antes das bombas abre sem bomba e com o contador a zero", () => {
+    const s = memoria();
+    const { bomba: _b, linhasDesdeBomba: _l, ...antigo } = emJogo();
+
+    s.setItem(
+      CORRIDA_KEY,
+      JSON.stringify({
+        version: CORRIDA_VERSION,
+        corrida: { estado: antigo, decorridoMs: 5_000 },
+      }),
+    );
+    const lida = lerCorrida(s);
+
+    expect(lida).toBeDefined();
+    expect(lida?.estado.bomba).toBeUndefined();
+    expect(lida?.estado.linhasDesdeBomba).toBe(0);
+  });
+
+  it("uma bomba que aponta para fora do tabuleiro perde-se — a corrida não", () => {
+    const s = memoria();
+    const estado: SurvivalState = {
+      ...emJogo(),
+      bomba: { at: 63, rebentaEm: 20_000 },
+    };
+
+    guardarCorrida(s, { estado, decorridoMs: 1_000 });
+    const lida = lerCorrida(s);
+
+    expect(lida).toBeDefined();
+    expect(lida?.estado.bomba).toBeUndefined();
+  });
+});
