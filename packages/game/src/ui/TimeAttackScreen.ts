@@ -26,20 +26,27 @@ import type {
 } from "../session/TimeAttackSession";
 import {
   DEFAULT_TIME_ATTACK,
+  armarBomba,
   escadaDeTamanho,
   isOver,
   nextBoard,
   nivelDoTabuleiro,
+  pavioRestante,
   remainingMs,
+  resolverBomba,
   startTimeAttack,
   tapTimeAttack,
 } from "../session/TimeAttackSession";
+import { vibrarExplosao, vibrarRecusa } from "../plataforma/nativo";
 import { BoardView } from "./BoardView";
-import { botao, botaoRedondo, confirmar, elemento } from "./dom";
+import { botao, botaoRedondo, confirmar, elemento, reanimar } from "./dom";
 import { iconeReiniciar, iconeVoltar } from "./icones";
 
 /** De quanto em quanto o relógio se repinta. Décimos chegam, e custam pouco. */
 const PASSO_RELOGIO = 100;
+
+/** `1500` → `1.5s`, como o relógio e os anúncios o escrevem. */
+const segundos = (ms: number): string => `${(ms / 1000).toFixed(1)}s`;
 
 export interface OpcoesTimeAttack {
   readonly niveis: readonly Level[];
@@ -60,6 +67,14 @@ export interface OpcoesTimeAttack {
    * generoso é número de playtest — daí ser uma definição e não uma constante.
    */
   readonly tempoInicial: number;
+  /**
+   * A economia da corrida, por cima dos valores de partida. O tempo de arranque
+   * continua a vir de `tempoInicial`.
+   *
+   * Existe para os testes poderem armar uma bomba logo no primeiro tabuleiro,
+   * sem esperar por três tabuleiros limpos e por um sorteio a favor.
+   */
+  readonly afinacao?: Partial<Omit<TimeAttackConfig, "initialMs">>;
 }
 
 /**
@@ -124,10 +139,17 @@ export class TimeAttackScreen {
 
     this.config = {
       ...DEFAULT_TIME_ATTACK,
+      ...opcoes.afinacao,
       initialMs: opcoes.tempoInicial * 1000,
     };
 
-    this.estado = startTimeAttack(primeiro, Date.now(), this.config);
+    const arranque = Date.now();
+    this.estado = armarBomba(
+      startTimeAttack(primeiro, arranque, this.config),
+      arranque,
+      this.rng,
+      this.config,
+    );
 
     this.raiz = elemento("div", "ecra jogo tempo");
 
@@ -272,12 +294,19 @@ export class TimeAttackScreen {
     const r = tapTimeAttack(antes, p, Date.now(), { time: this.config });
     this.estado = r.state;
 
+    // O pavio acabou antes de o toque chegar: a bomba rebenta primeiro, como
+    // a sessão decidiu.
+    if (r.rebentou !== undefined) this.rebentar(r.rebentou);
+
+    if (r.penalizado) this.multar(p);
+
     const grupo = r.state.game.lastMove;
 
     if (r.moved && grupo !== undefined) {
       // A âncora do anúncio calcula-se **antes** de as peças saírem: depois já
       // não há de onde o `+3s` subir.
-      if (r.gainedMs > 0) this.anunciar(r.gainedMs, grupo);
+      if (r.gainedMs > 0) this.anunciar(`+${segundos(r.gainedMs)}`, grupo);
+      if (r.desarmou) this.view.desarmarBomba();
 
       await this.view.aplicarJogada(grupo);
 
@@ -295,8 +324,43 @@ export class TimeAttackScreen {
 
     // Sem `dimensionarPara`: a peça foi fixada no arranque, e é isso que deixa
     // o tabuleiro crescer à vista. Ver o construtor.
-    this.estado = nextBoard(this.estado, seguinte);
+    //
+    // O pavio conta a partir de agora, que é quando o jogador vê o tabuleiro —
+    // e não do toque que limpou o anterior, que ainda estava a animar.
+    const agora = Date.now();
+    this.estado = armarBomba(
+      nextBoard(this.estado, seguinte),
+      agora,
+      this.rng,
+      this.config,
+    );
     this.view.montar(seguinte.board);
+  }
+
+  /**
+   * A bomba rebentou: o tabuleiro estremece, a perda sobe da peça e o relógio
+   * acusa-a.
+   *
+   * É o acontecimento mais pesado do modo, e é o único com abanão. Um toque
+   * errado custa menos e diz-se com menos; ver `multar`.
+   */
+  private rebentar(at: Packed): void {
+    this.anunciar(
+      `−${segundos(this.config.bomba.penalizacaoMs)}`,
+      [at],
+      "perda grande",
+    );
+    this.view.rebentarBomba(at);
+    reanimar(this.elRelogio, "perdeu");
+    vibrarExplosao();
+  }
+
+  /** O toque passava de 7: a peça diz que não, e a perda sobe dela. */
+  private multar(p: Packed): void {
+    this.anunciar(`−${segundos(this.config.penalizacaoMs)}`, [p], "perda");
+    this.view.recusarPeca(p);
+    reanimar(this.elRelogio, "perdeu");
+    vibrarRecusa();
   }
 
   /* ─── relógio ───────────────────────────────────────────────────────────── */
@@ -304,8 +368,16 @@ export class TimeAttackScreen {
   private tique(): void {
     if (this.terminado) return;
 
+    const agora = Date.now();
+    const r = resolverBomba(this.estado, agora, this.config);
+    if (r.rebentou !== undefined) {
+      this.estado = r.state;
+      this.rebentar(r.rebentou);
+    }
+
     this.pintarRelogio();
-    if (isOver(this.estado, Date.now())) this.terminar();
+    this.pintarBomba(agora);
+    if (isOver(this.estado, agora)) this.terminar();
   }
 
   private pararRelogio(): void {
@@ -319,6 +391,9 @@ export class TimeAttackScreen {
     this.terminado = true;
     this.pararRelogio();
     this.pintarRelogio();
+    // Um pavio parado a meio, por cima do painel de fim, lia-se como uma bomba
+    // que ainda ia rebentar.
+    this.pintarBomba();
 
     this.opcoes.aoTerminar({
       pontos: this.estado.score,
@@ -346,6 +421,30 @@ export class TimeAttackScreen {
 
     const jogo = this.estado.game;
     this.view.marcarSelecao(new Set(jogo.selection));
+    this.pintarBomba();
+  }
+
+  /**
+   * O pavio, à décima de segundo.
+   *
+   * A bomba é da sessão e o pavio é desenho: a vista recebe a posição e quanto
+   * falta, e não sabe nada de prazos. Depois de uma jogada a posição já é a
+   * nova — a sessão segue a peça na gravidade, e a vista segue o elemento.
+   */
+  private pintarBomba(agora = Date.now()): void {
+    const bomba = this.estado.bomba;
+    const resta = pavioRestante(this.estado, agora);
+
+    if (this.terminado || bomba === undefined || resta === undefined) {
+      this.view.marcarBomba(undefined);
+      return;
+    }
+
+    this.view.marcarBomba(
+      bomba.at,
+      resta / this.config.bomba.pavioMs,
+      Math.ceil(resta / 1000),
+    );
   }
 
   /**
@@ -363,8 +462,19 @@ export class TimeAttackScreen {
     this.elRelogio.classList.toggle("a-acabar", s < 10);
   }
 
-  /** O `+3s` a subir do sítio onde foi ganho. */
-  private anunciar(ms: number, selecao: readonly Packed[]): void {
+  /**
+   * O `+3s` a subir do sítio onde foi ganho — e o `−1.5s` do sítio onde foi
+   * perdido.
+   *
+   * Perder diz-se no mesmo sítio e da mesma maneira que ganhar, a vermelho. O
+   * relógio só fica a saber o porquê do salto se o jogador ligar o número à
+   * peça, e é essa ligação que ensina o que não voltar a fazer.
+   */
+  private anunciar(
+    texto: string,
+    selecao: readonly Packed[],
+    variante?: string,
+  ): void {
     const caixas = selecao
       .map((p) => this.view.caixaDe(p))
       .filter((r): r is DOMRect => r !== undefined);
@@ -378,7 +488,11 @@ export class TimeAttackScreen {
     const y =
       caixas.reduce((n, r) => n + r.top, 0) / caixas.length - palco.top;
 
-    const el = elemento("div", "ganho", `+${(ms / 1000).toFixed(1)}s`);
+    const el = elemento(
+      "div",
+      variante === undefined ? "ganho" : `ganho ${variante}`,
+      texto,
+    );
     el.style.left = `${String(Math.round(x))}px`;
     el.style.top = `${String(Math.round(y))}px`;
 

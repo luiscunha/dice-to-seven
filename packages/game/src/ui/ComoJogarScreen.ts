@@ -271,7 +271,7 @@ export class ComoJogarScreen {
       ],
       [
         "Contra-Relógio",
-        "Um relógio só, que nunca pára. Cada tabuleiro limpo dá tempo de volta, e os tabuleiros vão crescendo.",
+        "Um relógio só, que nunca pára. Cada tabuleiro limpo dá tempo de volta, mas cada vez menos, e os tabuleiros vão crescendo. Uma peça que passe de 7 custa tempo. E cuidado com as bombas: tira-as antes de o pavio acabar.",
       ],
       [
         "Survival",

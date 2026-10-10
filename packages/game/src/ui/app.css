@@ -2521,6 +2521,251 @@ body::before {
   }
 }
 
+/*
+ * ── Perder tempo ──
+ *
+ * A perda sobe do mesmo sítio que o ganho, e a vermelho: o vermelho do teto e
+ * dos últimos dez segundos, que no jogo inteiro quer dizer «isto custa-te».
+ *
+ * Dois tamanhos, por importância. Um toque errado custa 1,5s e diz-se no tamanho
+ * do ganho; a bomba custa 5s e diz-se maior. Se as duas perdas tivessem o mesmo
+ * peso no ecrã, a pequena passava a parecer grande ou a grande a parecer
+ * pequena.
+ */
+.ganho.perda {
+  color: var(--fogo);
+}
+
+.ganho.perda.grande {
+  font-size: 22px;
+}
+
+/*
+ * O relógio acusa a perda: um salto a vermelho, que volta ao repouso. Sem isto
+ * o número descia 5s de uma vez e parecia um defeito do relógio.
+ */
+.tempo-topo > .relogio.perdeu {
+  animation: perder-tempo 420ms var(--suavizacao);
+}
+
+@keyframes perder-tempo {
+  from {
+    color: var(--fogo);
+    scale: 1.18;
+  }
+  60% {
+    color: var(--fogo);
+  }
+  to {
+    scale: 1;
+  }
+}
+
+/* A peça que passaria de 7 abana, como quem diz que não. */
+.peca.recusada {
+  animation: negar 280ms var(--suavizacao);
+}
+
+@keyframes negar {
+  20% {
+    translate: -4px 0;
+  }
+  45% {
+    translate: 4px 0;
+  }
+  70% {
+    translate: -2px 0;
+  }
+  to {
+    translate: 0 0;
+  }
+}
+
+/*
+ * ─── A peça-bomba ───────────────────────────────────────────────────────────
+ *
+ * Uma peça normal com um **pavio pendurado no topo**: um mostrador redondo que
+ * se esvazia, com os segundos que faltam lá dentro. A face fica intocada — a
+ * bomba não muda o valor da peça, e taparem-lhe as pintas obrigava o jogador a
+ * escolher entre ver o perigo e ver a conta.
+ *
+ * ── Porque no meio do topo, e não no canto ──
+ *
+ * O canto foi a primeira ideia, e tapava a pinta superior direita, que as faces
+ * 2 a 6 usam todas. O meio da linha de cima é a **única casa da grelha 3×3 onde
+ * nenhum dado tem pinta**, e o mesmo vale para o meio da linha de baixo da peça
+ * de cima, onde o resto do mostrador assenta. Com 60% dele para fora, a parte
+ * que entra na peça fica acima da altura das pintas e do dígito.
+ *
+ * E não sai pelos lados: o palco corta na horizontal, e no telemóvel a folga
+ * até à borda é de 6px — um mostrador no canto da última coluna saía cortado.
+ *
+ * O anel vermelho à volta é o que se apanha de relance; o mostrador é o que se
+ * lê. A seleção, se a houver, ganha ao anel: o jogador tem de ver o que já
+ * escolheu mais do que tem de ver o que já sabe.
+ */
+.peca.bomba {
+  z-index: 3;
+  box-shadow:
+    0 0 0 2.5px var(--fogo),
+    inset 0 0 0 1px rgb(18 63 58 / 0.18),
+    inset 0 calc(var(--lado-real) * -0.055) 0 rgb(0 0 0 / 0.14),
+    inset 0 calc(var(--lado-real) * 0.035) 0 rgb(255 255 255 / 0.17);
+}
+
+.peca.bomba.selecionada {
+  box-shadow:
+    0 0 0 2px #ffffff,
+    0 0 0 5px #08221e,
+    inset 0 0 0 1px rgb(18 63 58 / 0.18),
+    inset 0 calc(var(--lado-real) * -0.055) 0 rgb(0 0 0 / 0.14);
+}
+
+.pavio {
+  --lado-pavio: max(18px, calc(var(--lado-real) * 0.42));
+
+  position: absolute;
+  top: calc(var(--lado-pavio) * -0.6);
+  left: 50%;
+  translate: -50% 0;
+  width: var(--lado-pavio);
+  height: var(--lado-pavio);
+  border-radius: 50%;
+
+  display: grid;
+  place-items: center;
+
+  /*
+   * O mostrador esvazia no sentido do relógio, a partir do meio-dia. A parte
+   * gasta é escura e não transparente: o número é branco, e tem de se ler por
+   * cima das duas metades.
+   */
+  background: conic-gradient(
+    var(--fogo) calc(var(--pavio, 1) * 360deg),
+    rgb(32 20 16 / 0.92) 0
+  );
+  box-shadow: 0 0 0 2px var(--surface);
+
+  color: #ffffff;
+  font-size: calc(var(--lado-pavio) * 0.56);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  pointer-events: none;
+
+  animation: arder 1s ease-in-out infinite;
+}
+
+/* No último terço do pavio, o pulso acelera. É o único aviso de que vai já. */
+.peca.a-rebentar .pavio {
+  animation-duration: 420ms;
+}
+
+@keyframes arder {
+  50% {
+    scale: 1.12;
+  }
+}
+
+/* Saiu a tempo: o mostrador passa à cor do «está tudo bem» e sai com a peça. */
+.peca.desarmada .pavio {
+  background: var(--accent);
+  animation: none;
+}
+
+/*
+ * Rebentou. A peça estala — clarão e abanão de rotação — e volta exatamente ao
+ * que era: fica no tabuleiro, a valer o mesmo, e o efeito não pode deixar
+ * rasto que a faça parecer outra coisa.
+ */
+.peca.rebentou {
+  animation: estalar 380ms var(--suavizacao);
+}
+
+@keyframes estalar {
+  from {
+    scale: 1.25;
+    filter: brightness(1.7) saturate(0.5);
+  }
+  30% {
+    rotate: -8deg;
+  }
+  55% {
+    rotate: 6deg;
+  }
+  80% {
+    rotate: -3deg;
+  }
+  to {
+    scale: 1;
+    rotate: 0deg;
+    filter: none;
+  }
+}
+
+/*
+ * E o tabuleiro estremece com ela. Pelo `translate` do tabuleiro, e não das
+ * peças: as peças são posicionadas por `transform`, e um abanão lá lutava com a
+ * gravidade da jogada que estivesse a meio.
+ */
+.tabuleiro.abanao {
+  animation: abanar 360ms var(--suavizacao);
+}
+
+@keyframes abanar {
+  15% {
+    translate: -6px 2px;
+  }
+  30% {
+    translate: 5px -2px;
+  }
+  45% {
+    translate: -4px 1px;
+  }
+  60% {
+    translate: 3px 0;
+  }
+  80% {
+    translate: -1px 0;
+  }
+  to {
+    translate: 0 0;
+  }
+}
+
+/*
+ * Sem movimento: ficam as cores, que dizem o mesmo sem mexer em nada. O clarão
+ * da peça, o vermelho do relógio e o anel da bomba bastam para se ler o que
+ * aconteceu.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .peca.recusada,
+  .tabuleiro.abanao,
+  .pavio {
+    animation: none;
+  }
+
+  .peca.rebentou {
+    animation: clarao 380ms linear;
+  }
+
+  @keyframes clarao {
+    from {
+      filter: brightness(1.7) saturate(0.5);
+    }
+    to {
+      filter: none;
+    }
+  }
+
+  @keyframes perder-tempo {
+    from,
+    60% {
+      color: var(--fogo);
+    }
+  }
+}
+
 /* ─── Telemóvel ───────────────────────────────────────────────────────────── */
 
 /*

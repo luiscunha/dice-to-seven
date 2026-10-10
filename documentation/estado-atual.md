@@ -631,6 +631,85 @@ normal: é assim que ela sai.
 
 ---
 
+## O Contra-Relógio deixou de ser infinito
+
+O retorno de quem jogava era que o modo era demasiado fácil. Medido contra o
+pack publicado (`tempo.json`), a razão não era falta de mecânicas: **a economia
+de tempo tinha saldo positivo**, e para quem jogava abaixo dos ~2,5 s por jogada
+a corrida não acabava nunca.
+
+| ritmo do jogador | saldo por tabuleiro, depois da escada |
+|---|---|
+| 2,4 s/jogada | **+7 s** |
+| 2,0 s/jogada | **+9 s** |
+| 1,5 s/jogada | **+12 s** |
+| 3,0 s/jogada | −8 s |
+
+Três causas, por ordem de peso:
+
+1. **O combo não tinha teto.** `(n − 1) × 750ms` por jogada cresce com o
+   quadrado do encadeamento; o tempo gasto cresce em linha. E quanto maior o
+   tabuleiro, maior o saldo — a escada de tamanho, que devia endurecer o modo,
+   aliviava-o.
+2. **O prémio tinha piso** (10 s), e um piso é um ponto de equilíbrio. Chegava ao
+   piso no sexto tabuleiro, o mesmo em que a escada para — daí para a frente a
+   corrida não mudava.
+3. **Errar não custava nada.** Uma peça que passava de 7 era recusada, e a
+   recusa não tirava tempo: tocar ao calhas era uma estratégia.
+
+### O que mudou
+
+**Ritmo-alvo.** O prémio de um tabuleiro é `jogadas × ritmo`, com
+`jogadas = soma / 7` e o ritmo a começar em 4 s por jogada e a multiplicar por
+0,92 a cada tabuleiro limpo, **sem piso**. A corrida acaba quando o jogador deixa
+de acompanhar o ritmo que se lhe pede, e acaba sempre.
+
+Geométrico e não linear, por medição: a descer um valor fixo, os jogadores
+rápidos ficavam comprimidos — 1,5 s e 1 s por jogada acabavam quase no mesmo
+tabuleiro — e as corridas lentas esticavam. Simulado com 60 s de arranque e 1 s
+de leitura por tabuleiro novo:
+
+| ritmo do jogador | tabuleiros | duração |
+|---|---|---|
+| 4 s/jogada | ~7 | ~3 min |
+| 3 s/jogada | ~12 | ~4 min |
+| 2 s/jogada | ~28 | ~6 min |
+| 1,5 s/jogada | ~42 | ~7 min |
+| 1 s/jogada | ~69 | ~8 min |
+
+**Teto no combo.** +0,25 s por nível de combo, no máximo +0,5 s por jogada.
+
+**Passar de 7 custa 1,5 s** e quebra o combo. Tirar uma peça da seleção ou
+tocar fora das peças não custa nada.
+
+**A peça-bomba.** A partir do quarto tabuleiro, metade dos tabuleiros traz uma
+peça com pavio de 6 s; se não sair numa jogada a tempo, rebenta e custa 5 s.
+Sai sempre numa peça que entra num grupo jogável no momento em que aparece.
+
+### Porque é que a bomba não passa pelo gerador
+
+As soldas e o gelo mudam **o que é jogada legal**, e por isso mudam os estados
+alcançáveis: têm de ser verificadas pelo solver para a garantia central
+sobreviver. A bomba só muda **o que se ganha ou perde de tempo**. O tabuleiro
+resolve-se exatamente como antes, com ou sem ela — e é por isso que vive na
+`TimeAttackSession` e não na engine.
+
+Pela mesma razão, quando rebenta **a peça fica**. Tirá-la mudava a soma do
+tabuleiro, que deixava de ser múltiplo de 7.
+
+É a primeira mecânica do modo que dá uma decisão em vez de só pedir velocidade:
+os tabuleiros são greedy-safe e qualquer ordem resolve, mas com a bomba há uma
+ordem que custa menos tempo.
+
+### Por afinar em playtest
+
+Todos os números vivem em `DEFAULT_TIME_ATTACK`. Os que mais mexem na sensação
+do modo são `ritmoFator` (quão depressa aperta), `pavioMs` e
+`bomba.probabilidade`. A simulação assume ritmos constantes, e ninguém joga
+assim: o primeiro playtest diz se as corridas boas duram mesmo seis minutos.
+
+---
+
 ## Decisões de arquitetura que não se leem no código
 
 - **A campanha não tem pontuação, tem um recorde de tempo.** A pontuação era

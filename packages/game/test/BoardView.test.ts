@@ -430,3 +430,99 @@ describe("o joker mostra a face do valor que toma", () => {
     view.destruir();
   });
 });
+
+describe("a peça-bomba", () => {
+  const peca = (p: Packed): HTMLElement =>
+    host.querySelector(`.peca[data-pos="${String(p)}"]`) as HTMLElement;
+
+  it("pendura o pavio na peça, com os segundos que faltam", () => {
+    const view = criar();
+    view.montar(TABULEIRO);
+
+    view.marcarBomba(packed(1, 1), 0.5, 3);
+
+    const el = peca(packed(1, 1));
+    expect(el.classList.contains("bomba")).toBe(true);
+    expect(el.querySelector(".pavio")?.textContent).toBe("3");
+    expect(el.style.getPropertyValue("--pavio")).toBe("0.500");
+    expect(el.getAttribute("aria-label")).toBe("face 3, bomba");
+
+    view.destruir();
+  });
+
+  it("só há um pavio, e mudar de peça leva-o consigo", () => {
+    const view = criar();
+    view.montar(TABULEIRO);
+
+    view.marcarBomba(packed(1, 1), 1, 6);
+    view.marcarBomba(packed(0, 0), 1, 6);
+
+    expect(host.querySelectorAll(".pavio")).toHaveLength(1);
+    expect(host.querySelectorAll(".peca.bomba")).toHaveLength(1);
+    expect(peca(packed(1, 1)).getAttribute("aria-label")).toBe("face 3");
+
+    view.destruir();
+  });
+
+  /*
+   * A bomba vive no elemento, e o elemento é o mesmo antes e depois da jogada.
+   * Tirar o 3 e o 4 de baixo faz o 4 de cima descer — e o pavio desce com ele.
+   */
+  it("o pavio cai com a peça na gravidade", async () => {
+    const view = criar();
+    view.montar(TABULEIRO);
+    view.marcarBomba(packed(0, 1), 1, 6);
+    const el = peca(packed(0, 1));
+
+    await view.aplicarJogada(grupo(packed(0, 0), packed(1, 0)));
+    view.marcarBomba(packed(0, 0), 0.9, 6);
+
+    expect(peca(packed(0, 0))).toBe(el);
+    expect(el.classList.contains("bomba")).toBe(true);
+    expect(host.querySelectorAll(".pavio")).toHaveLength(1);
+
+    view.destruir();
+  });
+
+  it("no último terço do pavio, a peça avisa que vai já", () => {
+    const view = criar();
+    view.montar(TABULEIRO);
+
+    view.marcarBomba(packed(0, 0), 0.5, 3);
+    expect(peca(packed(0, 0)).classList.contains("a-rebentar")).toBe(false);
+
+    view.marcarBomba(packed(0, 0), 0.3, 2);
+    expect(peca(packed(0, 0)).classList.contains("a-rebentar")).toBe(true);
+
+    view.destruir();
+  });
+
+  it("rebentar tira o pavio e deixa a peça, a estalar", () => {
+    const view = criar();
+    view.montar(TABULEIRO);
+    view.marcarBomba(packed(2, 1), 0.1, 1);
+
+    view.rebentarBomba(packed(2, 1));
+
+    const el = peca(packed(2, 1));
+    expect(el.dataset["valor"]).toBe("6");
+    expect(el.classList.contains("bomba")).toBe(false);
+    expect(el.classList.contains("rebentou")).toBe(true);
+    expect(host.querySelector(".pavio")).toBeNull();
+    expect(host.querySelector(".tabuleiro")?.classList.contains("abanao")).toBe(true);
+
+    view.destruir();
+  });
+
+  it("um tabuleiro novo não herda a bomba do anterior", () => {
+    const view = criar();
+    view.montar(TABULEIRO);
+    view.marcarBomba(packed(0, 0), 1, 6);
+
+    view.montar(TABULEIRO);
+
+    expect(host.querySelector(".peca.bomba")).toBeNull();
+
+    view.destruir();
+  });
+});

@@ -404,14 +404,16 @@ export const BANDS: readonly BandSpec[] = [
     params: { compositionWeights: ateNPecas(4), newColumnProbability: 0.45 },
     pieces: [10, 20],
     /*
-     * Seis janelas, uma por degrau da escada do modo — e seis é o mesmo número
-     * que leva o prémio de tempo de 30s ao piso de 10s, a 4s por tabuleiro. Os
-     * dois eixos aterram juntos de propósito: o tabuleiro para de crescer no
-     * mesmo tabuleiro em que o prémio para de encolher. `DEGRAUS`, no jogo,
-     * tem de ser este número, e há um teste que o exige.
+     * Seis janelas, uma por degrau da escada do modo. `DEGRAUS`, no jogo, tem
+     * de ser este número, e há um teste que o exige.
      *
      * São seis e não nove porque as janelas de 21, 22 e 23–24 peças deram zero
      * aceites em 16 320 candidatos cada. A escada acaba onde a garantia acaba.
+     *
+     * O prémio de tempo já não acaba com ela. Acabava — chegava ao piso no
+     * sexto tabuleiro, e daí para a frente a corrida não mudava — e esse
+     * patamar era o que tornava o modo infinito para quem jogava depressa. Ver
+     * `ritmoExigido`, no jogo.
      */
     janelas: [
       [10, 11],

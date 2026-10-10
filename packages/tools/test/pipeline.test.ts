@@ -328,11 +328,10 @@ describe("formas cheias", () => {
   });
 
   /*
-   * O comprimento da escada do modo tempo é o mesmo em três sítios: as janelas
-   * do pack, os degraus do jogo e os passos que o prémio de tempo leva a chegar
-   * ao piso. Este teste é o que impede que mexer num deles desalinhe os outros
-   * em silêncio — o jogo e o pipeline não se importam um com o outro, e sem
-   * isto ninguém dava pelo desencontro até jogar.
+   * O comprimento da escada do modo tempo é o mesmo em dois sítios: as janelas
+   * do pack e os degraus do jogo. Este teste é o que impede que mexer num deles
+   * desalinhe o outro em silêncio — o jogo e o pipeline não se importam um com
+   * o outro, e sem isto ninguém dava pelo desencontro até jogar.
    */
   it("**as janelas do pack são tantas quantos os degraus do jogo**", () => {
     const tempo = bandById("tempo");
