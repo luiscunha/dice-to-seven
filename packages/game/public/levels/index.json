@@ -1487,5 +1487,300 @@
     "joker": false
    }
   ]
+ },
+ {
+  "id": "tempo-livre",
+  "label": "Modo tempo, depois da escada — sem garantia de não bloquear",
+  "modo": "tempo",
+  "niveis": [
+   {
+    "id": "tempo-livre-1000003",
+    "pieces": 22,
+    "colunas": 4,
+    "joker": false
+   },
+   {
+    "id": "tempo-livre-1000014",
+    "pieces": 23,
+    "colunas": 5,
+    "joker": false
+   },
+   {
+    "id": "tempo-livre-1000019",
+    "pieces": 22,
+    "colunas": 4,
+    "joker": false
+   },
+   {
+    "id": "tempo-livre-1000021",
+    "pieces": 24,
+    "colunas": 6,
+    "joker": false
+   },
+   {
+    "id": "tempo-livre-1000024",
+    "pieces": 21,
+    "colunas": 4,
+    "joker": false
+   },
+   {
+    "id": "tempo-livre-1000027",
+    "pieces": 22,
+    "colunas": 6,
+    "joker": false
+   },
+   {
+    "id": "tempo-livre-1000029",
+    "pieces": 24,
+    "colunas": 6,
+    "joker": false
+   },
+   {
+    "id": "tempo-livre-1000038",
+    "pieces": 23,
+    "colunas": 5,
+    "joker": false
+   },
+   {
+    "id": "tempo-livre-1000044",
+    "pieces": 21,
+    "colunas": 4,
+    "joker": false
+   },
+   {
+    "id": "tempo-livre-1000046",
+    "pieces": 23,
+    "colunas": 5,
+    "joker": false
+   },
+   {
+    "id": "tempo-livre-1000051",
+    "pieces": 22,
+    "colunas": 4,
+    "joker": false
+   },
+   {
+    "id": "tempo-livre-1000056",
+    "pieces": 21,
+    "colunas": 4,
+    "joker": false
+   },
+   {
+    "id": "tempo-livre-2000003",
+    "pieces": 27,
+    "colunas": 5,
+    "joker": false
+   },
+   {
+    "id": "tempo-livre-2000004",
+    "pieces": 29,
+    "colunas": 6,
+    "joker": false
+   },
+   {
+    "id": "tempo-livre-2000005",
+    "pieces": 29,
+    "colunas": 6,
+    "joker": false
+   },
+   {
+    "id": "tempo-livre-2000008",
+    "pieces": 25,
+    "colunas": 5,
+    "joker": false
+   },
+   {
+    "id": "tempo-livre-2000010",
+    "pieces": 26,
+    "colunas": 6,
+    "joker": false
+   },
+   {
+    "id": "tempo-livre-2000011",
+    "pieces": 29,
+    "colunas": 6,
+    "joker": false
+   },
+   {
+    "id": "tempo-livre-2000015",
+    "pieces": 28,
+    "colunas": 7,
+    "joker": false
+   },
+   {
+    "id": "tempo-livre-2000017",
+    "pieces": 29,
+    "colunas": 6,
+    "joker": false
+   },
+   {
+    "id": "tempo-livre-2000020",
+    "pieces": 25,
+    "colunas": 7,
+    "joker": false
+   },
+   {
+    "id": "tempo-livre-2000025",
+    "pieces": 27,
+    "colunas": 5,
+    "joker": false
+   },
+   {
+    "id": "tempo-livre-2000027",
+    "pieces": 28,
+    "colunas": 6,
+    "joker": false
+   },
+   {
+    "id": "tempo-livre-2000032",
+    "pieces": 26,
+    "colunas": 5,
+    "joker": false
+   },
+   {
+    "id": "tempo-livre-3000007",
+    "pieces": 33,
+    "colunas": 6,
+    "joker": false
+   },
+   {
+    "id": "tempo-livre-3000017",
+    "pieces": 31,
+    "colunas": 6,
+    "joker": false
+   },
+   {
+    "id": "tempo-livre-3000037",
+    "pieces": 31,
+    "colunas": 6,
+    "joker": false
+   },
+   {
+    "id": "tempo-livre-3000038",
+    "pieces": 30,
+    "colunas": 6,
+    "joker": false
+   },
+   {
+    "id": "tempo-livre-3000041",
+    "pieces": 31,
+    "colunas": 5,
+    "joker": false
+   },
+   {
+    "id": "tempo-livre-3000047",
+    "pieces": 33,
+    "colunas": 6,
+    "joker": false
+   },
+   {
+    "id": "tempo-livre-3000048",
+    "pieces": 30,
+    "colunas": 6,
+    "joker": false
+   },
+   {
+    "id": "tempo-livre-3000052",
+    "pieces": 32,
+    "colunas": 6,
+    "joker": false
+   },
+   {
+    "id": "tempo-livre-3000056",
+    "pieces": 30,
+    "colunas": 6,
+    "joker": false
+   },
+   {
+    "id": "tempo-livre-3000060",
+    "pieces": 32,
+    "colunas": 6,
+    "joker": false
+   },
+   {
+    "id": "tempo-livre-3000064",
+    "pieces": 30,
+    "colunas": 7,
+    "joker": false
+   },
+   {
+    "id": "tempo-livre-3000067",
+    "pieces": 35,
+    "colunas": 7,
+    "joker": false
+   },
+   {
+    "id": "tempo-livre-4000015",
+    "pieces": 38,
+    "colunas": 7,
+    "joker": false
+   },
+   {
+    "id": "tempo-livre-4000017",
+    "pieces": 37,
+    "colunas": 7,
+    "joker": false
+   },
+   {
+    "id": "tempo-livre-4000020",
+    "pieces": 37,
+    "colunas": 7,
+    "joker": false
+   },
+   {
+    "id": "tempo-livre-4000026",
+    "pieces": 37,
+    "colunas": 7,
+    "joker": false
+   },
+   {
+    "id": "tempo-livre-4000034",
+    "pieces": 36,
+    "colunas": 7,
+    "joker": false
+   },
+   {
+    "id": "tempo-livre-4000048",
+    "pieces": 37,
+    "colunas": 6,
+    "joker": false
+   },
+   {
+    "id": "tempo-livre-4000078",
+    "pieces": 36,
+    "colunas": 7,
+    "joker": false
+   },
+   {
+    "id": "tempo-livre-4000106",
+    "pieces": 38,
+    "colunas": 7,
+    "joker": false
+   },
+   {
+    "id": "tempo-livre-4000147",
+    "pieces": 38,
+    "colunas": 7,
+    "joker": false
+   },
+   {
+    "id": "tempo-livre-4000148",
+    "pieces": 39,
+    "colunas": 7,
+    "joker": false
+   },
+   {
+    "id": "tempo-livre-4000151",
+    "pieces": 39,
+    "colunas": 7,
+    "joker": false
+   },
+   {
+    "id": "tempo-livre-4000167",
+    "pieces": 37,
+    "colunas": 6,
+    "joker": false
+   }
+  ]
  }
 ]

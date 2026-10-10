@@ -464,8 +464,21 @@ async function mostrarTempo(): Promise<void> {
     cabeNoEcra(n.board.length),
   );
 
+  /*
+   * Os tabuleiros de depois da escada. Um índice sem esta banda — um deploy
+   * anterior a ela — dá uma corrida só com a escada com garantia, como antes,
+   * em vez de não dar corrida nenhuma.
+   */
+  const livres: readonly Level[] =
+    bandaPorId("tempo-livre") === undefined
+      ? []
+      : (await carregarBanda("tempo-livre")).filter((n) =>
+          cabeNoEcra(n.board.length),
+        );
+
   atual = new TimeAttackScreen(app as HTMLElement, {
     niveis,
+    livres,
     melhorPontuacao: perfil.bestTimeAttackScore,
     tempoInicial: preferencias.tempoInicial,
     aoTerminar: ({ pontos, tabuleiros }) => {

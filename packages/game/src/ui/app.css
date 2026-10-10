@@ -2456,6 +2456,64 @@ body::before {
   justify-self: end;
 }
 
+/*
+ * A coluna da esquerda leva a seta e, a partir do sétimo tabuleiro, o salto.
+ * Dois botões de 44px e a folga entre eles cabem na coluna mesmo a 320px —
+ * a grelha dá-lhe a mesma largura que à do placar, e o relógio fica ao meio.
+ */
+.tempo-acoes {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-self: start;
+}
+
+/*
+ * O salto aparece com um pulso, uma vez: é uma regra nova a meio da corrida, e
+ * um botão que surge em silêncio no canto passa despercebido até fazer falta.
+ */
+.tempo-acoes > .btn.redondo.novo {
+  animation: aparecer-salto 700ms var(--suavizacao);
+}
+
+@keyframes aparecer-salto {
+  from {
+    scale: 0.6;
+    box-shadow: 0 0 0 0 var(--accent);
+  }
+  40% {
+    scale: 1.12;
+    box-shadow: 0 0 0 6px rgb(27 107 98 / 0.25);
+  }
+  to {
+    scale: 1;
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+/*
+ * ── Beco sem saída ──
+ *
+ * O tabuleiro recua como no fim da corrida — já não há nada a fazer nele —,
+ * mas menos: o jogador tem de conseguir ver porque é que ficou preso. O painel
+ * herda o desenho do `.fim`, e o salto é o botão principal: é a resposta, e a
+ * única.
+ */
+.palco.preso .tabuleiro {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.fim.preso .selo {
+  color: var(--fogo);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tempo-acoes > .btn.redondo.novo {
+    animation: none;
+  }
+}
+
 .tempo-topo > .relogio {
   min-width: 3ch;
   font-size: clamp(30px, 8vw, 40px);

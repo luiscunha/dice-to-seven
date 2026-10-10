@@ -138,3 +138,113 @@ describe("a bomba, no ecrã", () => {
     expect(host.querySelector(".peca.rebentou")).toBeNull();
   });
 });
+
+describe("o salto, no ecrã", () => {
+  /** Uma jogada só: 3+4. Os tabuleiros com garantia. */
+  const SEGURO: Level = { id: "tempo-x", seed: 0, board: [[3], [4]], solution: [] };
+  /** Seis, para a escada com garantia ter os seus seis degraus. */
+  const ESCADA: readonly Level[] = Array.from({ length: 6 }, (_, i) => ({
+    ...SEGURO,
+    id: `tempo-${String(i)}`,
+  }));
+  /** Com jogadas, sem garantia. */
+  const LIVRE: Level = {
+    id: "tempo-livre-x",
+    seed: 1,
+    board: [
+      [3, 4],
+      [4, 3],
+    ],
+    solution: [],
+  };
+  /** Sem jogada nenhuma: dois 6 não somam 7 com nada. */
+  const PRESO: Level = { id: "tempo-livre-preso", seed: 2, board: [[6], [6]], solution: [] };
+
+  /*
+   * Sem níveis com garantia, a escada começa logo nos livres — e o salto existe
+   * desde o primeiro tabuleiro. É o atalho dos testes que não são sobre a
+   * fronteira.
+   */
+  const abrirCom = (
+    niveis: readonly Level[],
+    livres: readonly Level[],
+  ): TimeAttackScreen =>
+    new TimeAttackScreen(host, {
+      niveis,
+      livres,
+      melhorPontuacao: 0,
+      tempoInicial: 30,
+      aoTerminar: () => undefined,
+      aoSair: () => undefined,
+    });
+
+  const botaoSaltar = (): HTMLButtonElement | null =>
+    host.querySelector<HTMLButtonElement>('.tempo-acoes [aria-label^="saltar"]');
+
+  /** Limpa um tabuleiro `[[3],[4]]` e espera que o seguinte entre. */
+  const limparSeguro = async (): Promise<void> => {
+    clicar(0 as Packed);
+    clicar(64 as Packed);
+    await vi.runOnlyPendingTimersAsync();
+  };
+
+  it("**só aparece no primeiro tabuleiro sem garantia** — o sétimo", async () => {
+    ecra = abrirCom(ESCADA, [LIVRE]);
+
+    for (let i = 0; i < ESCADA.length; i++) {
+      expect(botaoSaltar()?.hidden).toBe(true);
+      await limparSeguro();
+    }
+
+    expect(botaoSaltar()?.hidden).toBe(false);
+    expect(host.querySelector(".meta")?.textContent).toContain("6 tabuleiros");
+  });
+
+  it("saltar custa 10 s, e o tabuleiro seguinte entra já", () => {
+    ecra = abrirCom([], [LIVRE]);
+    expect(relogio()).toBe("30");
+
+    botaoSaltar()?.click();
+
+    expect(relogio()).toBe("20");
+    expect(host.querySelector(".ganho.perda.grande")?.textContent).toBe("−10.0s");
+    expect(host.querySelectorAll(".tabuleiro .peca")).toHaveLength(4);
+  });
+
+  it("**num beco sem saída, o painel oferece o salto**", () => {
+    ecra = abrirCom([], [PRESO]);
+
+    const painel = host.querySelector<HTMLElement>(".fim.preso");
+    expect(painel?.hidden).toBe(false);
+    expect(painel?.textContent).toContain("Sem jogadas");
+    expect(host.querySelector(".palco")?.classList.contains("preso")).toBe(true);
+
+    const saltar = painel?.querySelector<HTMLButtonElement>(".btn.primario");
+    expect(saltar?.textContent).toContain("Saltar (−10s)");
+
+    saltar?.click();
+    expect(relogio()).toBe("20");
+  });
+
+  it("num beco, as peças já não custam tempo — nem pelo teclado", () => {
+    ecra = abrirCom([], [PRESO]);
+
+    // 6 + 6 passaria de 7, e num tabuleiro com jogadas custava 1,5s.
+    clicar(0 as Packed);
+    clicar(64 as Packed);
+    vi.advanceTimersByTime(100);
+
+    expect(relogio()).toBe("30");
+  });
+
+  it("o fim diz quantos foram saltados", () => {
+    ecra = abrirCom([], [LIVRE]);
+    botaoSaltar()?.click();
+
+    vi.advanceTimersByTime(60_000);
+
+    expect(host.querySelector(".fim .detalhe")?.textContent).toBe(
+      "0 tabuleiros limpos · 1 saltado",
+    );
+  });
+});

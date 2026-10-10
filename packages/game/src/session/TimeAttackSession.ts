@@ -26,7 +26,7 @@ import type { ComboState } from "./combos";
 import { DEFAULT_COMBO_CONFIG, breakCombo, registerMove, startCombo } from "./combos";
 import type { ComboConfig } from "./combos";
 import type { GameState } from "./GameSession";
-import { isFinished, startGame, tap } from "./GameSession";
+import { isBlocked, isFinished, startGame, tap } from "./GameSession";
 import type { ScoringConfig } from "./scoring";
 import { DEFAULT_SCORING, moveScore } from "./scoring";
 
@@ -129,6 +129,30 @@ export interface TimeAttackConfig {
    */
   readonly penalizacaoMs: number;
 
+  /**
+   * O que custa saltar um tabuleiro. Ver `saltarTabuleiro`.
+   *
+   * **Mais do que a bomba (5s), e de propósito.** Saltar tem de ser a saída de
+   * um beco, não um atalho: se custasse menos do que a bomba, saltar o
+   * tabuleiro da bomba passava a ser a jogada certa.
+   *
+   * E saltar um tabuleiro que ainda se joga não poupa nada: troca um tabuleiro
+   * meio jogado por um inteiro, do degrau seguinte, e não soma à conta dos
+   * limpos. Só compensa quando o tabuleiro já não tem jogadas — que é para isso
+   * que existe.
+   */
+  readonly saltarMs: number;
+
+  /**
+   * O primeiro tabuleiro, contando de 0, que oferece o salto.
+   *
+   * Por omissão é o primeiro depois da escada com garantia. Mas quem manda é a
+   * escada **desta** corrida: um pack com menos níveis com garantia do que
+   * degraus dá uma escada mais curta, e os tabuleiros sem garantia começavam
+   * antes do salto existir. O ecrã acerta este número por `Escada.livresDesde`.
+   */
+  readonly saltoDesde: number;
+
   readonly bomba: ConfigBomba;
 }
 
@@ -158,6 +182,8 @@ export const DEFAULT_TIME_ATTACK: TimeAttackConfig = {
   comboTetoMs: 500,
   bigGroupBonusMs: 400,
   penalizacaoMs: 1_500,
+  saltarMs: 10_000,
+  saltoDesde: 6,
   bomba: {
     desdeTabuleiro: 3,
     probabilidade: 0.5,
@@ -176,6 +202,8 @@ export interface TimeAttackState {
   readonly startedAt: number;
   /** A bomba armada neste tabuleiro, se houver. Ver `Bomba`. */
   readonly bomba: Bomba | undefined;
+  /** Tabuleiros saltados. Não contam como limpos, nem apertam o ritmo. */
+  readonly saltados: number;
 }
 
 export class JokerInTimeAttackError extends Error {
@@ -202,6 +230,7 @@ export function startTimeAttack(
     deadlineAt: now + config.initialMs,
     startedAt: now,
     bomba: undefined,
+    saltados: 0,
   };
 }
 
@@ -210,6 +239,69 @@ export const remainingMs = (s: TimeAttackState, now: number): number =>
 
 export const isOver = (s: TimeAttackState, now: number): boolean =>
   now >= s.deadlineAt;
+
+/* ─── Saltar ──────────────────────────────────────────────────────────────── */
+
+/**
+ * O número do tabuleiro em jogo, contando de 0: os limpos mais os saltados.
+ *
+ * É a posição na escada. Saltar avança na escada como limpar — o tabuleiro
+ * seguinte é o do degrau seguinte —, porque saltar não pode ser uma maneira de
+ * ficar nos tabuleiros pequenos.
+ */
+export const indiceDoTabuleiro = (s: TimeAttackState): number =>
+  s.boardsCleared + s.saltados;
+
+/**
+ * Este tabuleiro oferece o salto?
+ *
+ * **Só depois da escada.** Os tabuleiros da escada são greedy-safe — não há
+ * como ficar preso, e um botão que só servisse para fugir de um tabuleiro que
+ * se joga era um convite a desperdiçar tempo. A partir do sétimo os tabuleiros
+ * podem bloquear, e é aí que a saída tem de existir.
+ *
+ * **Um tabuleiro bloqueado salta-se sempre**, esteja onde estiver. Com a escada
+ * a sair da banda com garantia não devia acontecer — mas uma corrida presa num
+ * tabuleiro sem jogadas e sem saída, à espera de que o relógio acabe, é um
+ * defeito que nenhuma garantia de geração pode valer o risco.
+ */
+export const podeSaltar = (
+  s: TimeAttackState,
+  now: number,
+  config: TimeAttackConfig = DEFAULT_TIME_ATTACK,
+): boolean =>
+  !isOver(s, now) &&
+  !isFinished(s.game) &&
+  (indiceDoTabuleiro(s) >= config.saltoDesde || isBlocked(s.game));
+
+/**
+ * Salta o tabuleiro: custa `saltarMs`, e o seguinte vem do degrau seguinte.
+ *
+ * Só mexe no relógio e nas contas. O tabuleiro novo entra por `nextBoard`, como
+ * depois de um tabuleiro limpo — a sessão não sabe de onde ele vem.
+ *
+ * **O ritmo não aperta.** O ritmo exigido conta tabuleiros limpos, e um
+ * tabuleiro saltado não foi limpo: saltar não pode ser premiado com a mesma
+ * curva que limpar.
+ *
+ * Se a bomba estiver armada, vai com o tabuleiro sem rebentar. Saltar já custa
+ * o dobro dela, e cobrar as duas era cobrar o mesmo erro duas vezes.
+ */
+export function saltarTabuleiro(
+  s: TimeAttackState,
+  now: number,
+  config: TimeAttackConfig = DEFAULT_TIME_ATTACK,
+): TimeAttackState {
+  if (!podeSaltar(s, now, config)) return s;
+
+  return {
+    ...s,
+    deadlineAt: s.deadlineAt - config.saltarMs,
+    saltados: s.saltados + 1,
+    combo: breakCombo(s.combo),
+    bomba: undefined,
+  };
+}
 
 /**
  * O tempo por jogada que o `n`-ésimo tabuleiro devolve, contando de 0.
@@ -354,22 +446,30 @@ export const pavioRestante = (
  * que subisse.
  */
 /**
- * Quantos tabuleiros o jogador sobe antes de o tamanho parar de crescer.
+ * Quantos degraus tem a escada **com garantia** — os tabuleiros da banda
+ * `tempo`, onde não há como ficar preso.
  *
  * **Seis, e não é um número solto**: o pack tem seis janelas de tamanho, uma
  * por degrau, e há um teste em `tools` a exigir que os dois coincidam.
  *
- * Seis é o que a garantia do modo permite, não o que se desejava. O tabuleiro
- * vai de 10 a 20 peças; acima disso não há tabuleiros impossíveis de bloquear
- * para gerar. Ver o comentário da banda `tempo`, em `tools/src/bands.ts`.
+ * Seis é o que a garantia permite, não o que se desejava. O tabuleiro vai de 10
+ * a 20 peças; acima disso não há tabuleiros impossíveis de bloquear para gerar.
+ * Ver o comentário da banda `tempo`, em `tools/src/bands.ts`.
  *
- * **O prémio já não para com a escada.** Parava: o prémio chegava ao piso no
- * mesmo tabuleiro em que o tamanho deixava de crescer, e daí para a frente nada
- * mudava — a corrida ficava num patamar, e quem o aguentava aguentava-o para
- * sempre. Agora o tamanho para aqui, porque não há tabuleiros maiores para
- * gerar, mas o ritmo exigido continua a apertar. Ver `ritmoExigido`.
+ * A escada já não acaba aqui: continua pelos `DEGRAUS_LIVRES`, e é a partir
+ * daqui que o modo oferece o salto. Ver `podeSaltar`.
  */
 export const DEGRAUS = 6;
+
+/**
+ * Os degraus que vêm depois, **sem garantia** — a banda `tempo-livre`, de 21 a
+ * 42 peças, onde um tabuleiro pode bloquear e o jogador o pode saltar.
+ *
+ * Quatro, pelas quatro janelas da banda, com o mesmo teste do outro lado. É o
+ * que leva a escada inteira a dez tabuleiros a crescer, e o tabuleiro de cima a
+ * um 6×7 — antes ficava num 4×5 a partir do sexto tabuleiro, para sempre.
+ */
+export const DEGRAUS_LIVRES = 4;
 
 /**
  * Um degrau por tabuleiro, e um nível sorteado dentro de cada degrau.
@@ -396,6 +496,11 @@ export interface Escada {
   readonly ordem: readonly Level[];
   /** Os níveis do degrau de cima, de onde sai tudo o que vem depois da escada. */
   readonly cume: readonly Level[];
+  /**
+   * A posição do primeiro tabuleiro sem garantia de não bloquear, ou
+   * `Infinity` se a corrida não os tiver. É daí que o salto passa a existir.
+   */
+  readonly livresDesde: number;
 }
 
 export function escadaDeTamanho(
@@ -403,7 +508,7 @@ export function escadaDeTamanho(
   rng: Rng,
   degraus = DEGRAUS,
 ): Escada {
-  if (niveis.length === 0) return { ordem: [], cume: [] };
+  if (niveis.length === 0) return { ordem: [], cume: [], livresDesde: Infinity };
 
   const ordenados = [...niveis].sort(
     (a, b) => pieceCount(a.board) - pieceCount(b.board),
@@ -427,7 +532,7 @@ export function escadaDeTamanho(
   const ordem = tiers.map((t) => escolher(t, rng));
   const cume = tiers[tiers.length - 1] ?? [];
 
-  return { ordem, cume };
+  return { ordem, cume, livresDesde: Infinity };
 }
 
 const escolher = <T>(xs: readonly T[], rng: Rng): T => {
@@ -435,6 +540,33 @@ const escolher = <T>(xs: readonly T[], rng: Rng): T => {
   if (primeiro === undefined) throw new Error("degrau vazio");
   return primeiro;
 };
+
+/**
+ * A escada da corrida inteira: os degraus com garantia, e depois os sem.
+ *
+ * São duas escadas coladas e não uma só sobre as duas bandas juntas, porque o
+ * que separa as duas não é o tamanho — é a garantia. Ordenar tudo por peças
+ * misturava as duas na fronteira, e um tabuleiro que pode bloquear aparecia
+ * antes do sétimo, onde o salto ainda não existe.
+ *
+ * Sem tabuleiros livres — um pack antigo, ou uma banda que não carregou — a
+ * corrida é a de antes: a escada com garantia, e o cume dela para sempre.
+ */
+export function escadaDaCorrida(
+  seguros: readonly Level[],
+  livres: readonly Level[],
+  rng: Rng,
+): Escada {
+  const primeira = escadaDeTamanho(seguros, rng, DEGRAUS);
+  if (livres.length === 0) return primeira;
+
+  const segunda = escadaDeTamanho(livres, rng, DEGRAUS_LIVRES);
+  return {
+    ordem: [...primeira.ordem, ...segunda.ordem],
+    cume: segunda.cume,
+    livresDesde: primeira.ordem.length,
+  };
+}
 
 /**
  * O tabuleiro número `n` da corrida, contando de 0.

@@ -17,7 +17,7 @@ import { construirBanda, passagensDe } from "../src/pipeline";
 
 // O jogo e o pipeline não se importam um com o outro — este import existe só
 // para que o desencontro entre os dois tenha onde rebentar. Ver o teste no fim.
-import { DEGRAUS } from "../../game/src/session/TimeAttackSession";
+import { DEGRAUS, DEGRAUS_LIVRES } from "../../game/src/session/TimeAttackSession";
 
 const TUTORIAL = bandById("tutorial");
 const DENSO = bandById("denso");
@@ -48,6 +48,24 @@ describe("bandas", () => {
 
   it("o modo tempo não pede joker", () => {
     expect(bandById("tempo")?.params.includeJoker).toBeUndefined();
+    expect(bandById("tempo-livre")?.params.includeJoker).toBeUndefined();
+  });
+
+  /*
+   * A banda de depois da escada larga a garantia de **não bloquear** — o modo
+   * dá-lhe o salto em troca — mas não a de **ter solução**, nem o piso de
+   * justiça. É o que a distingue de uma banda da campanha posta no relógio.
+   */
+  it("a banda sem garantia larga o greedy-safe, e só isso", () => {
+    const livre = bandById("tempo-livre");
+
+    expect(livre?.modo).toBe("tempo");
+    expect(livre?.accept.requireGreedySafe).toBeUndefined();
+    expect(livre?.accept.fairnessDepth).toBeGreaterThanOrEqual(2);
+    // Bloquear é um risco, não uma sentença: metade das sequências chega ao fim.
+    expect(livre?.accept.survival[0]).toBeGreaterThanOrEqual(0.5);
+    // E cabe num telemóvel em pé: o jogo filtra o que passa das sete colunas.
+    expect(livre?.limite?.[0]).toBeLessThanOrEqual(7);
   });
 });
 
@@ -340,6 +358,15 @@ describe("formas cheias", () => {
     expect(tempo.janelas).toHaveLength(DEGRAUS);
   });
 
+  it("e as da banda sem garantia, tantas quantos os degraus livres", () => {
+    const livre = bandById("tempo-livre");
+    if (livre?.janelas === undefined) throw new Error("sem janelas na tempo-livre");
+
+    expect(livre.janelas).toHaveLength(DEGRAUS_LIVRES);
+    // A escada continua de onde a outra acabou.
+    expect(livre.janelas[0]?.[0]).toBe((bandById("tempo")?.pieces[1] ?? 0) + 1);
+  });
+
   it("as quotas somam o alvo, e a parte cheia é a que a banda pediu", () => {
     for (const band of BANDS) {
       const passagens = passagensDe(band, 30);
@@ -377,4 +404,38 @@ describe("formas cheias", () => {
       expect(new Set(inicios).size).toBe(inicios.length);
     }
   });
+});
+
+describe("o teto de dimensões", () => {
+  /*
+   * Sem teto, a banda gastava orçamento em tabuleiros de 8 a 10 colunas que o
+   * jogo filtra. O teto rejeita-os à saída do gerador, antes de qualquer
+   * playout — e nenhum aceite passa dele.
+   */
+  it("nenhum aceite passa do teto, e os que passavam são rejeitados por forma", () => {
+    const base = bandById("tempo-livre");
+    if (base === undefined) throw new Error("sem tempo-livre");
+    const { janelas: _j, ...semJanelas } = base;
+    const banda = {
+      ...semJanelas,
+      pieces: [21, 24] as const,
+      limite: [5, 6] as const,
+    };
+
+    let porForma = 0;
+    let aceites = 0;
+
+    for (let seed = 3_000_000; seed < 3_000_080; seed++) {
+      const a = avaliar(seed, banda, 100);
+      if (a.rejeicao === "forma") porForma++;
+      if (a.level === undefined) continue;
+
+      aceites++;
+      expect(a.level.board.length).toBeLessThanOrEqual(5);
+      for (const coluna of a.level.board) expect(coluna.length).toBeLessThanOrEqual(6);
+    }
+
+    expect(porForma).toBeGreaterThan(0);
+    expect(aceites).toBeGreaterThan(0);
+  }, 120_000);
 });

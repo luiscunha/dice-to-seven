@@ -96,6 +96,16 @@ export const iconeVoltar = (): SVGElement =>
 export const iconeSeguir = (): SVGElement =>
   icone("icone-seguir", ["M9.5 5.5 16 12l-6.5 6.5"]);
 
+/**
+ * Saltar: as duas setas do seguir e a barra de fim de faixa.
+ *
+ * O desenho de «passar à frente» que qualquer leitor de música já ensinou. A
+ * barra é o que o distingue do seguir — sem ela, saltar o tabuleiro lia-se
+ * como ir para outro ecrã.
+ */
+export const iconeSaltar = (): SVGElement =>
+  icone("icone-saltar", ["M5.5 6.5 11 12l-5.5 5.5", "M11 6.5l5.5 5.5-5.5 5.5", "M18.5 6v12"]);
+
 /** Fechar uma caixa. */
 export const iconeFechar = (): SVGElement =>
   icone("icone-fechar", ["M6.5 6.5l11 11", "M17.5 6.5l-11 11"]);

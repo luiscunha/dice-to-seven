@@ -83,6 +83,13 @@ function temForma(board: Board, [colunas, linhas]: Forma): boolean {
   );
 }
 
+/** Cabe dentro do teto: nem coluna a mais, nem coluna mais alta do que ele. */
+function cabeEm(board: Board, [colunas, linhas]: Forma): boolean {
+  return (
+    board.length <= colunas && board.every((col) => col.length <= linhas)
+  );
+}
+
 /**
  * Margem com que **cada extremo** da banda é alargado no pré-filtro: três erros
  * padrão da proporção, calculados no próprio extremo.
@@ -134,6 +141,11 @@ export function avaliar(
    * Rejeitar aqui é barato: acontece antes da ida-e-volta e de qualquer playout.
    */
   if (forma !== undefined && !temForma(gerado.board, forma)) {
+    return { seed, rejeicao: "forma" };
+  }
+
+  // O teto de dimensões é o mesmo tipo de recusa, e pelo mesmo preço.
+  if (band.limite !== undefined && !cabeEm(gerado.board, band.limite)) {
     return { seed, rejeicao: "forma" };
   }
 
