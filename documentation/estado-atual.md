@@ -708,6 +708,36 @@ do modo são `ritmoFator` (quão depressa aperta), `pavioMs` e
 `bomba.probabilidade`. A simulação assume ritmos constantes, e ninguém joga
 assim: o primeiro playtest diz se as corridas boas duram mesmo seis minutos.
 
+### A bomba no Survival
+
+A mesma peça, com a moeda do modo: no Survival a pressão são as linhas, e
+**rebentar faz cair uma linha a mais**. O mecanismo comum — seguir a peça, sair
+com ela, o pavio — vive em `session/bomba.ts`; o castigo é de cada modo.
+
+Três diferenças face ao Contra-Relógio, todas forçadas pelo modo:
+
+- **Chega numa linha, e vê-se na fila antes de cair.** Uma em cada quatro
+  linhas, numa coluna tirada da seed (nunca no joker). No Contra-Relógio a bomba
+  arma-se numa peça já jogável; aqui não há essa garantia, e a fila é o que a
+  substitui — o jogador tem uma linha de avanço para preparar o sítio onde ela
+  aterra. Como o joker, só uma de cada vez: com bomba armada, nenhuma linha traz
+  outra.
+- **Uma linha a mais, e não a próxima antecipada.** Antecipar a próxima fazia o
+  castigo depender da sorte: a um segundo da linha marcada, rebentar não custava
+  nada. A linha extra custa sempre o mesmo, e o prazo da marcada fica onde
+  estava.
+- **O pavio está no tempo da corrida**, que pára com a pausa e se grava com a
+  corrida. Sair com seis segundos de pavio é voltar com seis segundos de pavio.
+  Uma corrida gravada antes das bombas abre sem bomba e com o contador a zero.
+
+A peça fica quando rebenta, também aqui. Não há solução a proteger, mas tirar
+uma peça num modo que se perde por excesso delas seria um alívio, e um castigo
+que alivia não é castigo.
+
+Valores de partida, em `DEFAULT_SURVIVAL`: `linhasEntreBombas: 3`,
+`pavioBombaMs: 10_000` — mais longo do que os 6 s do Contra-Relógio, porque a
+peça chega no topo da pilha e o tabuleiro tem o dobro das peças.
+
 ---
 
 ## Decisões de arquitetura que não se leem no código

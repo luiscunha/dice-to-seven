@@ -3127,6 +3127,22 @@ body::before {
 }
 
 /*
+ * A bomba na fila: o mesmo anel e o mesmo pavio do tabuleiro, para se
+ * reconhecer quando cair — mas **apagado**, sem número nem pulso, porque ainda
+ * não está a arder. O pavio é mais pequeno e entra menos para fora: a fila
+ * corta o que lhe sai da folga, e o de tamanho inteiro saía decapitado.
+ */
+.fila .peca.na-fila.bomba {
+  position: relative;
+}
+
+.fila .pavio {
+  --lado-pavio: 11px;
+  top: -5px;
+  animation: none;
+}
+
+/*
  * O resto para limpar. Cada jogada tira exatamente 7, portanto o tabuleiro só
  * pode esvaziar se a soma for múltipla de 7 — e `0` é a única leitura sobre a
  * qual há alguma coisa a fazer. É a única que ganha cor.

@@ -38,6 +38,7 @@ import {
   tapTimeAttack,
 } from "../session/TimeAttackSession";
 import { vibrarExplosao, vibrarRecusa } from "../plataforma/nativo";
+import { anunciar } from "./anuncio";
 import { BoardView } from "./BoardView";
 import { botao, botaoRedondo, confirmar, elemento, reanimar } from "./dom";
 import { iconeReiniciar, iconeVoltar } from "./icones";
@@ -462,14 +463,7 @@ export class TimeAttackScreen {
     this.elRelogio.classList.toggle("a-acabar", s < 10);
   }
 
-  /**
-   * O `+3s` a subir do sítio onde foi ganho — e o `−1.5s` do sítio onde foi
-   * perdido.
-   *
-   * Perder diz-se no mesmo sítio e da mesma maneira que ganhar, a vermelho. O
-   * relógio só fica a saber o porquê do salto se o jogador ligar o número à
-   * peça, e é essa ligação que ensina o que não voltar a fazer.
-   */
+  /** O `+3s` a subir do sítio onde foi ganho, ou o `−1.5s` de onde foi perdido. */
   private anunciar(
     texto: string,
     selecao: readonly Packed[],
@@ -479,27 +473,7 @@ export class TimeAttackScreen {
       .map((p) => this.view.caixaDe(p))
       .filter((r): r is DOMRect => r !== undefined);
 
-    if (caixas.length === 0) return;
-
-    const palco = this.palco.getBoundingClientRect();
-    const x =
-      caixas.reduce((n, r) => n + r.left + r.width / 2, 0) / caixas.length -
-      palco.left;
-    const y =
-      caixas.reduce((n, r) => n + r.top, 0) / caixas.length - palco.top;
-
-    const el = elemento(
-      "div",
-      variante === undefined ? "ganho" : `ganho ${variante}`,
-      texto,
-    );
-    el.style.left = `${String(Math.round(x))}px`;
-    el.style.top = `${String(Math.round(y))}px`;
-
-    this.palco.appendChild(el);
-    el.addEventListener("animationend", () => {
-      el.remove();
-    });
+    anunciar(this.palco, caixas, texto, variante);
   }
 
   private pintarFim(): void {

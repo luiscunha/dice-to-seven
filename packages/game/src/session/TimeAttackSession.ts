@@ -17,17 +17,11 @@
  * por parâmetro, que é o que torna isto testável (plano, fase 7).
  */
 
-import type { Board, Group, Level, Packed, Rng } from "@dicetoseven/engine";
-import {
-  findAllGroups,
-  jokerAt,
-  pick,
-  pieceCount,
-  remapearCelula,
-  shuffled,
-  totalSum,
-} from "@dicetoseven/engine";
+import type { Board, Level, Packed, Rng } from "@dicetoseven/engine";
+import { jokerAt, pick, pieceCount, shuffled, totalSum } from "@dicetoseven/engine";
 
+import type { Bomba } from "./bomba";
+import { pavioAcabou, pavioDe, pecasJogaveis, saiNaJogada, seguirBomba } from "./bomba";
 import type { ComboState } from "./combos";
 import { DEFAULT_COMBO_CONFIG, breakCombo, registerMove, startCombo } from "./combos";
 import type { ComboConfig } from "./combos";
@@ -36,38 +30,17 @@ import { isFinished, startGame, tap } from "./GameSession";
 import type { ScoringConfig } from "./scoring";
 import { DEFAULT_SCORING, moveScore } from "./scoring";
 
+export type { Bomba };
+
 /**
- * A peça-bomba: uma peça do tabuleiro com pavio, que tem de sair antes de ele
- * acabar.
- *
- * ── Porque é que existe ──
+ * A bomba do Contra-Relógio — o mecanismo comum está em `bomba.ts`.
  *
  * Os tabuleiros deste modo são greedy-safe, portanto **qualquer ordem resolve**.
  * Era essa a promessa do modo, e era também o que o deixava sem decisão
  * nenhuma: só contava a velocidade. A bomba põe uma pergunta de volta —
  * *que grupo tiro primeiro?* — sem tocar na promessa, porque não mexe no que é
- * jogada legal. Mexe só no relógio.
- *
- * **É por isso que não vive na engine nem passa pelo gerador.** Uma marca que
- * muda a legalidade (as soldas, o gelo) muda os estados alcançáveis, e tem de
- * ser verificada pelo solver para a garantia central sobreviver. Uma marca que
- * só muda o que se ganha ou perde de tempo não tem nada a verificar: o
- * tabuleiro resolve-se exatamente como antes, com ou sem bomba.
- *
- * ── O que acontece quando rebenta ──
- *
- * Custa tempo, e a peça **fica**, a valer o que valia. Tirá-la do tabuleiro
- * seria tirar-lhe pontos que a soma total precisa para dar múltiplo de 7, e o
- * tabuleiro deixava de ter solução — precisamente o que este projeto existe
- * para impedir.
+ * jogada legal. Mexe só no relógio: rebentar custa tempo.
  */
-export interface Bomba {
-  /** Onde está a peça armada. Viaja com o tabuleiro, como as marcas. */
-  readonly at: Packed;
-  /** Instante em que rebenta, se não sair antes. */
-  readonly rebentaEm: number;
-}
-
 export interface ConfigBomba {
   /**
    * Quantos tabuleiros limpos antes de poder aparecer a primeira bomba.
@@ -306,13 +279,6 @@ export function armarBomba(
   return { ...s, bomba: { at: alvo, rebentaEm: now + cfg.pavioMs } };
 }
 
-/** As peças que entram em pelo menos um grupo válido, por ordem crescente. */
-function pecasJogaveis(board: Board): Packed[] {
-  const pecas = new Set<Packed>();
-  for (const g of findAllGroups(board)) for (const p of g) pecas.add(p);
-  return [...pecas].sort((a, b) => a - b);
-}
-
 export interface Rebentamento {
   readonly state: TimeAttackState;
   /** Onde estava a bomba que rebentou agora. `undefined` se não rebentou nada. */
@@ -337,7 +303,7 @@ export function resolverBomba(
 ): Rebentamento {
   const bomba = s.bomba;
 
-  if (bomba === undefined || now < bomba.rebentaEm || isOver(s, now)) {
+  if (bomba === undefined || !pavioAcabou(bomba, now) || isOver(s, now)) {
     return { state: s, rebentou: undefined, perdidoMs: 0 };
   }
 
@@ -360,8 +326,7 @@ export function resolverBomba(
 export const pavioRestante = (
   s: TimeAttackState,
   now: number,
-): number | undefined =>
-  s.bomba === undefined ? undefined : Math.max(0, s.bomba.rebentaEm - now);
+): number | undefined => pavioDe(s.bomba, now);
 
 /* ─── A escada de tamanho ─────────────────────────────────────────────────── */
 
@@ -618,8 +583,7 @@ export function tapTimeAttack(
 
   // `moved` garante que há jogada; o `?? []` é só para o compilador.
   const jogada = game.lastMove ?? [];
-  const desarmou =
-    antes.bomba !== undefined && jogada.includes(antes.bomba.at);
+  const desarmou = saiNaJogada(antes.bomba, jogada);
 
   return {
     state: {
@@ -640,24 +604,6 @@ export function tapTimeAttack(
     rebentou: bomba.rebentou,
     desarmou,
   };
-}
-
-/**
- * A bomba acompanha a peça: cai com a gravidade e desliza com o colapso.
- *
- * É a mesma travessia que as soldas e o gelo fazem, e pela mesma função — uma
- * bomba que ficasse a apontar para a coordenada antiga passava a ameaçar a
- * peça que lá caiu, e o jogador desarmava a peça errada.
- */
-function seguirBomba(
-  bomba: Bomba | undefined,
-  board: Board,
-  jogada: Group,
-): Bomba | undefined {
-  if (bomba === undefined) return undefined;
-
-  const at = remapearCelula(board, jogada)(bomba.at);
-  return at === undefined ? undefined : { ...bomba, at };
 }
 
 /**
