@@ -35,18 +35,23 @@ import type { TimeAttackState } from "../src/session/TimeAttackSession";
 import {
   DEFAULT_TIME_ATTACK,
   DEGRAUS,
+  DEGRAUS_LIVRES,
   JokerInTimeAttackError,
   armarBomba,
   boardReward,
+  escadaDaCorrida,
   escadaDeTamanho,
+  indiceDoTabuleiro,
   jogadasDe,
   nivelDoTabuleiro,
   isOver,
   nextBoard,
   pavioRestante,
+  podeSaltar,
   remainingMs,
   resolverBomba,
   ritmoExigido,
+  saltarTabuleiro,
   startTimeAttack,
   tapTimeAttack,
 } from "../src/session/TimeAttackSession";
@@ -1195,5 +1200,123 @@ describe("o melhor tempo por nível", () => {
 
     save(storage, p);
     expect(load(storage).levels["meio-000015"]?.bestTimeMs).toBe(4321);
+  });
+});
+
+describe("a escada sem garantia e o salto", () => {
+  /** Níveis de uma coluna de `n` uns, marcados pela banda de onde vêm. */
+  const nivelDe = (n: number, banda: string, i: number): Level => ({
+    id: `${banda}-${String(i)}`,
+    seed: i,
+    board: [Array.from({ length: n }, () => 1 as const)],
+    solution: [] as never,
+    band: banda,
+  });
+
+  const seguros = Array.from({ length: 30 }, (_, i) =>
+    nivelDe(10 + Math.floor(i / 3), "tempo", i),
+  );
+  const livres = Array.from({ length: 48 }, (_, i) =>
+    nivelDe(21 + Math.floor(i / 3), "tempo-livre", i),
+  );
+
+  it("**seis degraus com garantia, depois quatro sem**", () => {
+    const e = escadaDaCorrida(seguros, livres, mulberry32(1));
+
+    expect(e.ordem).toHaveLength(DEGRAUS + DEGRAUS_LIVRES);
+    expect(e.livresDesde).toBe(DEGRAUS);
+    expect(e.ordem.slice(0, DEGRAUS).every((l) => l.band === "tempo")).toBe(true);
+    expect(e.ordem.slice(DEGRAUS).every((l) => l.band === "tempo-livre")).toBe(true);
+    // Depois da escada, o cume é dos sem garantia — os maiores.
+    expect(e.cume.every((l) => l.band === "tempo-livre")).toBe(true);
+  });
+
+  /*
+   * As duas escadas colam-se, não se misturam. Ordenar tudo por peças punha um
+   * tabuleiro sem garantia antes do sétimo, onde o salto ainda não existe.
+   */
+  it("um tabuleiro sem garantia nunca aparece antes da fronteira, mesmo pequeno", () => {
+    const pequenoLivre = [nivelDe(5, "tempo-livre", 99)];
+    const e = escadaDaCorrida(seguros, pequenoLivre, mulberry32(3));
+
+    expect(e.ordem.slice(0, e.livresDesde).some((l) => l.band === "tempo-livre")).toBe(false);
+  });
+
+  it("sem tabuleiros livres, a corrida é a de antes e o salto não existe", () => {
+    const e = escadaDaCorrida(seguros, [], mulberry32(1));
+
+    expect(e.ordem).toHaveLength(DEGRAUS);
+    expect(e.livresDesde).toBe(Infinity);
+    expect(e.cume.every((l) => l.band === "tempo")).toBe(true);
+  });
+
+  /** Uma corrida já no tabuleiro `n`, num tabuleiro com jogadas. */
+  const noTabuleiro = (n: number): TimeAttackState => ({
+    ...startTimeAttack(level([[3], [4], [2], [5]]), 0),
+    boardsCleared: n,
+  });
+
+  it("**o salto só existe depois da escada com garantia**", () => {
+    expect(podeSaltar(noTabuleiro(DEGRAUS - 1), 0)).toBe(false);
+    expect(podeSaltar(noTabuleiro(DEGRAUS), 0)).toBe(true);
+  });
+
+  it("a fronteira vem da escada desta corrida, e não de uma constante", () => {
+    const config = { ...DEFAULT_TIME_ATTACK, saltoDesde: 2 };
+    expect(podeSaltar(noTabuleiro(2), 0, config)).toBe(true);
+    expect(podeSaltar(noTabuleiro(1), 0, config)).toBe(false);
+  });
+
+  it("um tabuleiro bloqueado salta-se sempre, esteja onde estiver", () => {
+    const preso: TimeAttackState = startTimeAttack(level([[6], [6]]), 0);
+    expect(podeSaltar(preso, 0)).toBe(true);
+  });
+
+  it("depois do fim da corrida não se salta", () => {
+    const s = noTabuleiro(DEGRAUS);
+    expect(podeSaltar(s, s.deadlineAt)).toBe(false);
+    expect(saltarTabuleiro(s, s.deadlineAt)).toBe(s);
+  });
+
+  it("**saltar custa tempo, avança na escada e não conta como limpo**", () => {
+    let s = noTabuleiro(DEGRAUS);
+    s = { ...s, combo: { count: 3, best: 3, lastMoveAt: 0 } };
+
+    const depois = saltarTabuleiro(s, 1_000);
+
+    expect(depois.deadlineAt).toBe(s.deadlineAt - DEFAULT_TIME_ATTACK.saltarMs);
+    expect(depois.saltados).toBe(1);
+    expect(depois.boardsCleared).toBe(s.boardsCleared);
+    expect(indiceDoTabuleiro(depois)).toBe(indiceDoTabuleiro(s) + 1);
+    expect(depois.combo.count).toBe(0);
+  });
+
+  /*
+   * O ritmo exigido conta tabuleiros **limpos**. Se saltar o apertasse como
+   * limpar, saltar e limpar valeriam o mesmo para a curva da corrida.
+   */
+  it("saltar não aperta o ritmo exigido", () => {
+    const s = noTabuleiro(DEGRAUS);
+    const depois = saltarTabuleiro(s, 0);
+    const tab: Board = [[3], [4]];
+
+    expect(boardReward(depois.boardsCleared, tab)).toBe(boardReward(s.boardsCleared, tab));
+  });
+
+  it("a bomba vai com o tabuleiro, sem rebentar", () => {
+    const s: TimeAttackState = {
+      ...noTabuleiro(DEGRAUS),
+      bomba: { at: packed(0, 0), rebentaEm: 5_000 },
+    };
+    const depois = saltarTabuleiro(s, 1_000);
+
+    expect(depois.bomba).toBeUndefined();
+    expect(depois.deadlineAt).toBe(s.deadlineAt - DEFAULT_TIME_ATTACK.saltarMs);
+  });
+
+  it("**saltar custa mais do que a bomba** — senão fugir dela era a jogada certa", () => {
+    expect(DEFAULT_TIME_ATTACK.saltarMs).toBeGreaterThan(
+      DEFAULT_TIME_ATTACK.bomba.penalizacaoMs,
+    );
   });
 });

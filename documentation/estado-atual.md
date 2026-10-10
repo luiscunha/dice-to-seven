@@ -738,6 +738,58 @@ Valores de partida, em `DEFAULT_SURVIVAL`: `linhasEntreBombas: 3`,
 `pavioBombaMs: 10_000` — mais longo do que os 6 s do Contra-Relógio, porque a
 peça chega no topo da pilha e o tabuleiro tem o dobro das peças.
 
+### Depois da escada: tabuleiros sem garantia, e o salto
+
+A banda `tempo` para nas 20 peças porque a garantia de não bloquear acaba aí, e
+o modo ficava num 4×5 do sexto tabuleiro em diante. Agora a escada continua por
+uma segunda banda, **`tempo-livre`**: 48 níveis de 21 a 39 peças, em quatro
+degraus, até 7×7. Larga a garantia de não bloquear — **não a de ter solução**:
+passa pela ida-e-volta e pelo piso de justiça a 2, como tudo o resto.
+
+Do sétimo tabuleiro em diante, o modo oferece o **salto**: um botão ao lado da
+seta de sair, por **10 s**. Num tabuleiro sem jogadas abre-se no palco o painel
+«Sem jogadas», com o salto como botão principal.
+
+**O que a medição decidiu** (80 candidatos por janela):
+
+- **Composições até 5**, e não até 4. A 36–42 peças a aceitação triplica, e o
+  plano §6.3 manda endurecer o modo pelo tamanho dos grupos — 18% dos grupos
+  das soluções publicadas têm 5 ou mais peças, e é aqui que o bónus de grupo
+  grande passa a existir.
+- **Sobrevivência a partir de 0,5** em todas as janelas: bloquear é um risco,
+  não uma sentença.
+- **Teto de 7×7**, por um campo novo das bandas (`limite`). Sem ele, um terço
+  dos aceites grandes saía com 8 a 10 colunas, que o jogo filtra. Com ele, a
+  janela de 43–49 peças não dá nada (0 em 80), e a escada fica nas 42.
+
+**As regras do salto**, todas na `TimeAttackSession`:
+
+- Custa **mais do que a bomba** (10 s contra 5 s), senão fugir de uma bomba era
+  a jogada certa. Uma bomba armada vai com o tabuleiro, sem rebentar.
+- **Avança na escada** como limpar — saltar não é maneira de ficar nos
+  tabuleiros pequenos — mas **não aperta o ritmo exigido**, que conta só os
+  tabuleiros limpos.
+- A fronteira do salto é a da **escada desta corrida** (`Escada.livresDesde`),
+  e não a constante: um pack com menos níveis garantidos do que degraus dava
+  tabuleiros sem garantia antes de o salto existir.
+- **Um tabuleiro bloqueado salta-se sempre**, esteja onde estiver. Não devia
+  acontecer antes do sétimo, mas uma corrida presa à espera do fim do relógio
+  é um defeito que nenhuma garantia de geração vale arriscar.
+
+**O efeito na duração das corridas.** Os tabuleiros grandes tornam as
+corridas rápidas mais longas em tempo, com menos tabuleiros. Simulado com 60 s
+de arranque, sem contar bloqueios nem saltos:
+
+| ritmo do jogador | antes | agora | agora, `ritmoFator: 0.90` |
+|---|---|---|---|
+| 3 s/jogada | 12 tab, 3,7 min | 10 tab, 3,7 min | 9 tab, 3,2 min |
+| 2 s/jogada | 28 tab, 6,0 min | 24 tab, 7,9 min | 20 tab, 6,3 min |
+| 1,5 s/jogada | 42 tab, 6,9 min | 37 tab, 9,7 min | 30 tab, 7,6 min |
+
+O `ritmoFator` ficou em 0,92: os bloqueios e saltos reais encurtam as corridas,
+e quanto só o playtest diz. Se as corridas boas passarem dos oito minutos, 0,90
+repõe as durações de antes.
+
 ---
 
 ## Decisões de arquitetura que não se leem no código

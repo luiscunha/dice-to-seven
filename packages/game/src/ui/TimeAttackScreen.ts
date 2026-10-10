@@ -24,16 +24,20 @@ import type {
   TimeAttackConfig,
   TimeAttackState,
 } from "../session/TimeAttackSession";
+import { isBlocked } from "../session/GameSession";
 import {
   DEFAULT_TIME_ATTACK,
   armarBomba,
-  escadaDeTamanho,
+  escadaDaCorrida,
+  indiceDoTabuleiro,
   isOver,
   nextBoard,
   nivelDoTabuleiro,
   pavioRestante,
+  podeSaltar,
   remainingMs,
   resolverBomba,
+  saltarTabuleiro,
   startTimeAttack,
   tapTimeAttack,
 } from "../session/TimeAttackSession";
@@ -41,7 +45,7 @@ import { vibrarExplosao, vibrarRecusa } from "../plataforma/nativo";
 import { anunciar } from "./anuncio";
 import { BoardView } from "./BoardView";
 import { botao, botaoRedondo, confirmar, elemento, reanimar } from "./dom";
-import { iconeReiniciar, iconeVoltar } from "./icones";
+import { iconeReiniciar, iconeSaltar, iconeVoltar } from "./icones";
 
 /** De quanto em quanto o relógio se repinta. Décimos chegam, e custam pouco. */
 const PASSO_RELOGIO = 100;
@@ -49,8 +53,33 @@ const PASSO_RELOGIO = 100;
 /** `1500` → `1.5s`, como o relógio e os anúncios o escrevem. */
 const segundos = (ms: number): string => `${(ms / 1000).toFixed(1)}s`;
 
+/**
+ * «12 tabuleiros limpos · 2 saltados».
+ *
+ * Os saltados só aparecem quando os há. Um «0 saltados» em todas as corridas
+ * curtas era uma regra que o jogador ainda não conheceu a ser-lhe anunciada no
+ * fim, como se tivesse falhado nela.
+ */
+function detalheDoFim(s: TimeAttackState): string {
+  const limpos =
+    s.boardsCleared === 1
+      ? "1 tabuleiro limpo"
+      : `${String(s.boardsCleared)} tabuleiros limpos`;
+
+  if (s.saltados === 0) return limpos;
+  return `${limpos} · ${String(s.saltados)} ${s.saltados === 1 ? "saltado" : "saltados"}`;
+}
+
 export interface OpcoesTimeAttack {
+  /** Os tabuleiros com garantia — a banda `tempo`, da escada inicial. */
   readonly niveis: readonly Level[];
+  /**
+   * Os tabuleiros sem garantia — a banda `tempo-livre`, depois da escada.
+   *
+   * Opcional porque um pack sem esta banda continua a ser um pack válido: a
+   * corrida faz-se só com a escada com garantia, como antes.
+   */
+  readonly livres?: readonly Level[];
   readonly aoTerminar: (info: {
     readonly pontos: number;
     readonly tabuleiros: number;
@@ -108,12 +137,13 @@ export class TimeAttackScreen {
   private readonly elRelogio: HTMLElement;
   private readonly elMeta: HTMLElement;
   private readonly elFim: HTMLElement;
+  private readonly elPreso: HTMLElement;
+  private readonly btSaltar: HTMLButtonElement;
 
   private estado: TimeAttackState;
   private readonly config: TimeAttackConfig;
   private readonly escada: Escada;
   private readonly rng: Rng;
-  private indice = 0;
   private cronometro: ReturnType<typeof setInterval> | undefined;
   private readonly aoVoltarAoEcra: () => void;
   private terminado = false;
@@ -131,9 +161,12 @@ export class TimeAttackScreen {
      * Dentro de cada degrau o nível é sorteado, e a seed vem do relógio: duas
      * corridas seguidas não dão a mesma sequência, que é o que impedia o modo
      * de virar um exercício de memória. Aqui não há nada a reproduzir.
+     *
+     * A escada tem duas partes: seis degraus com garantia de não bloquear, e
+     * depois os tabuleiros maiores, sem ela — ver `escadaDaCorrida`.
      */
     this.rng = mulberry32(Date.now() >>> 0);
-    this.escada = escadaDeTamanho(opcoes.niveis, this.rng);
+    this.escada = escadaDaCorrida(opcoes.niveis, opcoes.livres ?? [], this.rng);
 
     const primeiro = this.escada.ordem[0];
     if (primeiro === undefined) throw new Error("não há níveis para o modo tempo");
@@ -142,6 +175,8 @@ export class TimeAttackScreen {
       ...DEFAULT_TIME_ATTACK,
       ...opcoes.afinacao,
       initialMs: opcoes.tempoInicial * 1000,
+      // O salto existe onde os tabuleiros sem garantia começam nesta corrida.
+      saltoDesde: this.escada.livresDesde,
     };
 
     const arranque = Date.now();
@@ -161,11 +196,37 @@ export class TimeAttackScreen {
       this.pedirParaSair();
     });
 
+    /*
+     * ── O salto vive ao lado da saída ──
+     *
+     * No cabeçalho e não num rodapé: o modo tirou o rodapé para dar o espaço
+     * ao tabuleiro, e um rodapé que aparecesse ao sétimo tabuleiro encolhia o
+     * tabuleiro no momento exato em que ele começa a ser grande. Escondido, o
+     * botão não ocupa nada; aparecido, cabe na coluna da seta, que a grelha do
+     * cabeçalho já reserva com a mesma largura da do placar — o relógio não
+     * sai do meio.
+     *
+     * Redondo e só com o ícone, porque a 320px não cabe mais. O custo diz-se
+     * no nome acessível, e diz-se por extenso no painel de beco sem saída, que
+     * é onde o salto é a resposta.
+     */
+    this.btSaltar = botaoRedondo(
+      iconeSaltar(),
+      `saltar o tabuleiro, custa ${String(this.config.saltarMs / 1000)} segundos`,
+      () => {
+        this.saltar();
+      },
+    );
+    this.btSaltar.hidden = true;
+
+    const esquerda = elemento("div", "tempo-acoes");
+    esquerda.append(sair, this.btSaltar);
+
     this.elRelogio = elemento("div", "relogio");
     this.elRelogio.setAttribute("role", "timer");
     this.elMeta = elemento("div", "meta");
 
-    topo.append(sair, this.elRelogio, this.elMeta);
+    topo.append(esquerda, this.elRelogio, this.elMeta);
 
     /* ── palco ── */
     this.palco = elemento("div", "palco");
@@ -178,6 +239,16 @@ export class TimeAttackScreen {
     this.elFim.setAttribute("role", "status");
     this.elFim.hidden = true;
     this.palco.appendChild(this.elFim);
+
+    /*
+     * O beco sem saída abre no mesmo sítio, e pela mesma razão. Não é um
+     * diálogo modal como na campanha: aqui o relógio não pára, e um modal que
+     * tivesse de se fechar antes de saltar era tempo a mais a pagar pelo erro.
+     */
+    this.elPreso = elemento("div", "fim preso");
+    this.elPreso.setAttribute("role", "alert");
+    this.elPreso.hidden = true;
+    this.palco.appendChild(this.elPreso);
 
     /*
      * ── Sem rodapé ──
@@ -215,7 +286,7 @@ export class TimeAttackScreen {
      * todo em vez de só à direita do buraco. O que se centra é a caixa, e para
      * isso ela tem de ter o tamanho do tabuleiro que lá está.
      */
-    this.view.dimensionarPara(maiorTabuleiro(opcoes.niveis), {
+    this.view.dimensionarPara(maiorTabuleiro([...opcoes.niveis, ...(opcoes.livres ?? [])]), {
       caixaPorTabuleiro: true,
     });
     this.view.montar(primeiro.board);
@@ -290,6 +361,13 @@ export class TimeAttackScreen {
   private async tocar(p: Packed): Promise<void> {
     if (this.terminado) return;
 
+    /*
+     * Num tabuleiro sem jogadas, nenhum toque fecha grupo — e um que passasse
+     * de 7 ainda custava tempo. O rato já não chega às peças (o palco tira-lhes
+     * os toques); isto fecha o teclado, que continua a poder tocar.
+     */
+    if (isBlocked(this.estado.game)) return;
+
     const antes = this.estado;
 
     const r = tapTimeAttack(antes, p, Date.now(), { time: this.config });
@@ -317,10 +395,20 @@ export class TimeAttackScreen {
     this.pintar();
   }
 
+  /**
+   * O tabuleiro seguinte, depois de um limpo ou de um saltado.
+   *
+   * A posição na escada vem da sessão — limpos mais saltados —, e não de um
+   * contador do ecrã: dois contadores da mesma coisa acabam por discordar, e
+   * aqui discordar era o ecrã mostrar um degrau e a sessão oferecer o salto
+   * pelo outro.
+   */
   private avancarTabuleiro(): void {
-    this.indice += 1;
-
-    const seguinte = nivelDoTabuleiro(this.escada, this.indice, this.rng);
+    const seguinte = nivelDoTabuleiro(
+      this.escada,
+      indiceDoTabuleiro(this.estado),
+      this.rng,
+    );
     if (seguinte === undefined) return;
 
     // Sem `dimensionarPara`: a peça foi fixada no arranque, e é isso que deixa
@@ -354,6 +442,34 @@ export class TimeAttackScreen {
     this.view.rebentarBomba(at);
     reanimar(this.elRelogio, "perdeu");
     vibrarExplosao();
+  }
+
+  /**
+   * Saltar: custa tempo, e o tabuleiro seguinte entra já.
+   *
+   * A perda sobe **do tabuleiro inteiro**, e não de uma peça — é ele que se
+   * deita fora. O relógio acusa-a como as outras.
+   */
+  private saltar(): void {
+    if (this.terminado) return;
+
+    const antes = this.estado;
+    const depois = saltarTabuleiro(antes, Date.now(), this.config);
+    if (depois === antes) return;
+
+    const tabuleiro = this.palco.querySelector(".tabuleiro");
+    anunciar(
+      this.palco,
+      tabuleiro === null ? [] : [tabuleiro.getBoundingClientRect()],
+      `−${segundos(this.config.saltarMs)}`,
+      "perda grande",
+    );
+    reanimar(this.elRelogio, "perdeu");
+    vibrarRecusa();
+
+    this.estado = depois;
+    this.avancarTabuleiro();
+    this.pintar();
   }
 
   /** O toque passava de 7: a peça diz que não, e a perda sobe dela. */
@@ -393,8 +509,9 @@ export class TimeAttackScreen {
     this.pararRelogio();
     this.pintarRelogio();
     // Um pavio parado a meio, por cima do painel de fim, lia-se como uma bomba
-    // que ainda ia rebentar.
+    // que ainda ia rebentar. O salto sai pela mesma razão.
     this.pintarBomba();
+    this.pintarSalto();
 
     this.opcoes.aoTerminar({
       pontos: this.estado.score,
@@ -423,6 +540,57 @@ export class TimeAttackScreen {
     const jogo = this.estado.game;
     this.view.marcarSelecao(new Set(jogo.selection));
     this.pintarBomba();
+    this.pintarSalto();
+  }
+
+  /**
+   * O botão de saltar e o painel de beco sem saída.
+   *
+   * O botão aparece no primeiro tabuleiro que pode bloquear, e **pulsa ao
+   * aparecer**: é uma regra nova a meio da corrida, e um botão que surge em
+   * silêncio no canto do cabeçalho passa despercebido até ao dia em que faz
+   * falta.
+   */
+  private pintarSalto(): void {
+    const pode =
+      !this.terminado && podeSaltar(this.estado, Date.now(), this.config);
+
+    if (pode && this.btSaltar.hidden) reanimar(this.btSaltar, "novo");
+    this.btSaltar.hidden = !pode;
+
+    const preso = pode && isBlocked(this.estado.game);
+    this.palco.classList.toggle("preso", preso);
+
+    if (!preso) {
+      this.elPreso.hidden = true;
+      return;
+    }
+
+    if (!this.elPreso.hidden) return;
+
+    const restantes = this.estado.game.board.reduce((n, col) => n + col.length, 0);
+    const saltar = botao(
+      `Saltar (−${String(this.config.saltarMs / 1000)}s)`,
+      "primario com-icone",
+      () => {
+        this.saltar();
+      },
+    );
+    saltar.prepend(iconeSaltar());
+
+    this.elPreso.replaceChildren(
+      elemento("div", "selo", "Sem jogadas"),
+      elemento(
+        "div",
+        "detalhe",
+        restantes === 1
+          ? "Sobrou 1 peça, e nenhum grupo soma 7."
+          : `Sobraram ${String(restantes)} peças, e nenhum grupo soma 7.`,
+      ),
+      saltar,
+    );
+    this.elPreso.hidden = false;
+    saltar.focus({ preventScroll: true });
   }
 
   /**
@@ -504,13 +672,7 @@ export class TimeAttackScreen {
     this.elFim.replaceChildren(
       elemento("div", "selo", recorde ? "Novo recorde" : "Acabou o tempo"),
       elemento("div", "fim-tempo", `${String(this.estado.score)} pontos`),
-      elemento(
-        "div",
-        "detalhe",
-        this.estado.boardsCleared === 1
-          ? "1 tabuleiro limpo"
-          : `${String(this.estado.boardsCleared)} tabuleiros limpos`,
-      ),
+      elemento("div", "detalhe", detalheDoFim(this.estado)),
       acoes,
     );
 

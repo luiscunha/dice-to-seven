@@ -107,6 +107,21 @@ export interface BandSpec {
   readonly janelas?: readonly (readonly [number, number])[];
 
   /**
+   * O maior tabuleiro aceite, em colunas × linhas. Sem isto, qualquer tamanho.
+   *
+   * Não é uma forma pedida — é um teto. Existe porque o jogo **filtra** os
+   * tabuleiros com mais de sete colunas (não cabem num telemóvel em pé), e
+   * sem o teto a banda gastava orçamento a gerar níveis que nunca se jogariam:
+   * medido na `tempo-livre`, entre um quarto e um terço dos aceites de 30 peças
+   * para cima saíam com 8 a 10 colunas.
+   *
+   * As linhas contam pela mesma razão do outro lado: o Contra-Relógio mede a
+   * peça pelo maior tabuleiro da corrida, e um só tabuleiro alto encolhia as
+   * peças da corrida inteira.
+   */
+  readonly limite?: Forma;
+
+  /**
    * Todos os níveis saem das `formas`, sem a metade de forma livre.
    *
    * Só o `perito` o usa, e é uma decisão de desenho e não de geração: é a banda
@@ -382,7 +397,9 @@ export const BANDS: readonly BandSpec[] = [
    *
    * Chegar a 7×7 obriga a largar a sobrevivência 1,00, e largá-la obriga a dar
    * ao jogador uma saída para o beco: undo, ou saltar o tabuleiro a troco de
-   * tempo. É uma decisão de desenho do modo, não de afinação desta banda.
+   * tempo. Era uma decisão de desenho do modo, e foi tomada: **o salto**, e os
+   * tabuleiros maiores numa banda à parte — a `tempo-livre`, logo abaixo. Esta
+   * fica com a garantia, e com a escada dos seis primeiros tabuleiros.
    *
    * ── O que mudou, e o que custou ──
    *
@@ -394,8 +411,9 @@ export const BANDS: readonly BandSpec[] = [
    * 22 e 23–24 peças deram zero aceites em 16 320 candidatos cada. Subir mais
    * obriga a largar o limite das composições — livres até 7, a banda aceita 5,2%
    * e chega às 23–24 peças —, ao preço de grupos que já não se veem de relance,
-   * que é exatamente o que este modo pede aos olhos. Fica como decisão de
-   * desenho por tomar, e não como afinação em falta.
+   * que é exatamente o que este modo pede aos olhos. A `tempo-livre` faz essa
+   * troca, mas só depois da escada desta: grupos até 5, quando o jogador já
+   * aqueceu.
    */
   {
     id: "tempo",
@@ -424,6 +442,66 @@ export const BANDS: readonly BandSpec[] = [
       [19, 20],
     ],
     accept: { survival: [1, 1], requireGreedySafe: true, fairnessDepth: 0 },
+  },
+  /*
+   * ── Depois da escada: tabuleiros sem garantia de não bloquear ──
+   *
+   * A banda `tempo` para nas 20 peças porque a garantia acaba aí: acima disso
+   * quase não há tabuleiros onde nenhuma sequência gulosa bloqueie. Esta banda
+   * larga a garantia, e o modo dá ao jogador a saída que o comentário de cima
+   * pedia — **saltar o tabuleiro a troco de tempo**. Os tabuleiros daqui
+   * entram a partir do sétimo da corrida, quando a escada da `tempo` acaba.
+   *
+   * Larga-se a garantia de não bloquear, **não a de ter solução**: estes níveis
+   * passam pela ida-e-volta como todos os outros, e pelo piso de justiça a 2 —
+   * as duas primeiras jogadas nunca condenam o tabuleiro.
+   *
+   * ── O que a medição decidiu (2026-10-10, 80 candidatos por janela) ──
+   *
+   * | peças | até 4, piso 0,5 | até 5, piso 0,5 | até 5, mediana |
+   * |---|---|---|---|
+   * | 21–24 | 20 | 20 | 0,75 |
+   * | 25–29 | 21 | 30 | 0,67 |
+   * | 30–35 | 16 | 39 | 0,54 |
+   * | 36–42 | 9 | 31 | 0,37 |
+   * | 43–49 | 8 | 19 | 0,27 |
+   *
+   * **Composições até 5**, e não até 4 como a `tempo`. Duas razões, e a segunda
+   * é a que conta. Grupos maiores são feitos de 1s e 2s, que se juntam a tudo,
+   * e por isso a sobrevivência dos tabuleiros grandes sobe — a 36–42 peças a
+   * aceitação triplica. E o plano §6.3 diz que o modo tempo endurece pela
+   * **carga de reconhecimento**, sobretudo o tamanho dos grupos: um `1+1+2+2+1`
+   * em S demora segundos a encontrar. É a escada a continuar por outro eixo — e
+   * é também onde o bónus de grupo grande, que pede 5 peças, passa a existir.
+   *
+   * **Sobrevivência a partir de 0,5**, igual em todas as janelas: pelo menos
+   * metade das sequências ao calhas chega ao fim. Um jogador a jogar depressa
+   * faz melhor do que o acaso, portanto bloquear é um risco, não uma sentença.
+   *
+   * **Teto de 7×7.** Sem ele, um terço dos aceites das janelas de cima saía com
+   * 8 a 10 colunas, que o jogo filtra. Com ele a janela de 43–49 peças não dá
+   * nada — **0 em 80** —, porque teria de ser um 7×7 quase cheio com metade das
+   * sequências a sobreviver, e isso não existe com estas composições. A escada
+   * fica nas 42 peças.
+   */
+  {
+    id: "tempo-livre",
+    label: "Modo tempo, depois da escada — sem garantia de não bloquear",
+    modo: "tempo",
+    params: { compositionWeights: ateNPecas(5), newColumnProbability: 0.35 },
+    pieces: [21, 42],
+    /*
+     * Quatro janelas, uma por degrau. `DEGRAUS_LIVRES`, no jogo, tem de ser
+     * este número, e há um teste que o exige — como na `tempo`.
+     */
+    janelas: [
+      [21, 24],
+      [25, 29],
+      [30, 35],
+      [36, 42],
+    ],
+    limite: [7, 7],
+    accept: { survival: [0.5, 1], fairnessDepth: 2 },
   },
 ];
 
