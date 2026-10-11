@@ -211,6 +211,35 @@ describe("gelar não estraga a solução", () => {
     expect(total / comGelo).toBeGreaterThan(1.5);
   });
 
+  /*
+   * As duas peças de um par da solução são ambas candidatas. Gelar as duas
+   * deixava esse passo ilegal — duas geladas não saem juntas — e o nível sem a
+   * solução que o garante. Aconteceu em 10 dos 30 níveis do `perito`.
+   */
+  it("**nunca gela as duas peças do mesmo par da solução**", () => {
+    let pares = 0;
+
+    for (let seed = 1; seed <= 300; seed += 1) {
+      const nivel = nivelDe(seed, 26);
+      if (nivel === undefined) continue;
+
+      // Muitas peças pedidas, para o conflito ter onde aparecer.
+      const gelo = gelarNivel(nivel, 8, mulberry32(seed * 4421));
+
+      let b: Board = nivel.board;
+      let marcas = marcasDe(undefined, gelo);
+      for (const g of nivel.solution) {
+        const geladas = g.filter((p) => marcas.gelo.includes(p)).length;
+        expect(geladas).toBeLessThanOrEqual(1);
+        if (g.length === 2) pares += 1;
+        marcas = aplicarMarcas(b, marcas, g);
+        b = applyMove(b, g);
+      }
+    }
+
+    expect(pares).toBeGreaterThan(100);
+  });
+
   it("**a face 6 nunca é gelada** — gelá-la não proibiria nada", () => {
     // `6+1` é a única composição com um 6, portanto qualquer grupo com um 6 já
     // é obrigatoriamente um par. É o mesmo defeito que as soldas tiveram.

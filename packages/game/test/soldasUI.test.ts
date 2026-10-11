@@ -308,6 +308,32 @@ describe("a peça gelada", () => {
     expect(tres.moves).toBe(0);
   });
 
+  /*
+   * O caso visto a jogar: um 5 e um 2, ambos gelados, lado a lado. Somam 7, e
+   * na regra antiga saíam — as duas soltavam-se uma à outra e o gelo não
+   * prendia nada.
+   */
+  it("**recusa uma segunda peça gelada**, mesmo que somem 7", () => {
+    const duas: Level = {
+      id: "duas-geladas",
+      seed: 12,
+      board: [[5, 2], [2]],
+      gelo: [packed(0, 0), packed(0, 1)], // o 5 e o 2 de cima
+      solution: [[packed(0, 0), packed(1, 0)], [packed(0, 0), packed(0, 1)]],
+    };
+
+    const um = tap(startGame(duas), packed(0, 0));
+    const dois = tap(um, packed(0, 1));
+
+    expect(dois.rejection).toBe("gelo-com-gelo");
+    expect(dois.selection).toEqual([packed(0, 0)]);
+    expect(dois.moves).toBe(0);
+
+    // Com o 2 que não está gelado, o 5 sai.
+    const certo = tap(um, packed(1, 0));
+    expect(certo.moves).toBe(1);
+  });
+
   it("sem gelo, o mesmo trio fecha a jogada", () => {
     const solto: Level = {
       id: "solto",

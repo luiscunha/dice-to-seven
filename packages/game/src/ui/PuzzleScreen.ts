@@ -841,6 +841,18 @@ export class PuzzleScreen {
       return;
     }
 
+    // A mesma regra, do lado que se viu a jogar: um 5 e um 2 gelados somam 7, e
+    // sem isto o tabuleiro ficava parado sem dizer porquê.
+    if (jogo.rejection === "gelo-com-gelo") {
+      this.elAviso.dataset["tipo"] = "erro";
+      this.elAviso.replaceChildren(
+        marca("❄"),
+        texto("duas peças geladas não saem juntas"),
+      );
+      this.recusou();
+      return;
+    }
+
     /*
      * O `faltam N` é a mesma conta da linha da soma, dita por outras palavras, e
      * sai com ela: fora do Tutorial ninguém diz ao jogador quanto falta.

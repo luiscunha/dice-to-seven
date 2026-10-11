@@ -870,7 +870,33 @@ export function gelarNivel(
     }
   }
 
-  return shuffled(rng, candidatas).slice(0, quantas).sort((x, y) => x - y);
+  /*
+   * **Uma peça gelada por passo da solução.** As duas peças de um par são
+   * ambas candidatas, e gelar as duas era gelar um par que a regra já não
+   * deixa sair — duas geladas não se soltam uma à outra (ver `respeitaGelo`).
+   * O passo da solução ficava ilegal, e o nível sem a solução que o garante.
+   *
+   * Aconteceu: 10 dos 30 níveis do `perito` publicados tinham as duas peças de
+   * um par geladas. Na regra antiga isso era legal e não restringia nada — que
+   * é a outra razão para não o voltar a gerar.
+   *
+   * O baralhar consome o gerador exatamente como antes, portanto um nível que
+   * não tinha o conflito sai com o mesmo gelo, peça a peça.
+   */
+  const escolhidas: Packed[] = [];
+  const passosUsados = new Set<number>();
+
+  for (const p of shuffled(rng, candidatas)) {
+    if (escolhidas.length >= quantas) break;
+
+    const i = passo.get(p) as number;
+    if (passosUsados.has(i)) continue;
+
+    passosUsados.add(i);
+    escolhidas.push(p);
+  }
+
+  return escolhidas.sort((x, y) => x - y);
 }
 
 /**

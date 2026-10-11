@@ -36,7 +36,8 @@ export type TapRejection =
   | "board-finished"
   | "over-target"
   | "joker-needs-value"
-  | "gelo-so-a-par";
+  | "gelo-so-a-par"
+  | "gelo-com-gelo";
 
 export type HintSource = "stored" | "computed" | "none";
 
@@ -199,6 +200,11 @@ export const remainingToTarget = (s: GameState): number =>
  * seleção com peça gelada e três células nunca pode fechar jogada, e sem esta
  * recusa o jogador chegava aos 7 pontos e via o tabuleiro não fazer nada. A
  * recusa acontece no toque que quebraria a regra, não no fim.
+ *
+ * **E uma gelada recusa outra gelada.** Duas geladas não se soltam uma à outra
+ * (ver `respeitaGelo`), portanto um par delas também nunca fecha jogada — e
+ * somava 7, que era exatamente o caso em que o tabuleiro ficava parado sem
+ * dizer porquê.
  */
 export function tap(
   s: GameState,
@@ -240,8 +246,12 @@ export function tap(
     return recusar(s, "over-target");
   }
 
-  // Ver a nota acima: uma seleção com peça gelada e mais de duas células nunca
-  // fecha jogada. Recusa-se aqui, e não quando a soma chegar a 7.
+  // Ver a nota acima: duas geladas nunca saem juntas, e uma gelada com mais de
+  // duas células também não. Recusa-se aqui, e não quando a soma chegar a 7.
+  if (selection.filter((q) => s.marcas.gelo.includes(q)).length > 1) {
+    return recusar(s, "gelo-com-gelo");
+  }
+
   if (selection.length > 2 && selection.some((q) => s.marcas.gelo.includes(q))) {
     return recusar(s, "gelo-so-a-par");
   }

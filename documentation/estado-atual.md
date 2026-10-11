@@ -572,7 +572,31 @@ três peças geladas no perito, duas soldas no avançado.
 ## O gelo — a segunda marca
 
 > Uma peça gelada só pode ser eliminada num grupo de **exatamente duas peças**:
-> ela e a que completa 7 com ela.
+> ela e a que completa 7 com ela — **que não pode estar gelada**.
+
+A segunda metade entrou depois, vinda de jogar: um 5 e um 2, ambos gelados e
+encostados, saíam juntos. As duas soltavam-se uma à outra, e o gelo deixava de
+prender o que quer que fosse — o parceiro deixava de ser o recurso que o gelo
+existe para criar.
+
+**A correção tocou na garantia central, e foi tratada como tal.** O gerador
+escolhia para gelar peças que saem a par na solução guardada — e as duas
+peças do mesmo par eram ambas candidatas. **10 dos 30 níveis do `perito`**
+tinham as duas geladas no mesmo passo; com a regra nova, esse passo ficava
+ilegal e o nível sem a solução que o garante. Três mudanças, juntas:
+
+- `respeitaGelo` recusa um par de duas geladas, e `checkGelo` passa a exigir
+  um parceiro **não gelado** no tabuleiro.
+- `gelarNivel` gela no máximo uma peça por passo da solução. O baralhar consome
+  o gerador como antes, portanto um nível sem o conflito sai com o mesmo gelo.
+- O pack foi **remarcado sem regerar um tabuleiro**, por uma ferramenta nova,
+  `tools/src/remarcar.ts`: as marcas escolhem-se depois de o nível estar aceite,
+  com uma seed derivada da do nível, portanto a mesma escolha pode repetir-se
+  com a regra nova. Mudou o gelo dos 10 níveis e mais nada — tabuleiros,
+  soluções, soldas e métricas iguais, byte a byte — e o `verify` passa os 288.
+
+No toque, a segunda gelada é recusada com o aviso «duas peças geladas não saem
+juntas», como a terceira peça já era.
 
 Ataca o que as soldas não atacam. Um 5 gelado só sai com um 2 encostado,
 portanto **o parceiro passa a ser um recurso que se guarda**: gastá-lo noutra
