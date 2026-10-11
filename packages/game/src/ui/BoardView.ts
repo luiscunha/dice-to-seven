@@ -281,6 +281,9 @@ export class BoardView {
   /** A caixa segue cada tabuleiro montado, em vez de ficar no máximo. */
   private caixaPorTabuleiro = false;
 
+  /** O topo da caixa é um teto: nada a faz crescer. Ver `dimensionarPara`. */
+  private caixaComTeto = false;
+
   /**
    * Fecha a animação em curso, saltando para o estado final.
    *
@@ -393,7 +396,7 @@ export class BoardView {
     if (this.caixaPorTabuleiro) {
       this.colunas = largura;
       this.linhas = altura;
-    } else {
+    } else if (!this.caixaComTeto) {
       this.colunas = Math.max(this.colunas, largura);
       this.linhas = Math.max(this.linhas, altura);
     }
@@ -457,14 +460,24 @@ export class BoardView {
    * caixa passa a seguir cada montagem. É o que o Contra-Relógio precisa para
    * os tabuleiros crescerem à vista sem ficarem encostados ao canto de um
    * enquadramento que ainda não é deles.
+   *
+   * Com `teto`, a caixa **nunca cresce**: o topo dela é o limite do Survival,
+   * e o laser mora lá. Uma peça que passe desenha-se por cima do laser, fora da
+   * caixa — que é onde ela de facto está. Sem isto, a linha que transbordava
+   * fazia a caixa crescer, o laser subia com ela, e só na pintura seguinte
+   * voltava ao sítio: o teto mexia-se no exato momento em que era ultrapassado.
    */
   dimensionarPara(
     board: Board,
-    opcoes: { readonly caixaPorTabuleiro?: boolean } = {},
+    opcoes: {
+      readonly caixaPorTabuleiro?: boolean;
+      readonly teto?: boolean;
+    } = {},
   ): void {
     this.colunasMedida = width(board);
     this.linhasMedida = board.reduce((m, col) => Math.max(m, col.length), 0);
     this.caixaPorTabuleiro = opcoes.caixaPorTabuleiro === true;
+    this.caixaComTeto = opcoes.teto === true;
 
     if (!this.caixaPorTabuleiro) {
       this.colunas = this.colunasMedida;
@@ -557,11 +570,14 @@ export class BoardView {
 
     const antes = this.board;
     this.board = depois;
-    this.colunas = Math.max(this.colunas, width(depois));
-    this.linhas = Math.max(
-      this.linhas,
-      depois.reduce((m, col) => Math.max(m, col.length), 0),
-    );
+    // Com teto, a linha que transborda fica por cima dele — ver `dimensionarPara`.
+    if (!this.caixaComTeto) {
+      this.colunas = Math.max(this.colunas, width(depois));
+      this.linhas = Math.max(
+        this.linhas,
+        depois.reduce((m, col) => Math.max(m, col.length), 0),
+      );
+    }
 
     const novas: { readonly el: HTMLElement; readonly p: Packed }[] = [];
     let ultimaColuna = 0;
@@ -652,6 +668,29 @@ export class BoardView {
     // Sempre o último filho: a linha passa por cima das peças, e o topo do
     // tabuleiro é o sítio onde as peças mais altas lhe encostam.
     this.grelha.appendChild(this.teto);
+  }
+
+  /**
+   * As peças que passaram o teto ficam queimadas pelo laser, e o laser dá um
+   * clarão. Devolve quantas queimou.
+   *
+   * São as de cima da caixa — linha igual ou acima de `linhas` —, e só essas:
+   * a regra do Survival é o teto, e o castigo diz-se na peça que o passou.
+   *
+   * A queimadura **fica**: é o fim da corrida, e o tabuleiro já não volta a ser
+   * montado. Ao contrário dos outros efeitos, não sai quando a animação acaba.
+   */
+  queimarAcimaDoTeto(): number {
+    let queimadas = 0;
+
+    for (const [p, el] of this.pecas) {
+      if (rowOf(p) < this.linhas) continue;
+      el.classList.add("queimada");
+      queimadas++;
+    }
+
+    if (queimadas > 0 && this.teto !== undefined) reanimar(this.teto, "atingido");
+    return queimadas;
   }
 
   /** Retângulo de uma peça no ecrã — o seletor do joker ancora-se nele. */

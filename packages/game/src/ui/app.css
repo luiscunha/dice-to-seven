@@ -2983,8 +2983,8 @@ body::before {
 .laser-feixe {
   position: absolute;
   top: 0;
-  left: calc(var(--laser-emissor) * 0.6);
-  right: calc(var(--laser-emissor) * 0.6);
+  left: 0;
+  right: 0;
   height: var(--laser-feixe);
   translate: 0 -50%;
   border-radius: 999px;
@@ -3017,8 +3017,8 @@ body::before {
 .laser-arcos {
   position: absolute;
   top: 0;
-  left: calc(var(--laser-emissor) * 0.6);
-  width: calc(100% - var(--laser-emissor) * 1.2);
+  left: 0;
+  width: 100%;
   height: calc(var(--laser-feixe) * 2 + 18px);
   translate: 0 -50%;
   overflow: visible;
@@ -3043,8 +3043,8 @@ body::before {
 .laser-faiscas {
   position: absolute;
   top: 0;
-  left: calc(var(--laser-emissor) * 0.6);
-  right: calc(var(--laser-emissor) * 0.6);
+  left: 0;
+  right: 0;
   height: 0;
 }
 
@@ -3068,9 +3068,16 @@ body::before {
  * O da direita é o mesmo desenho virado ao espelho (`scale: -1 1`), e por isso
  * a lente fica sempre virada para o feixe sem uma regra própria.
  *
- * Saem um pouco para fora do tabuleiro, para dentro da folga de `--moldura`.
- * Para dentro tapariam o canto das peças da linha de cima, que é precisamente
- * a linha que interessa ver quando o laser está crítico.
+ * Ficam **inteiros fora** da largura das peças, encostados à margem do ecrã, e
+ * o feixe atravessa o tabuleiro de ponta a ponta — o teto é para todas as
+ * colunas, e um feixe mais curto do que o tabuleiro deixava as colunas das
+ * pontas sem teto à vista. Dentro, os emissores tapariam também o canto das
+ * peças da linha de cima, que é a linha que interessa ver quando o laser está
+ * crítico.
+ *
+ * Num telemóvel em pé sobram ~15px entre as peças e a borda do ecrã, e o
+ * emissor mede 13 a 16px: cabe, desde que o palco não o corte. Ver
+ * `.ecra.survival`, mais abaixo.
  */
 .laser-emissor {
   position: absolute;
@@ -3094,12 +3101,12 @@ body::before {
 }
 
 .laser-emissor.esquerda {
-  left: calc(var(--laser-emissor) * -0.3);
+  left: calc(var(--laser-emissor) * -1);
   --laser-farol: #ffc928;
 }
 
 .laser-emissor.direita {
-  right: calc(var(--laser-emissor) * -0.3);
+  right: calc(var(--laser-emissor) * -1);
   scale: -1 1;
   --laser-farol: #ff3b2f;
 }
@@ -3152,8 +3159,8 @@ body::before {
   content: "";
   position: absolute;
   top: calc(var(--laser-feixe) * 0.5);
-  left: calc(var(--laser-emissor) * 0.6);
-  right: calc(var(--laser-emissor) * 0.6);
+  left: 0;
+  right: 0;
   height: calc(var(--lado, 48px) * 0.6);
   background: linear-gradient(
     to bottom,
@@ -3163,6 +3170,108 @@ body::before {
   );
   opacity: var(--laser-forca);
   pointer-events: none;
+}
+
+/*
+ * ── No Survival, o corte horizontal passa do palco para o ecrã ──
+ *
+ * O palco corta na horizontal para um tabuleiro em transição de tamanho nunca
+ * dar largura à página (ver `.palco`). Mas o corte no palco cortava os
+ * emissores, que vivem na folga entre o palco e a borda do ecrã. O ecrã tem a
+ * largura da janela, portanto cortar nele protege a página exatamente da mesma
+ * maneira — e deixa os emissores chegar à margem.
+ */
+.ecra.survival {
+  overflow-x: clip;
+}
+
+.ecra.survival .palco {
+  overflow-x: visible;
+}
+
+/*
+ * ── Queimada pelo laser ──
+ *
+ * A peça que passa o teto não desaparece: fica por cima do laser, onde está, e
+ * queima. Primeiro um clarão branco, depois carvão — e as pintas em brasa, para
+ * a face continuar a ler-se: o jogador tem de ver **que** peça foi, e não só
+ * que alguma foi.
+ *
+ * O calor fica em baixo, do lado do laser, que é por onde a peça foi apanhada.
+ * O fumo sobe dela uma vez e desfaz-se.
+ */
+.peca.queimada {
+  --tinta: #ff8a3d;
+  background:
+    radial-gradient(
+      ellipse 90% 60% at 50% 100%,
+      rgb(255 96 32 / 0.6),
+      transparent 70%
+    ),
+    linear-gradient(to bottom, #3b2a23, #1c1310);
+  box-shadow:
+    inset 0 0 0 1px rgb(0 0 0 / 0.6),
+    inset 0 -3px 6px rgb(255 80 20 / 0.45),
+    0 0 10px rgb(255 80 20 / 0.45);
+  animation: queimar 700ms var(--suavizacao) both;
+}
+
+.peca.queimada .pinta {
+  box-shadow: 0 0 4px #ff6a1f;
+}
+
+.peca.queimada::after {
+  content: "";
+  position: absolute;
+  left: 15%;
+  right: 15%;
+  bottom: 60%;
+  height: 80%;
+  border-radius: 50%;
+  background: radial-gradient(rgb(70 64 60 / 0.45), transparent 70%);
+  pointer-events: none;
+  animation: fumegar 1.2s ease-out forwards;
+}
+
+@keyframes queimar {
+  0% {
+    filter: brightness(2.4) saturate(0);
+    scale: 1.06;
+  }
+  35% {
+    filter: brightness(1.5) sepia(1) saturate(4) hue-rotate(-15deg);
+  }
+  100% {
+    filter: none;
+    scale: 1;
+  }
+}
+
+@keyframes fumegar {
+  from {
+    opacity: 0.9;
+    translate: 0 0;
+    scale: 0.6;
+  }
+  to {
+    opacity: 0;
+    translate: 0 -60%;
+    scale: 1.3;
+  }
+}
+
+/* E o laser dá o clarão do golpe. */
+.linha-fogo.atingido {
+  animation: atingir 600ms ease-out;
+}
+
+@keyframes atingir {
+  from {
+    filter: brightness(2.2);
+  }
+  to {
+    filter: none;
+  }
 }
 
 /* ── Os três graus ── */
@@ -3324,6 +3433,17 @@ body::before {
 
   .linha-fogo[data-grau="critico"] .laser-arcos path:first-child {
     opacity: 0.7;
+  }
+
+  /* A peça queimada fica queimada; só não há clarão, fumo nem golpe. */
+  .peca.queimada,
+  .peca.queimada::after,
+  .linha-fogo.atingido {
+    animation: none;
+  }
+
+  .peca.queimada::after {
+    opacity: 0;
   }
 
   .linha-fogo[data-grau="critico"] .laser-emissor::before {
