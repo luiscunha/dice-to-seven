@@ -5,7 +5,7 @@
  * usa a engine, que é pura. É esta função que o pool paraleliza (spec §7.2).
  */
 
-import type { Board, Level } from "@dicetoseven/engine";
+import type { Board, GeneratedLevel, Level, Marcas } from "@dicetoseven/engine";
 import {
   applyMove,
   fairnessFloor,
@@ -109,6 +109,26 @@ function cabeEm(board: Board, [colunas, linhas]: Forma): boolean {
  */
 export const margemPre = (p: number, runs: number): number =>
   3 * Math.sqrt((p * (1 - p)) / runs);
+
+/**
+ * As marcas de um nível aceite: soldas e gelo, nas quantidades da banda.
+ *
+ * A seed é derivada da do nível, para a escolha ser reprodutível sem gastar a
+ * sequência do gerador — e é isso que permite **voltar a escolher as marcas de
+ * um pack já publicado** sem regerar um tabuleiro (ver `remarcar.ts`): a mesma
+ * função, com a mesma seed, sobre o mesmo nível, dá as mesmas marcas.
+ */
+export function marcasDoNivel(
+  gerado: GeneratedLevel,
+  band: BandSpec,
+  seed: number,
+): Marcas {
+  return marcarNivel(
+    gerado,
+    { soldas: band.soldas ?? 0, gelo: band.gelo ?? 0 },
+    mulberry32(seed ^ 0x50_1d),
+  );
+}
 
 export function avaliar(
   seed: number,
@@ -225,14 +245,9 @@ export function avaliar(
 
   /*
    * As marcas entram aqui, no fim, e não no gerador: dependem da solução, que só
-   * existe depois de o nível estar construído e aceite. A seed é derivada da do
-   * nível para a escolha ser reprodutível sem gastar a sequência do gerador.
+   * existe depois de o nível estar construído e aceite. Ver `marcasDoNivel`.
    */
-  const marcas = marcarNivel(
-    gerado,
-    { soldas: band.soldas ?? 0, gelo: band.gelo ?? 0 },
-    mulberry32(seed ^ 0x50_1d),
-  );
+  const marcas = marcasDoNivel(gerado, band, seed);
 
   const base = toLevel(
     `${band.id}-${String(seed).padStart(6, "0")}`,

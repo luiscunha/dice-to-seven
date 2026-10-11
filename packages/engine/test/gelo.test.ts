@@ -48,12 +48,25 @@ const B: Board = [
 ];
 
 describe("a regra", () => {
-  it("um grupo de duas peças é sempre legal, gelo ou não", () => {
+  it("uma peça gelada sai num par com uma não gelada", () => {
     // (1,1)=5 com (2,1)=2 dá 7.
     const par = toGroup([packed(1, 1), packed(2, 1)]);
 
     expect(respeitaGelo(par, [packed(1, 1)])).toBe(true);
     expect(respeitaGelo(par, [packed(2, 1)])).toBe(true);
+  });
+
+  /*
+   * O caso que se viu a jogar: um 5 e um 2, ambos gelados, saíram juntos. As
+   * duas soltavam-se uma à outra, e o gelo deixava de prender o que quer que
+   * fosse.
+   */
+  it("**duas peças geladas não saem juntas**, nem a par", () => {
+    const par = toGroup([packed(1, 1), packed(2, 1)]);
+    const ambas = [packed(1, 1), packed(2, 1)];
+
+    expect(respeitaGelo(par, ambas)).toBe(false);
+    expect(jogadaLegal(B, par, marcasDe(undefined, ambas))).toBe(false);
   });
 
   it("um grupo maior com uma peça gelada é ilegal", () => {
@@ -150,6 +163,14 @@ describe("invariantes", () => {
 
     expect(problemas).toHaveLength(1);
     expect(problemas[0]).toContain("precisa de um 1");
+  });
+
+  it("recusa uma peça gelada cujo único parceiro também está gelado", () => {
+    // O 5 de (1,1) só tem os 2 de (1,0) e (2,1) — gelados os três, nenhum solta
+    // o 5: uma gelada não solta outra.
+    const problemas = checkGelo(B, [packed(1, 0), packed(1, 1), packed(2, 1)]);
+
+    expect(problemas.some((p) => p.includes("face 5 precisa de um 2"))).toBe(true);
   });
 
   it("recusa a mesma peça gelada e soldada", () => {
