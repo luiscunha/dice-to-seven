@@ -183,9 +183,13 @@
    * dobra-o e a queda passa a ler-se como luz.
    */
   --fogo-veu-meio: rgb(217 58 22 / 0.05);
-  /* O clarão que atravessa a linha quando ela fica crítica. */
-  --fogo-faisca: rgb(255 228 205 / 0.85);
-  --fogo-forca: 0.3;
+  /*
+   * O laser do teto, no Survival: o núcleo do feixe e a passagem para o
+   * laranja. Iguais nos dois temas — é luz, e a luz não muda com o fundo; o
+   * que muda é o `--fogo` à volta, que já tem a sua versão escura.
+   */
+  --laser-nucleo: #fffaf0;
+  --laser-amarelo: #ffd04a;
 
   /* ─── Forma ───────────────────────────────────────────────────────────── */
   --raio: 10px;
@@ -359,7 +363,6 @@
     --fogo-quente: #ffb488;
     --fogo-veu: rgb(255 106 69 / 0.14);
     --fogo-veu-meio: rgb(255 106 69 / 0.045);
-    --fogo-faisca: rgb(255 243 232 / 0.9);
     --sombra: 0 1px 2px rgb(0 0 0 / 0.5), 0 8px 22px rgb(0 0 0 / 0.35);
     /* No escuro a sombra precisa de ser mais funda para se ver de todo. */
     --sombra-cartao: 0 1px 2px rgb(0 0 0 / 0.4), 0 4px 12px rgb(0 0 0 / 0.3);
@@ -400,7 +403,6 @@
   --fogo-quente: #ffb488;
   --fogo-veu: rgb(255 106 69 / 0.14);
   --fogo-veu-meio: rgb(255 106 69 / 0.045);
-  --fogo-faisca: rgb(255 243 232 / 0.9);
   --sombra: 0 1px 2px rgb(0 0 0 / 0.5), 0 8px 22px rgb(0 0 0 / 0.35);
   /* No escuro a sombra precisa de ser mais funda para se ver de todo. */
   --sombra-cartao: 0 1px 2px rgb(0 0 0 / 0.4), 0 4px 12px rgb(0 0 0 / 0.3);

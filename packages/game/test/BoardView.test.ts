@@ -526,3 +526,80 @@ describe("a peça-bomba", () => {
     view.destruir();
   });
 });
+
+describe("o laser do teto", () => {
+  const laser = (): HTMLElement | null => host.querySelector(".tabuleiro .linha-fogo");
+
+  it("tem os dois emissores, o feixe, os arcos e as faíscas", () => {
+    const view = criar();
+    view.montar(TABULEIRO);
+    view.marcarTeto("critico");
+
+    const el = laser();
+    expect(el?.dataset["grau"]).toBe("critico");
+    expect(el?.querySelectorAll(".laser-emissor")).toHaveLength(2);
+    expect(el?.querySelector(".laser-emissor.esquerda")).not.toBeNull();
+    expect(el?.querySelector(".laser-emissor.direita")).not.toBeNull();
+    expect(el?.querySelectorAll(".laser-feixe")).toHaveLength(1);
+    expect(el?.querySelectorAll(".laser-arcos path")).toHaveLength(3);
+    expect(el?.querySelectorAll(".laser-faiscas i").length).toBeGreaterThan(0);
+
+    view.destruir();
+  });
+
+  /*
+   * O grau muda muitas vezes durante uma corrida — a cada linha que cai e a
+   * cada jogada que abre espaço. Mudar de grau é mudar um atributo; montar o
+   * laser outra vez a cada mudança era refazer o SVG a cada jogada.
+   */
+  it("monta-se uma vez: mudar de grau não o refaz", () => {
+    const view = criar();
+    view.montar(TABULEIRO);
+    view.marcarTeto("folgado");
+    const antes = laser();
+
+    view.marcarTeto("aviso");
+    view.marcarTeto("critico");
+    view.montar(TABULEIRO);
+    view.marcarTeto("critico");
+
+    expect(laser()).toBe(antes);
+    expect(host.querySelectorAll(".linha-fogo")).toHaveLength(1);
+
+    view.destruir();
+  });
+
+  it("os arcos são sempre os mesmos desenhos", () => {
+    const desenhos = (): string[] =>
+      [...(laser()?.querySelectorAll(".laser-arcos path") ?? [])].map(
+        (p) => p.getAttribute("d") ?? "",
+      );
+
+    const a = criar();
+    a.montar(TABULEIRO);
+    a.marcarTeto("critico");
+    const primeiros = desenhos();
+    a.destruir();
+
+    const b = criar();
+    b.montar(TABULEIRO);
+    b.marcarTeto("critico");
+
+    expect(desenhos()).toEqual(primeiros);
+    // E três desenhos diferentes: um repetido não crepitava, piscava.
+    expect(new Set(primeiros).size).toBe(3);
+
+    b.destruir();
+  });
+
+  it("escondido, sai do tabuleiro", () => {
+    const view = criar();
+    view.montar(TABULEIRO);
+    view.marcarTeto("aviso");
+    view.marcarTeto("escondido");
+
+    expect(laser()).toBeNull();
+
+    view.destruir();
+  });
+});

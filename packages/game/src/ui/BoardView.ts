@@ -26,6 +26,7 @@ import {
   SEM_MARCAS,
   applyMove,
   colOf,
+  mulberry32,
   packed,
   parDe,
   rowOf,
@@ -97,6 +98,116 @@ function criarPavio(): HTMLElement {
   el.className = "pavio";
   el.setAttribute("aria-hidden", "true");
   return el;
+}
+
+/* ─── O laser do teto ─────────────────────────────────────────────────────── */
+
+const SVG_NS = "http://www.w3.org/2000/svg";
+
+/**
+ * Quantos desenhos de arco elétrico há, e por isso quantas «molduras» tem o
+ * crepitar. Três chegam para o olho não apanhar a repetição: cada um está à
+ * vista um terço do ciclo, e o ciclo é curto.
+ */
+const DESENHOS_DE_ARCO = 3;
+
+/**
+ * Um arco elétrico: um traço aos ziguezagues ao longo do feixe.
+ *
+ * Em coordenadas de 100 × 20, com o feixe em `y = 10`. O SVG estica-se à
+ * largura do tabuleiro (`preserveAspectRatio="none"`), portanto o mesmo desenho
+ * serve a um tabuleiro de quatro colunas e a um de sete.
+ *
+ * **Sorteado, mas sempre igual**: a seed é fixa, e o laser de hoje é o de
+ * amanhã. Não é a garantia da engine — é que um arco que mudasse a cada
+ * montagem não acrescentava nada e custava um teste que não se podia escrever.
+ */
+function desenhoDeArco(variante: number): string {
+  const rng = mulberry32(0x1a5e + variante * 7919);
+  const pontos: string[] = [];
+
+  for (let x = 0; x <= 100; x += 2 + rng() * 3) {
+    // Quase sempre rente ao feixe, de vez em quando um pico — é o pico que se
+    // lê como descarga, e não como uma linha tremida.
+    const pico = rng() < 0.18 ? 8.5 : 4;
+    const y = 10 + (rng() - 0.5) * 2 * pico;
+    pontos.push(`${x.toFixed(1)},${y.toFixed(1)}`);
+  }
+
+  pontos.push("100,10");
+  return `M${pontos.join(" L")}`;
+}
+
+/**
+ * As faíscas: onde nascem ao longo do feixe (%) e para onde voam (px).
+ *
+ * Fixas e não sorteadas pela mesma razão dos arcos. Voam mais para cima do que
+ * para baixo — por cima do feixe só há ar, por baixo estão as peças, e uma
+ * faísca a cair sobre uma face rouba-lhe leitura.
+ */
+const FAISCAS: readonly (readonly [x: number, dx: number, dy: number, atraso: number])[] = [
+  [8, -7, -16, 0],
+  [19, 5, -22, 0.42],
+  [27, -4, 9, 0.85],
+  [36, 8, -14, 0.2],
+  [47, -6, -24, 0.63],
+  [55, 3, 11, 1.05],
+  [63, -9, -12, 0.31],
+  [72, 6, -19, 0.77],
+  [81, -3, 8, 0.12],
+  [91, 7, -15, 0.55],
+];
+
+/**
+ * A linha de fogo, desenhada como um laser: dois emissores nas pontas, o
+ * feixe entre eles, arcos elétricos à volta e faíscas a saltar.
+ *
+ * Tudo isto é **pintura**: o elemento continua a ser a linha de fogo, com o
+ * mesmo `data-grau`, no mesmo sítio, e quem decide o grau é o ecrã. A
+ * intensidade de cada parte vive no CSS — aqui só se monta a estrutura, uma
+ * vez, e ela atravessa todas as montagens do tabuleiro.
+ */
+function criarLaser(): HTMLElement {
+  const laser = document.createElement("div");
+  laser.className = "linha-fogo";
+  laser.setAttribute("aria-hidden", "true");
+
+  const emissor = (lado: "esquerda" | "direita"): HTMLElement => {
+    const el = document.createElement("span");
+    el.className = `laser-emissor ${lado}`;
+    return el;
+  };
+
+  const feixe = document.createElement("span");
+  feixe.className = "laser-feixe";
+
+  const arcos = document.createElementNS(SVG_NS, "svg");
+  arcos.setAttribute("class", "laser-arcos");
+  arcos.setAttribute("viewBox", "0 0 100 20");
+  arcos.setAttribute("preserveAspectRatio", "none");
+  for (let i = 0; i < DESENHOS_DE_ARCO; i++) {
+    const arco = document.createElementNS(SVG_NS, "path");
+    arco.setAttribute("d", desenhoDeArco(i));
+    // O traço não estica com o SVG: sem isto, num tabuleiro largo os arcos
+    // saíam grossos na horizontal e finos na vertical.
+    arco.setAttribute("vector-effect", "non-scaling-stroke");
+    arco.style.setProperty("--arco", String(i));
+    arcos.appendChild(arco);
+  }
+
+  const faiscas = document.createElement("span");
+  faiscas.className = "laser-faiscas";
+  for (const [x, dx, dy, atraso] of FAISCAS) {
+    const f = document.createElement("i");
+    f.style.setProperty("--x", `${String(x)}%`);
+    f.style.setProperty("--dx", `${String(dx)}px`);
+    f.style.setProperty("--dy", `${String(dy)}px`);
+    f.style.setProperty("--atraso", `${String(atraso)}s`);
+    faiscas.appendChild(f);
+  }
+
+  laser.append(feixe, arcos, faiscas, emissor("esquerda"), emissor("direita"));
+  return laser;
 }
 
 /**
@@ -535,12 +646,7 @@ export class BoardView {
       return;
     }
 
-    if (this.teto === undefined) {
-      const el = document.createElement("div");
-      el.className = "linha-fogo";
-      el.setAttribute("aria-hidden", "true");
-      this.teto = el;
-    }
+    this.teto ??= criarLaser();
 
     this.teto.dataset["grau"] = grau;
     // Sempre o último filho: a linha passa por cima das peças, e o topo do
