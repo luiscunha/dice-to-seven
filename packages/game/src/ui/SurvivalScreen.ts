@@ -67,8 +67,13 @@ import { botao, botaoRedondo, confirmar, elemento } from "./dom";
 import { iconeReiniciar, iconeVoltar } from "./icones";
 import { JokerPicker } from "./JokerPicker";
 
-/** De quanto em quanto o cronómetro se repinta. Décimos chegam. */
-
+/**
+ * Quanto tempo a queimadura fica à vista antes do painel de fim.
+ *
+ * O bastante para o clarão passar e a peça assentar em carvão — o jogador tem
+ * de ver **qual** peça passou o teto, senão a derrota chega sem explicação.
+ */
+const DURACAO_DA_QUEIMA = 1_100;
 
 export interface OpcoesSurvival {
   readonly seed: number;
@@ -320,6 +325,8 @@ topo.append(sair, this.elRelogio);
       Array.from({ length: larguraAtual(this.estado, this.config) }, () =>
         Array.from({ length: this.config.alturaMaxima }, () => 1 as Cell),
       ),
+      // O topo da caixa é o teto, e o teto não se mexe — nem quando é passado.
+      { teto: true },
     );
   }
 
@@ -414,8 +421,36 @@ topo.append(sair, this.elRelogio);
       this.ocupado = false;
     }
 
+    if (this.estado.morto) await this.transbordar();
+
     this.pintar();
     this.verificarFim();
+  }
+
+  /**
+   * A linha passou o teto: as peças de cima queimam no laser, e só depois a
+   * corrida acaba.
+   *
+   * **O relógio pára aqui, e não no fim da queimadura.** A marca do modo é o
+   * tempo aguentado, e o jogador deixou de aguentar no instante em que a linha
+   * passou — contar o segundo da animação era dar-lhe tempo que não jogou.
+   *
+   * O ecrã fica ocupado durante a queimadura: um toque ou um «puxar linha» a
+   * meio remontava o tabuleiro e apagava as peças queimadas antes de se verem.
+   */
+  private async transbordar(): Promise<void> {
+    this.ocupado = true;
+    this.fimMs = Date.now();
+    this.parar();
+    this.pintarRelogio();
+
+    this.view.queimarAcimaDoTeto();
+    vibrarExplosao();
+
+    await new Promise((r) => {
+      setTimeout(r, DURACAO_DA_QUEIMA);
+    });
+    this.ocupado = false;
   }
 
   /* ─── jogar ─────────────────────────────────────────────────────────────── */
@@ -534,6 +569,9 @@ topo.append(sair, this.elRelogio);
       this.ocupado = false;
     }
 
+    // Puxar uma linha a mais também pode passar o teto.
+    if (this.estado.morto) await this.transbordar();
+
     this.pintar();
     this.verificarFim();
   }
@@ -560,7 +598,8 @@ topo.append(sair, this.elRelogio);
     if (!this.estado.limpo && !this.estado.morto) return;
 
     this.terminado = true;
-    this.fimMs = Date.now();
+    // Quem transbordou já parou o relógio no instante certo — ver `transbordar`.
+    this.fimMs ??= Date.now();
     this.parar();
     this.pintarRelogio();
     // Um pavio parado por baixo do painel de fim lia-se como uma bomba por rebentar.

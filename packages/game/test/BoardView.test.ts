@@ -526,3 +526,166 @@ describe("a peça-bomba", () => {
     view.destruir();
   });
 });
+
+describe("o laser do teto", () => {
+  const laser = (): HTMLElement | null => host.querySelector(".tabuleiro .linha-fogo");
+
+  it("tem os dois emissores, o feixe, os arcos e as faíscas", () => {
+    const view = criar();
+    view.montar(TABULEIRO);
+    view.marcarTeto("critico");
+
+    const el = laser();
+    expect(el?.dataset["grau"]).toBe("critico");
+    expect(el?.querySelectorAll(".laser-emissor")).toHaveLength(2);
+    expect(el?.querySelector(".laser-emissor.esquerda")).not.toBeNull();
+    expect(el?.querySelector(".laser-emissor.direita")).not.toBeNull();
+    expect(el?.querySelectorAll(".laser-feixe")).toHaveLength(1);
+    expect(el?.querySelectorAll(".laser-arcos path")).toHaveLength(3);
+    expect(el?.querySelectorAll(".laser-faiscas i").length).toBeGreaterThan(0);
+
+    view.destruir();
+  });
+
+  /*
+   * O grau muda muitas vezes durante uma corrida — a cada linha que cai e a
+   * cada jogada que abre espaço. Mudar de grau é mudar um atributo; montar o
+   * laser outra vez a cada mudança era refazer o SVG a cada jogada.
+   */
+  it("monta-se uma vez: mudar de grau não o refaz", () => {
+    const view = criar();
+    view.montar(TABULEIRO);
+    view.marcarTeto("folgado");
+    const antes = laser();
+
+    view.marcarTeto("aviso");
+    view.marcarTeto("critico");
+    view.montar(TABULEIRO);
+    view.marcarTeto("critico");
+
+    expect(laser()).toBe(antes);
+    expect(host.querySelectorAll(".linha-fogo")).toHaveLength(1);
+
+    view.destruir();
+  });
+
+  it("os arcos são sempre os mesmos desenhos", () => {
+    const desenhos = (): string[] =>
+      [...(laser()?.querySelectorAll(".laser-arcos path") ?? [])].map(
+        (p) => p.getAttribute("d") ?? "",
+      );
+
+    const a = criar();
+    a.montar(TABULEIRO);
+    a.marcarTeto("critico");
+    const primeiros = desenhos();
+    a.destruir();
+
+    const b = criar();
+    b.montar(TABULEIRO);
+    b.marcarTeto("critico");
+
+    expect(desenhos()).toEqual(primeiros);
+    // E três desenhos diferentes: um repetido não crepitava, piscava.
+    expect(new Set(primeiros).size).toBe(3);
+
+    b.destruir();
+  });
+
+  it("escondido, sai do tabuleiro", () => {
+    const view = criar();
+    view.montar(TABULEIRO);
+    view.marcarTeto("aviso");
+    view.marcarTeto("escondido");
+
+    expect(laser()).toBeNull();
+
+    view.destruir();
+  });
+});
+
+describe("a caixa com teto (Survival)", () => {
+  /** jsdom não faz layout: a caixa entra à mão, como em «dimensionamento». */
+  const palcoDe = (largura: number, altura: number): HTMLElement => {
+    const el = document.createElement("div");
+    el.getBoundingClientRect = () =>
+      ({ width: largura, height: altura, top: 0, left: 0, right: largura, bottom: altura, x: 0, y: 0, toJSON: () => ({}) }) as DOMRect;
+    document.body.appendChild(el);
+    return el;
+  };
+
+  const colunas = (n: number, alturas: readonly number[]): Board =>
+    Array.from({ length: n }, (_, c) =>
+      Array.from({ length: alturas[c] ?? 1 }, () => 1 as const),
+    );
+
+  /** A caixa do Survival: duas colunas, sete linhas até ao teto. */
+  const TETO = colunas(2, [7, 7]);
+  /** Uma coluna passou o teto. */
+  const PASSOU = colunas(2, [8, 7]);
+
+  const altura = (palco: HTMLElement): string =>
+    palco.querySelector<HTMLElement>(".tabuleiro")?.style.height ?? "";
+
+  /*
+   * Era o defeito: a linha que transbordava fazia a caixa crescer, o laser —
+   * que vive no topo dela — subia, e só na pintura seguinte voltava ao sítio.
+   */
+  it("**a caixa não cresce quando uma linha passa o teto**", async () => {
+    const palco = palcoDe(400, 800);
+    const view = new BoardView(palco, { aoTocar: () => undefined });
+    view.dimensionarPara(TETO, { teto: true });
+    view.montar(colunas(2, [6, 7]));
+    const antes = altura(palco);
+
+    await view.injetarLinha(PASSOU);
+    expect(altura(palco)).toBe(antes);
+
+    view.montar(PASSOU);
+    expect(altura(palco)).toBe(antes);
+
+    view.destruir();
+  });
+
+  it("sem teto, a caixa cresce como sempre cresceu", () => {
+    const palco = palcoDe(400, 800);
+    const view = new BoardView(palco, { aoTocar: () => undefined });
+    view.dimensionarPara(TETO);
+    view.montar(TETO);
+    const antes = altura(palco);
+
+    view.montar(PASSOU);
+    expect(altura(palco)).not.toBe(antes);
+
+    view.destruir();
+  });
+
+  it("**queima só as peças que passaram o teto**, e o laser acusa o golpe", () => {
+    const palco = palcoDe(400, 800);
+    const view = new BoardView(palco, { aoTocar: () => undefined });
+    view.dimensionarPara(TETO, { teto: true });
+    view.montar(PASSOU);
+    view.marcarTeto("critico");
+
+    expect(view.queimarAcimaDoTeto()).toBe(1);
+
+    const queimadas = [...palco.querySelectorAll<HTMLElement>(".peca.queimada")];
+    expect(queimadas.map((el) => el.dataset["pos"])).toEqual([String(packed(0, 7))]);
+    expect(palco.querySelector(".linha-fogo")?.classList.contains("atingido")).toBe(true);
+
+    view.destruir();
+  });
+
+  it("sem nada acima do teto, não queima nada", () => {
+    const palco = palcoDe(400, 800);
+    const view = new BoardView(palco, { aoTocar: () => undefined });
+    view.dimensionarPara(TETO, { teto: true });
+    view.montar(TETO);
+    view.marcarTeto("critico");
+
+    expect(view.queimarAcimaDoTeto()).toBe(0);
+    expect(palco.querySelector(".linha-fogo")?.classList.contains("atingido")).toBe(false);
+
+    view.destruir();
+  });
+});

@@ -26,6 +26,7 @@ import {
   SEM_MARCAS,
   applyMove,
   colOf,
+  mulberry32,
   packed,
   parDe,
   rowOf,
@@ -99,6 +100,116 @@ function criarPavio(): HTMLElement {
   return el;
 }
 
+/* ─── O laser do teto ─────────────────────────────────────────────────────── */
+
+const SVG_NS = "http://www.w3.org/2000/svg";
+
+/**
+ * Quantos desenhos de arco elétrico há, e por isso quantas «molduras» tem o
+ * crepitar. Três chegam para o olho não apanhar a repetição: cada um está à
+ * vista um terço do ciclo, e o ciclo é curto.
+ */
+const DESENHOS_DE_ARCO = 3;
+
+/**
+ * Um arco elétrico: um traço aos ziguezagues ao longo do feixe.
+ *
+ * Em coordenadas de 100 × 20, com o feixe em `y = 10`. O SVG estica-se à
+ * largura do tabuleiro (`preserveAspectRatio="none"`), portanto o mesmo desenho
+ * serve a um tabuleiro de quatro colunas e a um de sete.
+ *
+ * **Sorteado, mas sempre igual**: a seed é fixa, e o laser de hoje é o de
+ * amanhã. Não é a garantia da engine — é que um arco que mudasse a cada
+ * montagem não acrescentava nada e custava um teste que não se podia escrever.
+ */
+function desenhoDeArco(variante: number): string {
+  const rng = mulberry32(0x1a5e + variante * 7919);
+  const pontos: string[] = [];
+
+  for (let x = 0; x <= 100; x += 2 + rng() * 3) {
+    // Quase sempre rente ao feixe, de vez em quando um pico — é o pico que se
+    // lê como descarga, e não como uma linha tremida.
+    const pico = rng() < 0.18 ? 8.5 : 4;
+    const y = 10 + (rng() - 0.5) * 2 * pico;
+    pontos.push(`${x.toFixed(1)},${y.toFixed(1)}`);
+  }
+
+  pontos.push("100,10");
+  return `M${pontos.join(" L")}`;
+}
+
+/**
+ * As faíscas: onde nascem ao longo do feixe (%) e para onde voam (px).
+ *
+ * Fixas e não sorteadas pela mesma razão dos arcos. Voam mais para cima do que
+ * para baixo — por cima do feixe só há ar, por baixo estão as peças, e uma
+ * faísca a cair sobre uma face rouba-lhe leitura.
+ */
+const FAISCAS: readonly (readonly [x: number, dx: number, dy: number, atraso: number])[] = [
+  [8, -7, -16, 0],
+  [19, 5, -22, 0.42],
+  [27, -4, 9, 0.85],
+  [36, 8, -14, 0.2],
+  [47, -6, -24, 0.63],
+  [55, 3, 11, 1.05],
+  [63, -9, -12, 0.31],
+  [72, 6, -19, 0.77],
+  [81, -3, 8, 0.12],
+  [91, 7, -15, 0.55],
+];
+
+/**
+ * A linha de fogo, desenhada como um laser: dois emissores nas pontas, o
+ * feixe entre eles, arcos elétricos à volta e faíscas a saltar.
+ *
+ * Tudo isto é **pintura**: o elemento continua a ser a linha de fogo, com o
+ * mesmo `data-grau`, no mesmo sítio, e quem decide o grau é o ecrã. A
+ * intensidade de cada parte vive no CSS — aqui só se monta a estrutura, uma
+ * vez, e ela atravessa todas as montagens do tabuleiro.
+ */
+function criarLaser(): HTMLElement {
+  const laser = document.createElement("div");
+  laser.className = "linha-fogo";
+  laser.setAttribute("aria-hidden", "true");
+
+  const emissor = (lado: "esquerda" | "direita"): HTMLElement => {
+    const el = document.createElement("span");
+    el.className = `laser-emissor ${lado}`;
+    return el;
+  };
+
+  const feixe = document.createElement("span");
+  feixe.className = "laser-feixe";
+
+  const arcos = document.createElementNS(SVG_NS, "svg");
+  arcos.setAttribute("class", "laser-arcos");
+  arcos.setAttribute("viewBox", "0 0 100 20");
+  arcos.setAttribute("preserveAspectRatio", "none");
+  for (let i = 0; i < DESENHOS_DE_ARCO; i++) {
+    const arco = document.createElementNS(SVG_NS, "path");
+    arco.setAttribute("d", desenhoDeArco(i));
+    // O traço não estica com o SVG: sem isto, num tabuleiro largo os arcos
+    // saíam grossos na horizontal e finos na vertical.
+    arco.setAttribute("vector-effect", "non-scaling-stroke");
+    arco.style.setProperty("--arco", String(i));
+    arcos.appendChild(arco);
+  }
+
+  const faiscas = document.createElement("span");
+  faiscas.className = "laser-faiscas";
+  for (const [x, dx, dy, atraso] of FAISCAS) {
+    const f = document.createElement("i");
+    f.style.setProperty("--x", `${String(x)}%`);
+    f.style.setProperty("--dx", `${String(dx)}px`);
+    f.style.setProperty("--dy", `${String(dy)}px`);
+    f.style.setProperty("--atraso", `${String(atraso)}s`);
+    faiscas.appendChild(f);
+  }
+
+  laser.append(feixe, arcos, faiscas, emissor("esquerda"), emissor("direita"));
+  return laser;
+}
+
 /**
  * Um efeito que corre uma vez e **sai** quando acaba.
  *
@@ -169,6 +280,9 @@ export class BoardView {
 
   /** A caixa segue cada tabuleiro montado, em vez de ficar no máximo. */
   private caixaPorTabuleiro = false;
+
+  /** O topo da caixa é um teto: nada a faz crescer. Ver `dimensionarPara`. */
+  private caixaComTeto = false;
 
   /**
    * Fecha a animação em curso, saltando para o estado final.
@@ -282,7 +396,7 @@ export class BoardView {
     if (this.caixaPorTabuleiro) {
       this.colunas = largura;
       this.linhas = altura;
-    } else {
+    } else if (!this.caixaComTeto) {
       this.colunas = Math.max(this.colunas, largura);
       this.linhas = Math.max(this.linhas, altura);
     }
@@ -346,14 +460,24 @@ export class BoardView {
    * caixa passa a seguir cada montagem. É o que o Contra-Relógio precisa para
    * os tabuleiros crescerem à vista sem ficarem encostados ao canto de um
    * enquadramento que ainda não é deles.
+   *
+   * Com `teto`, a caixa **nunca cresce**: o topo dela é o limite do Survival,
+   * e o laser mora lá. Uma peça que passe desenha-se por cima do laser, fora da
+   * caixa — que é onde ela de facto está. Sem isto, a linha que transbordava
+   * fazia a caixa crescer, o laser subia com ela, e só na pintura seguinte
+   * voltava ao sítio: o teto mexia-se no exato momento em que era ultrapassado.
    */
   dimensionarPara(
     board: Board,
-    opcoes: { readonly caixaPorTabuleiro?: boolean } = {},
+    opcoes: {
+      readonly caixaPorTabuleiro?: boolean;
+      readonly teto?: boolean;
+    } = {},
   ): void {
     this.colunasMedida = width(board);
     this.linhasMedida = board.reduce((m, col) => Math.max(m, col.length), 0);
     this.caixaPorTabuleiro = opcoes.caixaPorTabuleiro === true;
+    this.caixaComTeto = opcoes.teto === true;
 
     if (!this.caixaPorTabuleiro) {
       this.colunas = this.colunasMedida;
@@ -446,11 +570,14 @@ export class BoardView {
 
     const antes = this.board;
     this.board = depois;
-    this.colunas = Math.max(this.colunas, width(depois));
-    this.linhas = Math.max(
-      this.linhas,
-      depois.reduce((m, col) => Math.max(m, col.length), 0),
-    );
+    // Com teto, a linha que transborda fica por cima dele — ver `dimensionarPara`.
+    if (!this.caixaComTeto) {
+      this.colunas = Math.max(this.colunas, width(depois));
+      this.linhas = Math.max(
+        this.linhas,
+        depois.reduce((m, col) => Math.max(m, col.length), 0),
+      );
+    }
 
     const novas: { readonly el: HTMLElement; readonly p: Packed }[] = [];
     let ultimaColuna = 0;
@@ -535,17 +662,35 @@ export class BoardView {
       return;
     }
 
-    if (this.teto === undefined) {
-      const el = document.createElement("div");
-      el.className = "linha-fogo";
-      el.setAttribute("aria-hidden", "true");
-      this.teto = el;
-    }
+    this.teto ??= criarLaser();
 
     this.teto.dataset["grau"] = grau;
     // Sempre o último filho: a linha passa por cima das peças, e o topo do
     // tabuleiro é o sítio onde as peças mais altas lhe encostam.
     this.grelha.appendChild(this.teto);
+  }
+
+  /**
+   * As peças que passaram o teto ficam queimadas pelo laser, e o laser dá um
+   * clarão. Devolve quantas queimou.
+   *
+   * São as de cima da caixa — linha igual ou acima de `linhas` —, e só essas:
+   * a regra do Survival é o teto, e o castigo diz-se na peça que o passou.
+   *
+   * A queimadura **fica**: é o fim da corrida, e o tabuleiro já não volta a ser
+   * montado. Ao contrário dos outros efeitos, não sai quando a animação acaba.
+   */
+  queimarAcimaDoTeto(): number {
+    let queimadas = 0;
+
+    for (const [p, el] of this.pecas) {
+      if (rowOf(p) < this.linhas) continue;
+      el.classList.add("queimada");
+      queimadas++;
+    }
+
+    if (queimadas > 0 && this.teto !== undefined) reanimar(this.teto, "atingido");
+    return queimadas;
   }
 
   /** Retângulo de uma peça no ecrã — o seletor do joker ancora-se nele. */

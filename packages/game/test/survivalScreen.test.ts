@@ -549,6 +549,10 @@ describe("a caixa de fim de corrida", () => {
 
     host.querySelector<HTMLButtonElement>(".rodape .acoes .btn")?.click();
     await assentar();
+    // Antes do painel, a peça que passou o teto queima — ver «passar o teto».
+    await new Promise((r) => {
+      setTimeout(r, 1_200);
+    });
 
     expect(caixa()?.textContent).toContain("transbordou");
     expect(acoes()).toEqual(["Outra corrida", "Repetir esta", "Sair"]);
@@ -677,5 +681,82 @@ describe("a bomba no ecrã do Survival", () => {
 
     expect(pavio()).toBe("8");
     expect(pecas()).toBe(DEFAULT_SURVIVAL.largura * DEFAULT_SURVIVAL.alturaInicial);
+  });
+});
+
+describe("passar o teto", () => {
+  let host: HTMLElement;
+  let ecra: SurvivalScreen | undefined;
+  let fim: { limpou: boolean; tempoMs: number } | undefined;
+
+  /** O tabuleiro à altura do teto, em todas as colunas: a próxima linha passa. */
+  const noTeto = (): SurvivalState => {
+    const base = startSurvival(SEED);
+    const cheio = Array.from({ length: DEFAULT_SURVIVAL.largura }, () =>
+      Array.from({ length: DEFAULT_SURVIVAL.alturaMaxima }, () => 1 as const),
+    );
+    return {
+      ...base,
+      game: { ...base.game, board: cheio },
+      proximaLinhaMs: 2_000,
+    };
+  };
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+    document.body.replaceChildren();
+    host = document.createElement("div");
+    document.body.appendChild(host);
+    fim = undefined;
+
+    ecra = new SurvivalScreen(host, {
+      seed: SEED,
+      retomar: { estado: noTeto(), decorridoMs: 1_000 },
+      melhorTempo: 0,
+      aoGuardar: () => undefined,
+      aoTerminar: (info) => {
+        fim = { ...info };
+      },
+      aoSair: () => undefined,
+      aoRecomecar: () => undefined,
+    });
+  });
+
+  afterEach(() => {
+    ecra?.destruir();
+    ecra = undefined;
+    vi.useRealTimers();
+  });
+
+  const painel = (): HTMLDialogElement | null =>
+    host.querySelector<HTMLDialogElement>("dialog.popup");
+
+  it("**as peças que passam o laser queimam antes de a corrida acabar**", async () => {
+    await vi.advanceTimersByTimeAsync(1_050);
+
+    // Uma peça por coluna passou o teto, e cada uma queimou.
+    expect(host.querySelectorAll(".tabuleiro .peca.queimada")).toHaveLength(
+      DEFAULT_SURVIVAL.largura,
+    );
+    // E o painel ainda não abriu: primeiro vê-se a queimadura.
+    expect(painel()?.open).toBe(false);
+    expect(fim).toBeUndefined();
+
+    await vi.advanceTimersByTimeAsync(1_200);
+
+    expect(painel()?.open).toBe(true);
+    expect(fim?.limpou).toBe(false);
+  });
+
+  /*
+   * A marca do modo é o tempo aguentado. O jogador deixou de aguentar quando a
+   * linha passou — o segundo da queimadura não é tempo que ele tenha jogado.
+   */
+  it("o tempo gravado é o do instante em que passou, e não o do fim da queimadura", async () => {
+    await vi.advanceTimersByTimeAsync(2_500);
+
+    expect(fim?.tempoMs).toBeGreaterThanOrEqual(2_000);
+    expect(fim?.tempoMs).toBeLessThan(2_200);
   });
 });
