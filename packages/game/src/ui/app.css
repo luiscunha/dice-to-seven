@@ -3574,6 +3574,21 @@ body::before {
   background: var(--fogo);
 }
 
+/*
+ * Passar de 7 adianta a linha: a barra salta para trás com o tempo perdido, e
+ * dá um esticão a vermelho para o salto não passar por uma atualização normal.
+ */
+.fila.adiantada::after {
+  animation: adiantar 600ms var(--suavizacao);
+}
+
+@keyframes adiantar {
+  from {
+    height: 6px;
+    background: var(--fogo);
+  }
+}
+
 .fila .peca.na-fila {
   --lado-real: 26px;
   position: static;

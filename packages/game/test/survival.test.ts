@@ -906,3 +906,48 @@ describe("sem jogadas, a linha cai já", () => {
     expect(r.forcada).toBe(false);
   });
 });
+
+describe("passar de 7 adianta a próxima linha", () => {
+  /** 3+4 e 4+3: o 4 de cima à esquerda e o 4 de baixo à direita passam de 7. */
+  const com = (proximaLinhaMs = 20_000): SurvivalState => {
+    const base = startSurvival(SEED);
+    return {
+      ...base,
+      game: { ...base.game, board: [[3, 4], [4, 3]] },
+      proximaLinhaMs,
+    };
+  };
+
+  it("**o toque que passa de 7 tira 3 s ao prazo**, e a seleção fica", () => {
+    let r = survivalTap(com(), packed(0, 1));
+    r = survivalTap(r.state, packed(1, 0));
+
+    expect(r.penalizado).toBe(true);
+    expect(r.state.proximaLinhaMs).toBe(20_000 - DEFAULT_SURVIVAL.penalizacaoSomaMs);
+    expect(r.state.game.selection).toEqual([packed(0, 1)]);
+  });
+
+  it("só a soma errada paga — selecionar, tirar da seleção e jogar não", () => {
+    let r = survivalTap(com(), packed(0, 1));
+    expect(r.penalizado).toBe(false);
+
+    r = survivalTap(r.state, packed(0, 1));
+    expect(r.penalizado).toBe(false);
+
+    r = survivalTap(r.state, packed(0, 0));
+    r = survivalTap(r.state, packed(0, 1));
+    expect(r.moved).toBe(true);
+    expect(r.penalizado).toBe(false);
+    expect(r.state.proximaLinhaMs).toBe(20_000);
+  });
+
+  it("se o prazo ficar para trás, a linha cai no tique seguinte", () => {
+    let r = survivalTap(com(2_000), packed(0, 1));
+    r = survivalTap(r.state, packed(1, 0));
+
+    const t = avancarRelogio(r.state, 1_500);
+    expect(t.caiu).toBe(true);
+    expect(t.forcada).toBe(false);
+    expect(t.state.proximaLinhaMs).toBe(1_500 + cadencia(t.state));
+  });
+});

@@ -753,6 +753,60 @@ describe("a bomba no ecrã do Survival", () => {
   });
 });
 
+describe("passar de 7, no ecrã", () => {
+  let host: HTMLElement;
+  let ecra: SurvivalScreen | undefined;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+    document.body.replaceChildren();
+    host = document.createElement("div");
+    document.body.appendChild(host);
+  });
+
+  afterEach(() => {
+    ecra?.destruir();
+    ecra = undefined;
+    vi.useRealTimers();
+  });
+
+  it("**o «−3s» sobe da peça, e a barra da linha salta para trás**", () => {
+    const base = startSurvival(SEED);
+    const estado: SurvivalState = {
+      ...base,
+      game: { ...base.game, board: [[3, 4], [4, 3]] },
+      proximaLinhaMs: 20_000,
+    };
+    ecra = new SurvivalScreen(host, {
+      seed: SEED,
+      retomar: { estado, decorridoMs: 1_000 },
+      melhorTempo: 0,
+      aoGuardar: () => undefined,
+      aoTerminar: () => undefined,
+      aoSair: () => undefined,
+      aoRecomecar: () => undefined,
+    });
+
+    const conta = (): number =>
+      Number(host.querySelector<HTMLElement>(".fila")?.style.getPropertyValue("--conta"));
+    const clicar = (p: number): void => {
+      host
+        .querySelector(`.tabuleiro .peca[data-pos="${String(p)}"]`)
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    };
+
+    const antes = conta();
+    clicar(packed(0, 1));
+    clicar(packed(1, 0));
+
+    expect(host.querySelector(".ganho.perda")?.textContent).toBe("−3s");
+    expect(host.querySelector(".fila")?.classList.contains("adiantada")).toBe(true);
+    // Três segundos num intervalo de trinta: a barra perde um décimo.
+    expect(antes - conta()).toBeCloseTo(0.1, 2);
+  });
+});
+
 describe("sem jogadas, no ecrã", () => {
   let host: HTMLElement;
   let ecra: SurvivalScreen | undefined;

@@ -62,7 +62,7 @@ import { anunciar } from "./anuncio";
 import { BoardView } from "./BoardView";
 import { PASSO_RELOGIO, relogio } from "./tempo";
 import { criarPeca } from "./dice";
-import { botao, botaoRedondo, confirmar, elemento } from "./dom";
+import { botao, botaoRedondo, confirmar, elemento, reanimar } from "./dom";
 import { iconeReiniciar, iconeVoltar } from "./icones";
 import { JokerPicker } from "./JokerPicker";
 
@@ -504,6 +504,7 @@ topo.append(sair, this.elRelogio);
     const recusado = r.state.game.rejection !== undefined;
     vibrarPeloToque({ recusado, jogou: r.moved, limpou: r.cleared });
     if (recusado) this.view.recusarPeca(p);
+    if (r.penalizado) this.adiantar(p);
 
     const grupo = r.state.game.lastMove;
 
@@ -623,6 +624,24 @@ topo.append(sair, this.elRelogio);
     this.view.rebentarBomba(at);
     this.view.aquecerPecas(depois, aquecidas);
     vibrarExplosao();
+  }
+
+  /**
+   * Passou de 7: a próxima linha chega mais cedo. O «−3s» sobe da peça, como a
+   * multa do Contra-Relógio, e a barra da fila dá um esticão a vermelho — é lá
+   * que se vê o tempo que se perdeu, e é lá que o jogador já está habituado a
+   * olhar para saber quando cai a linha.
+   */
+  private adiantar(p: Packed): void {
+    const caixa = this.view.caixaDe(p);
+    anunciar(
+      this.palco,
+      caixa === undefined ? [] : [caixa],
+      `−${String(this.config.penalizacaoSomaMs / 1000)}s`,
+      "perda",
+    );
+    reanimar(this.elFila, "adiantada");
+    this.pintarContagem();
   }
 
   /* ─── fim ───────────────────────────────────────────────────────────────── */

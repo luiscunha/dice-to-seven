@@ -981,6 +981,17 @@ Saiu também a linha do resto para limpar («dá para limpar», «limpar: faltam
 6»), por baixo do tabuleiro: quase nunca mudava a jogada seguinte, e roubava
 uma linha ao tabuleiro. A conta continua na sessão (`restoParaLimpar`).
 
+### Passar de 7 adianta a próxima linha
+
+No Survival, tocar ao calhas não custava nada além do toque: a peça era
+recusada e a seleção ficava. Agora cada toque que passa de 7 — o 5 e o 3, por
+exemplo — **adianta a próxima linha 3 segundos**. É a multa do Contra-Relógio
+com a moeda deste modo: lá perde-se tempo do relógio, aqui a linha chega mais
+cedo. O «−3s» sobe da peça, a peça abana, e a barra da fila salta para trás com
+um esticão a vermelho. Se o prazo ficar para trás, a linha cai no tique
+seguinte. Só a soma errada paga: tirar uma peça da seleção não. Valor em
+`penalizacaoSomaMs`.
+
 ### A vibração é a mesma nos três modos
 
 Só a campanha vibrava a cada toque. O Contra-Relógio vibrava na multa e na
