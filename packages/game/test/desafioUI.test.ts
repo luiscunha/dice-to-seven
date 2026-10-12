@@ -19,7 +19,7 @@ import type { Profile } from "../src/session/progress";
 import type { SurvivalState } from "../src/session/SurvivalSession";
 import { DEFAULT_SURVIVAL, startSurvival } from "../src/session/SurvivalSession";
 import { DEFAULT_TIME_ATTACK } from "../src/session/TimeAttackSession";
-import { diasDoTrilho, modoDoDia, numeroDoDia } from "../src/session/desafio";
+import { diasDoMes, diasDoTrilho, modoDoDia, numeroDoDia } from "../src/session/desafio";
 import type { EstadoNoCartao, EstadoNoTrilho, TrilhoDoDesafio } from "../src/ui/DesafioScreen";
 import { DesafioScreen } from "../src/ui/DesafioScreen";
 import type { ResumoDoDesafio } from "../src/ui/HomeScreen";
@@ -28,6 +28,7 @@ import {
   botaoPartilhar,
   dataCurta,
   dataPorExtenso,
+  mesPorExtenso,
   partilhar,
   textoDoDesafio,
 } from "../src/ui/partilha";
@@ -97,6 +98,7 @@ describe("o texto que se partilha", () => {
     expect(dataCurta("2026-01-05")).toBe("5 jan");
     expect(dataCurta("2026-12-31")).toBe("31 dez");
     expect(dataPorExtenso("2026-03-07")).toBe("7 de março");
+    expect(mesPorExtenso("2026-09")).toBe("setembro de 2026");
   });
 });
 
@@ -420,6 +422,15 @@ describe("o ecrã do Desafio do Dia: o trilho", () => {
     ecra.destruir();
   });
 
+  it("no #1, o trilho acaba na partida — e não há mais nada para trás", () => {
+    const ecra = abrir({ carregarMes: () => [], primeiroMes: "2026-10" });
+    expect(host.querySelector(".trilho-mais")).toBeNull();
+    expect(host.querySelector(".trilho-partida")?.textContent).toBe(
+      "🏁 O primeiro desafio: 12 de outubro de 2026",
+    );
+    ecra.destruir();
+  });
+
   it("a seta volta, e a legenda tem os três modos", () => {
     const aoVoltar = vi.fn();
     const ecra = abrir({}, { tipo: "por-jogar" }, aoVoltar);
@@ -429,6 +440,101 @@ describe("o ecrã do Desafio do Dia: o trilho", () => {
 
     host.querySelector<HTMLElement>(".topo .btn")?.click();
     expect(aoVoltar).toHaveBeenCalledOnce();
+    ecra.destruir();
+  });
+});
+
+describe("o trilho, para trás: os meses anteriores", () => {
+  /** O #55: o trilho abre a 1 de novembro, e outubro fica por carregar. */
+  const HOJE = "2026-12-05";
+
+  /** Tudo feito, menos os dias 7 de cada mês. */
+  const casa = (data: string) => ({
+    data,
+    numero: numeroDoDia(data),
+    modo: modoDoDia(data),
+    estado:
+      data > HOJE
+        ? ({ tipo: "futuro" } as const)
+        : data === HOJE
+          ? ({ tipo: "por-jogar" } as const)
+          : data.endsWith("-07")
+            ? ({ tipo: "perdido" } as const)
+            : ({ tipo: "feito", texto: "ok" } as const),
+  });
+
+  const abrir = (t: Partial<TrilhoDoDesafio> = {}): DesafioScreen =>
+    new DesafioScreen(host, {
+      aoVoltar: () => undefined,
+      trilho: {
+        hoje: HOJE,
+        dias: diasDoTrilho(HOJE).map(casa),
+        sequencia: 0,
+        aoJogar: () => undefined,
+        carregarMes: (mes) => diasDoMes(mes).map(casa),
+        primeiroMes: "2026-10",
+        ...t,
+      },
+    });
+
+  /** A lista, de cima para baixo: as casas pela data curta, as placas entre parênteses. */
+  const lista = (): string[] =>
+    [...host.querySelectorAll<HTMLElement>(".trilho-dias > li")].map((li) =>
+      li.classList.contains("trilho-mes")
+        ? `[${li.querySelector(".trilho-mes-nome")?.textContent ?? ""} · ${li.querySelector(".trilho-mes-conta")?.textContent ?? ""}]`
+        : (li.querySelector(".trilho-rotulo")?.textContent ?? "").split(" · ")[0] ?? "",
+    );
+
+  it("**onde o mês muda, uma placa** com o nome e as contas — o mês de hoje não leva", () => {
+    const ecra = abrir();
+    const l = lista();
+
+    expect(l.slice(0, 3)).toEqual(["7 dez", "6 dez", "5 dez"]);
+    const i = l.indexOf("[novembro de 2026 · 29 de 30 feitos]");
+    expect(i).toBeGreaterThan(0);
+    expect(l[i - 1]).toBe("1 dez");
+    expect(l[i + 1]).toBe("30 nov");
+    expect(l.at(-1)).toBe("1 nov");
+    expect(host.querySelectorAll(".trilho-mes")).toHaveLength(1);
+    ecra.destruir();
+  });
+
+  it("**o botão traz o mês anterior inteiro**, por baixo — até ao #1", () => {
+    const ecra = abrir();
+
+    const mais = host.querySelector<HTMLElement>(".trilho-mais");
+    expect(mais?.textContent).toBe("Ver outubro de 2026");
+    expect(host.querySelector(".trilho-partida")).toBeNull();
+    mais?.click();
+
+    const l = lista();
+    expect(l).toContain("[outubro de 2026 · 20 de 20 feitos]");
+    expect(l.at(-1)).toBe("12 out");
+    expect(l.slice(0, 3)).toEqual(["7 dez", "6 dez", "5 dez"]);
+
+    // Outubro é o mês do #1: não há mais para trás, e o trilho acaba na partida.
+    expect(host.querySelector(".trilho-mais")).toBeNull();
+    expect(host.querySelector(".trilho-partida")?.textContent).toBe(
+      "🏁 O primeiro desafio: 12 de outubro de 2026",
+    );
+
+    // O balão continua em hoje, e a casa nova de cima fica com o foco.
+    expect(host.querySelector('.trilho-dia[data-hoje] .trilho-balao')).not.toBeNull();
+    expect(document.activeElement?.getAttribute("aria-label")).toMatch(/^31 de outubro/);
+    ecra.destruir();
+  });
+
+  it("sem quem carregue os meses, o trilho fica no que traz", () => {
+    const ecra = new DesafioScreen(host, {
+      aoVoltar: () => undefined,
+      trilho: {
+        hoje: HOJE,
+        dias: diasDoTrilho(HOJE).map(casa),
+        sequencia: 0,
+        aoJogar: () => undefined,
+      },
+    });
+    expect(host.querySelector(".trilho-mais")).toBeNull();
     ecra.destruir();
   });
 });

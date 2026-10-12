@@ -2443,6 +2443,67 @@ body::before {
   }
 }
 
+/*
+ * ── Os meses ──
+ *
+ * Onde o mês muda, uma placa no meio da estrada — a estrada passa por baixo
+ * dela. O nome do mês que começa ali para baixo, e as contas dele.
+ */
+.trilho-mes {
+  display: grid;
+  justify-items: center;
+  padding: 4px 0;
+}
+
+.trilho-mes-placa {
+  display: grid;
+  justify-items: center;
+  gap: 1px;
+  padding: 8px 18px;
+  border: 1px solid var(--line);
+  border-radius: calc(var(--raio) + 4px);
+  background: var(--surface);
+  box-shadow: var(--sombra-cartao);
+}
+
+.trilho-mes-nome {
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.trilho-mes-conta {
+  font-size: 12.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-muted);
+}
+
+/* O fim do trilho: o botão do mês anterior, e a partida no primeiro desafio. */
+.trilho-fim {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+}
+
+.trilho-fim:empty {
+  display: none;
+}
+
+.trilho-mais {
+  justify-content: center;
+  min-width: 220px;
+}
+
+.trilho-partida {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--ink-muted);
+}
+
 /* A legenda: os três modos, com o ícone e a cor que têm no trilho. */
 .desafio-legenda {
   display: flex;

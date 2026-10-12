@@ -1116,7 +1116,7 @@ outros modos de um dia de quando havia três ficam guardados sem contar.
   seja qual for a definição. No Survival do Dia não há «Recomeçar» — trocar de
   seed a meio era sair do desafio.
 - **Os recordes normais ficam de fora**: o desafio tem o seu registo
-  (`dicetoseven.desafio`, os últimos 400 dias), e a sequência de dias seguidos
+  (`dicetoseven.desafio`, os últimos três anos), e a sequência de dias seguidos
   com o desafio feito. Hoje por jogar não parte a sequência.
 - **Partilhar sem servidor**: um texto curto com o número, o dia, o resultado
   e a sequência, pela folha de partilha do sistema quando existe e copiado
@@ -1140,10 +1140,22 @@ outros modos de um dia de quando havia três ficam guardados sem contar.
       dura por baixo, numa onda presa ao número do dia (uma casa não muda de
       sítio quando muda o dia): **os dois dias seguintes** em cima, em
       cinzento e fechados a cadeado — com hoje, são a rotação inteira; **hoje**
-      a meio, maior, com «Hoje» escrito e um aro aceso que respira; e **as
-      duas últimas semanas** em baixo, a partir do #1 — feitas com o visto na
-      cor do modo, perdidas como casa vazia. Por baixo de cada casa, a data e
-      o modo.
+      a meio, maior, com «Hoje» escrito e um aro aceso que respira; e **pelo
+      menos as duas últimas semanas** em baixo, a começar num dia 1 e nunca
+      antes do #1 — feitas com o visto na cor do modo, perdidas como casa
+      vazia. Por baixo de cada casa, a data e o modo; a onda tem 60 px de
+      amplitude, o que deixa o rótulo mais comprido caber num ecrã de 375.
+    - **Os meses para trás.** Onde o mês muda, uma placa no meio da estrada,
+      com o nome do mês que começa por baixo dela e as contas dele
+      («Novembro de 2026 · 29 de 30 feitos»); o mês de hoje não leva placa.
+      No fundo, **«Ver outubro de 2026»** traz o mês anterior inteiro
+      (`diasDoMes`), por baixo, sem mexer no que está à vista, e põe o foco na
+      primeira casa nova. Repete-se até ao mês do #1, onde o trilho acaba na
+      partida — «🏁 O primeiro desafio: 12 de outubro de 2026» —, ou até ao
+      primeiro mês que o armazenamento ainda guarda inteiro
+      (`primeiroMesDoTrilho`): mais para trás, um dia feito que já se apagou
+      aparecia como perdido. O registo passou a guardar três anos
+      (`DIAS_GUARDADOS`, 1100 dias — pouco mais de cem quilobytes).
     - **A estrada** é um SVG desenhado depois de as casas estarem no sítio,
       pelos centros que o browser mede: curvas que saem e chegam na vertical,
       na cor de destaque de hoje para trás e em cinzento de hoje para a

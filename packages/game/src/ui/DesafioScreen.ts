@@ -18,6 +18,10 @@
  * conta. Tocar noutra casa leva-lhe o balão, com o resultado desse dia, o que
  * ficou por jogar, ou quando abre. **Só se joga o de hoje.**
  *
+ * **Para trás, mês a mês.** Onde o mês muda, uma placa na estrada com o nome
+ * e as contas desse mês; no fundo, um botão traz o mês anterior inteiro, e
+ * outra vez, até ao #1 — onde o trilho acaba na partida.
+ *
  * **O caminho é desenhado por cima da página já montada**: as casas fazem uma
  * onda (`ONDA`), e o SVG liga os centros delas como os mede o browser. Medir
  * em vez de calcular é o que deixa o balão viver no fluxo da página, a
@@ -25,6 +29,7 @@
  */
 
 import type { ModoDoDesafio } from "../session/desafio";
+import { mesAnterior, mesDe } from "../session/desafio";
 import { botao, cabecalho, elemento } from "./dom";
 import {
   iconeCadeado,
@@ -35,7 +40,13 @@ import {
   iconeVisto,
 } from "./icones";
 import type { DesfechoDaPartilha } from "./partilha";
-import { NOME_DO_MODO, botaoPartilhar, dataCurta, dataPorExtenso } from "./partilha";
+import {
+  NOME_DO_MODO,
+  botaoPartilhar,
+  dataCurta,
+  dataPorExtenso,
+  mesPorExtenso,
+} from "./partilha";
 
 /**
  * O desafio de hoje, como os ecrãs o mostram. Os textos vêm feitos: o ecrã não
@@ -77,6 +88,13 @@ export interface TrilhoDoDesafio {
   readonly aoJogar: () => void;
   /** Só quando o desafio de hoje está feito. */
   readonly aoPartilhar?: () => Promise<DesfechoDaPartilha>;
+  /**
+   * Os dias de um mês anterior, `AAAA-MM`, para o trilho continuar para trás.
+   * Sem isto, o trilho fica nos dias que traz.
+   */
+  readonly carregarMes?: (mes: string) => readonly DiaNoTrilho[];
+  /** O mês mais antigo que se pode carregar — ver `primeiroMesDoTrilho`. */
+  readonly primeiroMes?: string;
 }
 
 export interface OpcoesDesafio {
@@ -109,8 +127,11 @@ export function sinalDaSequencia(sequencia: number): HTMLElement {
  * A onda do trilho: o desvio de cada casa ao centro, em píxeis, pelo número do
  * dia. Pelo número, e não pela posição na lista: uma casa fica sempre no mesmo
  * sítio do caminho, e o trilho não se mexe todo quando muda o dia.
+ *
+ * Sessenta píxeis no máximo: é o que deixa o rótulo mais comprido — «28 out ·
+ * Contra-Relógio» — caber por baixo da casa mais desviada num ecrã de 375.
  */
-const ONDA = [0, 48, 72, 48, 0, -48, -72, -48] as const;
+const ONDA = [0, 40, 60, 40, 0, -40, -60, -40] as const;
 
 const desvio = (numero: number): number =>
   ONDA[((numero % ONDA.length) + ONDA.length) % ONDA.length] ?? 0;
@@ -151,10 +172,14 @@ export class DesafioScreen {
   private readonly raiz: HTMLElement;
   private readonly rolo: HTMLElement;
   private readonly trilho: TrilhoDoDesafio;
-  /** As casas, de cima para baixo: o dia mais distante primeiro. */
-  private readonly ordem: readonly DiaNoTrilho[];
+  /** Os dias no trilho, do mais antigo ao mais recente. Cresce para trás. */
+  private dias: DiaNoTrilho[];
   private readonly elTrilho: HTMLElement;
   private readonly svg: SVGSVGElement;
+  private readonly lista: HTMLElement;
+  /** O mês da última casa da lista — a mais antiga —, para saber onde vai a placa. */
+  private ultimoMes: string | undefined;
+  private readonly elFim: HTMLElement;
   private readonly casas = new Map<string, HTMLLIElement>();
   private readonly nos = new Map<string, HTMLButtonElement>();
   private balao: HTMLElement | undefined;
@@ -164,7 +189,7 @@ export class DesafioScreen {
   constructor(host: HTMLElement, opcoes: OpcoesDesafio) {
     const t = opcoes.trilho;
     this.trilho = t;
-    this.ordem = [...t.dias].reverse();
+    this.dias = [...t.dias];
     this.selecionado = t.hoje;
     this.raiz = elemento("div", "ecra desafio");
 
@@ -176,16 +201,20 @@ export class DesafioScreen {
     this.svg.setAttribute("class", "trilho-caminho");
     this.svg.setAttribute("aria-hidden", "true");
 
-    const lista = elemento("ol", "trilho-dias");
-    lista.setAttribute("aria-label", "Os desafios, de amanhã para trás");
-    for (const dia of this.ordem) lista.appendChild(this.casa(dia));
+    this.lista = elemento("ol", "trilho-dias");
+    this.lista.setAttribute("aria-label", "Os desafios, de amanhã para trás");
+    this.acrescentar([...this.dias].reverse());
 
-    this.elTrilho.append(this.svg, lista);
+    this.elTrilho.append(this.svg, this.lista);
+
+    this.elFim = elemento("div", "trilho-fim");
+    this.pintarFim();
 
     const corpo = elemento("div", "desafio-corpo");
     corpo.append(
       this.faixa(t),
       this.elTrilho,
+      this.elFim,
       this.legenda(),
       elemento(
         "p",
@@ -248,6 +277,98 @@ export class DesafioScreen {
     );
 
     return el;
+  }
+
+  /* ─── Os meses ──────────────────────────────────────────────────────────── */
+
+  /**
+   * Acrescenta casas ao fundo da lista, da mais recente para a mais antiga.
+   * Onde o mês muda entra uma placa com o nome do mês que começa por baixo dela
+   * e as contas dele. O mês de cima — o de hoje — não leva placa: está na faixa,
+   * e na data de cada casa.
+   */
+  private acrescentar(dias: readonly DiaNoTrilho[]): void {
+    for (const dia of dias) {
+      const mes = mesDe(dia.data);
+      if (this.ultimoMes !== undefined && mes !== this.ultimoMes) {
+        this.lista.appendChild(this.placa(mes, dias));
+      }
+      this.ultimoMes = mes;
+      this.lista.appendChild(this.casa(dia));
+    }
+  }
+
+  /** A placa do mês: o nome, e quantos desafios se fizeram dos que houve. */
+  private placa(mes: string, dias: readonly DiaNoTrilho[]): HTMLLIElement {
+    const doMes = dias.filter((d) => mesDe(d.data) === mes && d.estado.tipo !== "futuro");
+    const feitos = doMes.filter((d) => d.estado.tipo === "feito").length;
+    const nome = mesPorExtenso(mes);
+    const conta = `${String(feitos)} de ${String(doMes.length)} feitos`;
+
+    const li = document.createElement("li");
+    li.className = "trilho-mes";
+    li.setAttribute("aria-label", `${nome}: ${conta}`);
+
+    const placa = elemento("span", "trilho-mes-placa");
+    placa.append(
+      elemento("span", "trilho-mes-nome", nome),
+      elemento("span", "trilho-mes-conta", conta),
+    );
+    li.appendChild(placa);
+
+    return li;
+  }
+
+  /**
+   * O fim do trilho: o botão que traz o mês anterior, enquanto houver; e, no
+   * primeiro desafio de todos, a partida.
+   */
+  private pintarFim(): void {
+    const t = this.trilho;
+    const maisAntigo = this.dias[0];
+    if (maisAntigo === undefined) return;
+
+    const anterior = mesAnterior(mesDe(maisAntigo.data));
+    const podeMais =
+      t.carregarMes !== undefined && t.primeiroMes !== undefined && anterior >= t.primeiroMes;
+
+    const fim: HTMLElement[] = [];
+    if (podeMais) {
+      fim.push(
+        botao(`Ver ${mesPorExtenso(anterior)}`, "trilho-mais", () => {
+          this.verMes(anterior);
+        }),
+      );
+    }
+    if (maisAntigo.numero === 1) {
+      fim.push(
+        elemento(
+          "p",
+          "trilho-partida",
+          `🏁 O primeiro desafio: ${dataPorExtenso(maisAntigo.data)} de ${maisAntigo.data.slice(0, 4)}`,
+        ),
+      );
+    }
+
+    this.elFim.replaceChildren(...fim);
+  }
+
+  /**
+   * Traz um mês anterior para o fundo do trilho. O que já está à vista não se
+   * mexe — o mês entra por baixo —, e o foco vai para a primeira casa nova,
+   * para quem navega por teclado continuar onde o mês começa.
+   */
+  private verMes(mes: string): void {
+    const novos = this.trilho.carregarMes?.(mes) ?? [];
+    if (novos.length === 0) return;
+
+    this.dias = [...novos, ...this.dias];
+    this.acrescentar([...novos].reverse());
+    this.pintarFim();
+    this.desenharCaminho();
+
+    const ultimo = novos[novos.length - 1];
+    if (ultimo !== undefined) this.nos.get(ultimo.data)?.focus({ preventScroll: true });
   }
 
   /* ─── As casas ──────────────────────────────────────────────────────────── */
@@ -325,7 +446,7 @@ export class DesafioScreen {
       no.setAttribute("aria-expanded", String(data === this.selecionado));
     }
 
-    const dia = this.ordem.find((d) => d.data === this.selecionado);
+    const dia = this.dias.find((d) => d.data === this.selecionado);
     const casa = this.casas.get(this.selecionado);
     if (dia === undefined || casa === undefined) return;
 
@@ -455,7 +576,9 @@ export class DesafioScreen {
     const caixa = this.elTrilho.getBoundingClientRect();
     if (caixa.width === 0 || caixa.height === 0) return;
 
-    const pontos = this.ordem.map((d) => {
+    // De cima para baixo: o dia mais distante primeiro.
+    const ordem = [...this.dias].reverse();
+    const pontos = ordem.map((d) => {
       const r = this.nos.get(d.data)?.getBoundingClientRect();
       return r === undefined
         ? { x: 0, y: 0 }
@@ -475,7 +598,7 @@ export class DesafioScreen {
         })
         .join(" ");
 
-    const iHoje = this.ordem.findIndex((d) => d.data === this.trilho.hoje);
+    const iHoje = ordem.findIndex((d) => d.data === this.trilho.hoje);
     const futuro = pontos.slice(0, iHoje + 1);
     const andado = pontos.slice(iHoje);
 

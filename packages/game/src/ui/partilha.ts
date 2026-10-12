@@ -51,6 +51,12 @@ export function dataPorExtenso(data: string): string {
   return `${String(dia)} de ${MESES_POR_EXTENSO[mes - 1] ?? ""}`;
 }
 
+/** `2026-10` (ou uma data desse mês) → `outubro de 2026`. */
+export function mesPorExtenso(mes: string): string {
+  const [ano, m] = partes(mes);
+  return `${MESES_POR_EXTENSO[m - 1] ?? ""} de ${String(ano)}`;
+}
+
 
 /** O nome de cada modo, como os ecrãs do desafio o escrevem. */
 export const NOME_DO_MODO: Readonly<Record<ModoDoDesafio, string>> = {

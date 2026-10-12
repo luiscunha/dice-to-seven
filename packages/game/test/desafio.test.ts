@@ -11,18 +11,23 @@ import { describe, expect, it } from "vitest";
 import type { Desafios } from "../src/session/desafio";
 import {
   DESAFIO_KEY,
+  DIAS_GUARDADOS,
   SEM_DESAFIOS,
   comecar,
   dataDe,
   diaAnterior,
+  diasDoMes,
   diasDoTrilho,
   escolherDoDia,
   estadoDoModo,
   guardarDesafios,
   interromper,
   lerDesafios,
+  mesAnterior,
+  mesSeguinte,
   modoDoDia,
   numeroDoDia,
+  primeiroMesDoTrilho,
   registar,
   seedDoDia,
   sequencia,
@@ -99,12 +104,17 @@ describe("um desafio por dia, à vez", () => {
 });
 
 describe("o trilho", () => {
-  it("**duas semanas para trás, hoje, e dois dias à frente**, do mais antigo ao mais recente", () => {
-    const dias = diasDoTrilho("2026-11-10");
-    expect(dias).toHaveLength(17);
-    expect(dias[0]).toBe("2026-10-27");
-    expect(dias[14]).toBe("2026-11-10");
-    expect(dias.at(-1)).toBe("2026-11-12");
+  it("**pelo menos duas semanas para trás, a começar num dia 1**, hoje, e dois dias à frente", () => {
+    // Há duas semanas foi 6 de dezembro: o trilho começa a 1.
+    const dezembro = diasDoTrilho("2026-12-20");
+    expect(dezembro[0]).toBe("2026-12-01");
+    expect(dezembro.at(-1)).toBe("2026-12-22");
+    expect(dezembro).toHaveLength(22);
+
+    // Há duas semanas foi 21 de novembro: o trilho começa a 1 de novembro.
+    const comNovembro = diasDoTrilho("2026-12-05");
+    expect(comNovembro[0]).toBe("2026-11-01");
+    expect(comNovembro.at(-1)).toBe("2026-12-07");
   });
 
   it("os dois dias à frente fazem, com hoje, a rotação inteira", () => {
@@ -114,7 +124,31 @@ describe("o trilho", () => {
 
   it("começa no #1: antes dele não houve desafio", () => {
     expect(diasDoTrilho("2026-10-12")).toEqual(["2026-10-12", "2026-10-13", "2026-10-14"]);
-    expect(diasDoTrilho("2026-10-15")[0]).toBe("2026-10-12");
+    expect(diasDoTrilho("2026-11-10")[0]).toBe("2026-10-12");
+  });
+
+  it("os meses para trás: inteiros, e só os dias que tiveram desafio", () => {
+    expect(diasDoMes("2026-11")).toHaveLength(30);
+    expect(diasDoMes("2026-11")[0]).toBe("2026-11-01");
+    expect(diasDoMes("2028-02")).toHaveLength(29);
+
+    // Outubro de 2026 começa no #1, a 12.
+    expect(diasDoMes("2026-10")[0]).toBe("2026-10-12");
+    expect(diasDoMes("2026-10")).toHaveLength(20);
+    expect(diasDoMes("2026-09")).toEqual([]);
+  });
+
+  it("o mês anterior e o seguinte atravessam os anos", () => {
+    expect(mesAnterior("2026-10")).toBe("2026-09");
+    expect(mesAnterior("2027-01")).toBe("2026-12");
+    expect(mesSeguinte("2026-12")).toBe("2027-01");
+  });
+
+  it("**o histórico vai até ao #1, ou até onde o armazenamento ainda guarda**", () => {
+    expect(primeiroMesDoTrilho("2026-12-05")).toBe("2026-10");
+    // 1100 dias antes de 15 de junho de 2031 é 10 de junho de 2028: junho já
+    // não está inteiro, e o trilho para em julho.
+    expect(primeiroMesDoTrilho("2031-06-15")).toBe("2028-07");
   });
 });
 
@@ -245,6 +279,20 @@ describe("guardar e ler", () => {
     const s = memoria();
     s.setItem(DESAFIO_KEY, "{isto não é json");
     expect(lerDesafios(s)).toEqual(SEM_DESAFIOS);
+  });
+
+  it("guarda os últimos três anos — o histórico que o trilho deixa ver — e não mais", () => {
+    expect(DIAS_GUARDADOS).toBeGreaterThanOrEqual(3 * 365);
+
+    let d = SEM_DESAFIOS;
+    for (let i = 0; i < DIAS_GUARDADOS + 5; i++) d = feito(d, somarDias("2026-10-12", i));
+
+    const s = memoria();
+    guardarDesafios(s, d);
+    const dias = Object.keys(lerDesafios(s).dias).sort();
+    expect(dias).toHaveLength(DIAS_GUARDADOS);
+    // Saem os mais antigos.
+    expect(dias[0]).toBe(somarDias("2026-10-12", 5));
   });
 });
 

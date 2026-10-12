@@ -61,8 +61,12 @@ export const DESAFIO_VERSAO = 1;
  */
 export const DESAFIO_TEMPO_INICIAL = 60;
 
-/** Dias guardados. Chega para a sequência mais longa que importa mostrar. */
-const DIAS_GUARDADOS = 400;
+/**
+ * Dias guardados: três anos. É o histórico que o trilho deixa ver, mês a mês
+ * — ver `primeiroMesDoTrilho`. Um dia guardado são uns cem bytes, e três anos
+ * cabem em pouco mais de cem quilobytes.
+ */
+export const DIAS_GUARDADOS = 1100;
 
 export interface ResultadoTempo {
   readonly pontos: number;
@@ -152,7 +156,32 @@ export const modoDoDia = (data: string): ModoDoDesafio =>
 /** O dia `n` dias depois de `data` — ou antes, com `n` negativo. */
 export const somarDias = (data: string, n: number): string => deDias(emDias(data) + n);
 
-/** Os dias que o trilho mostra para trás de hoje: duas semanas. */
+/* ─── O trilho: os dias à vista, e os meses para trás ────────────────────── */
+
+/** O mês de uma data, `AAAA-MM`. Compara-se como texto, como as datas. */
+export const mesDe = (data: string): string => data.slice(0, 7);
+
+const somarMeses = (mes: string, n: number): string => {
+  const [a, m] = mes.split("-").map(Number);
+  const total = (a ?? 1970) * 12 + ((m ?? 1) - 1) + n;
+  return `${String(Math.floor(total / 12))}-${doisDigitos(resto(total, 12) + 1)}`;
+};
+
+export const mesAnterior = (mes: string): string => somarMeses(mes, -1);
+export const mesSeguinte = (mes: string): string => somarMeses(mes, 1);
+
+/** Os dias do mês que tiveram desafio — do #1 em diante —, do primeiro ao último. */
+export function diasDoMes(mes: string): string[] {
+  const dias: string[] = [];
+
+  for (let d = `${mes}-01`; mesDe(d) === mes; d = somarDias(d, 1)) {
+    if (numeroDoDia(d) >= 1) dias.push(d);
+  }
+
+  return dias;
+}
+
+/** Os dias que o trilho mostra, pelo menos, para trás de hoje: duas semanas. */
 export const DIAS_PASSADOS_NO_TRILHO = 14;
 
 /**
@@ -162,19 +191,36 @@ export const DIAS_PASSADOS_NO_TRILHO = 14;
 export const DIAS_FUTUROS_NO_TRILHO = 2;
 
 /**
- * Os dias do trilho do desafio, do mais antigo ao mais recente: as últimas duas
- * semanas, hoje, e os dois dias seguintes. Antes do #1 não houve desafio, e o
- * trilho começa nele.
+ * Os dias do trilho ao abrir, do mais antigo ao mais recente: **pelo menos as
+ * últimas duas semanas, a começar no dia 1 de um mês**, hoje, e os dois dias
+ * seguintes. Começar num dia 1 é o que deixa o resto do histórico chegar mês a
+ * mês, inteiro — ver `diasDoMes`. Antes do #1 não houve desafio, e o trilho
+ * começa nele.
  */
 export function diasDoTrilho(hoje: string): string[] {
   const dias: string[] = [];
+  const ultimo = somarDias(hoje, DIAS_FUTUROS_NO_TRILHO);
 
-  for (let n = -DIAS_PASSADOS_NO_TRILHO; n <= DIAS_FUTUROS_NO_TRILHO; n++) {
-    const data = somarDias(hoje, n);
-    if (numeroDoDia(data) >= 1) dias.push(data);
+  for (
+    let d = `${mesDe(somarDias(hoje, -DIAS_PASSADOS_NO_TRILHO))}-01`;
+    d <= ultimo;
+    d = somarDias(d, 1)
+  ) {
+    if (numeroDoDia(d) >= 1) dias.push(d);
   }
 
   return dias;
+}
+
+/**
+ * O mês mais antigo que o trilho deixa ver: o do #1, ou o primeiro que ainda
+ * está inteiro no armazenamento (`DIAS_GUARDADOS`). Mais para trás, um dia
+ * feito que já se apagou aparecia como perdido.
+ */
+export function primeiroMesDoTrilho(hoje: string): string {
+  const guardado = mesSeguinte(mesDe(somarDias(hoje, -DIAS_GUARDADOS)));
+  const epoca = mesDe(EPOCA_DESAFIO);
+  return guardado > epoca ? guardado : epoca;
 }
 
 /** Uma data bem formada, que é tudo o que se aceita vindo do armazenamento. */
@@ -292,8 +338,8 @@ export function sequencia(d: Desafios, hoje: string): number {
 /* ─── Guardar e ler ───────────────────────────────────────────────────────── */
 
 export function guardarDesafios(storage: ProfileStorage, d: Desafios): void {
-  // Só os dias mais recentes: a sequência não precisa de mais, e o armazenamento
-  // de um telemóvel não é sítio para um diário infinito.
+  // Só os dias mais recentes: os três anos que o trilho deixa ver. O
+  // armazenamento de um telemóvel não é sítio para um diário infinito.
   const datas = Object.keys(d.dias).sort().slice(-DIAS_GUARDADOS);
   const dias = Object.fromEntries(datas.map((k) => [k, d.dias[k]]));
 

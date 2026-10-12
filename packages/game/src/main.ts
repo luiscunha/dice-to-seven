@@ -48,6 +48,7 @@ import {
   SEM_DESAFIOS,
   comecar,
   dataDe,
+  diasDoMes,
   diasDoTrilho,
   escolherDoDia,
   estadoDoModo,
@@ -56,6 +57,7 @@ import {
   lerDesafios,
   modoDoDia,
   numeroDoDia,
+  primeiroMesDoTrilho,
   registar,
   seedDoDia,
   sequencia,
@@ -67,6 +69,7 @@ import { ComoJogarScreen } from "./ui/ComoJogarScreen";
 import { DefinicoesScreen } from "./ui/DefinicoesScreen";
 import { elemento } from "./ui/dom";
 import type {
+  DiaNoTrilho,
   EstadoNoCartao,
   EstadoNoTrilho,
   TrilhoDoDesafio,
@@ -757,17 +760,22 @@ function trilhoDoDesafio(): TrilhoDoDesafio {
   arrumarDesafio(data);
   const feito = estadoDoModo(desafios, data, modoDoDia(data))?.estado === "feito";
 
+  const casa = (d: string): DiaNoTrilho => ({
+    data: d,
+    numero: numeroDoDia(d),
+    modo: modoDoDia(d),
+    estado: estadoNoTrilho(d, data),
+  });
+
   return {
     hoje: data,
-    dias: diasDoTrilho(data).map((d) => ({
-      data: d,
-      numero: numeroDoDia(d),
-      modo: modoDoDia(d),
-      estado: estadoNoTrilho(d, data),
-    })),
+    dias: diasDoTrilho(data).map(casa),
     sequencia: sequencia(desafios, data),
     aoJogar: voltarA({ ecra: "desafio", modo: modoDoDia(data) }),
     ...(feito ? { aoPartilhar: () => partilharDia(data) } : {}),
+    // O histórico, mês a mês, para trás.
+    carregarMes: (mes) => diasDoMes(mes).map(casa),
+    primeiroMes: primeiroMesDoTrilho(data),
   };
 }
 
