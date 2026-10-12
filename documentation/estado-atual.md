@@ -1094,6 +1094,16 @@ eram determinísticos na seed.
   própria (`dicetoseven.desafio.survival`, à parte da corrida normal) e
   retoma-se. Depois da tentativa oficial, jogar é **treino** — os mesmos
   tabuleiros, sem gravar.
+- **O Contra-Relógio oficial espera por um «Começar»**, e é aí que a tentativa
+  se marca, e não ao entrar. Marcada ao entrar, abrir o desafio para ver o que
+  era e sair pela seta gravava 0 pontos como resultado do dia, e a corrida a
+  sério, a seguir, já era treino — foi o primeiro defeito do desafio em
+  playtest. O painel de arranque fica no sítio do de fim, com o tabuleiro
+  escondido e o relógio parado: diz quanto tempo há e que só esta tentativa
+  conta. «Voltar» não gasta nada; depois do «Começar», sair pergunta, e diz que
+  é esta a que conta. A bomba do primeiro tabuleiro só se sorteia no arranque,
+  portanto o treino (que arranca logo, sem painel) gasta a seed pela mesma
+  ordem e continua a ser a mesma corrida.
 - **Regras iguais para todos**: o Contra-Relógio do Dia arranca sempre com 60 s,
   seja qual for a definição. No Survival do Dia não há «Recomeçar» — trocar de
   seed a meio era sair do desafio.

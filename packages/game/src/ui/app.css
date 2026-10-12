@@ -330,6 +330,15 @@ body::before {
   pointer-events: none;
 }
 
+/*
+ * À espera do «Começar» do Contra-Relógio do Dia: o tabuleiro ainda não se vê.
+ * `visibility`, e não `display`: a peça já está medida, e a corrida arranca
+ * sem o tabuleiro mudar de sítio.
+ */
+.palco.a-espera .tabuleiro {
+  visibility: hidden;
+}
+
 .ecra[data-estado="fim"] .linha-selecao {
   visibility: hidden;
 }

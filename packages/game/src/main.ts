@@ -761,10 +761,11 @@ function cartaoDoDesafio(): CartaoDoDesafio {
 /**
  * Um desafio do dia: a mesma corrida para toda a gente, com a seed da data.
  *
- * **A primeira tentativa é a oficial**, e marca-se ao entrar. Daí em diante,
- * no mesmo dia, é treino: os mesmos tabuleiros, sem gravar nada. O Survival
- * oficial que ficou a meio retoma-se; um Contra-Relógio oficial abandonado já
- * não volta — ver `arrumarDesafio`.
+ * **A primeira tentativa é a oficial**, e marca-se ao entrar — o
+ * Contra-Relógio, no «Começar». Daí em diante, no mesmo dia, é treino: os
+ * mesmos tabuleiros, sem gravar nada. O Survival oficial que ficou a meio
+ * retoma-se; um Contra-Relógio oficial abandonado já não volta — ver
+ * `arrumarDesafio`.
  *
  * Os recordes normais ficam de fora: o desafio tem as suas regras (o tempo de
  * arranque fixo, por exemplo), e o seu próprio registo.
@@ -788,10 +789,18 @@ async function mostrarDesafio(modo: ModoDoDesafio): Promise<void> {
     // desistir. Volta-se ao tabuleiro do início, e o relógio também.
     (modo === "puzzle" && antes.estado === "a-jogar");
 
-  if (antes === undefined) {
+  const marcarTentativa = (): void => {
+    if (estadoDoModo(desafios, data, modo) !== undefined) return;
     desafios = comecar(desafios, data, modo);
     guardarOsDesafios();
-  }
+  };
+
+  /*
+   * O Contra-Relógio marca-a no «Começar», e não ao entrar. Marcada ao entrar,
+   * abrir o desafio para ver o que era e sair pela seta gastava-o com 0
+   * pontos — e a corrida a sério, a seguir, já era treino.
+   */
+  if (modo !== "tempo") marcarTentativa();
 
   const etiqueta = `Desafio #${String(numeroDoDia(data))}`;
   const desafio: DesafioNoEcra = oficial
@@ -847,6 +856,7 @@ async function mostrarDesafio(modo: ModoDoDesafio): Promise<void> {
       // O recorde pessoal não é a comparação do desafio — ver o selo do fim.
       melhorPontuacao: Number.POSITIVE_INFINITY,
       tempoInicial: DESAFIO_TEMPO_INICIAL,
+      ...(oficial ? { aoComecar: marcarTentativa } : {}),
       aoTerminar: ({ pontos, tabuleiros, saltados }) => {
         if (!oficial) return;
         desafios = registar(desafios, data, "tempo", { pontos, tabuleiros, saltados });

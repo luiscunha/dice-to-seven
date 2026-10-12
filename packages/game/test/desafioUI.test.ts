@@ -18,6 +18,7 @@ import { emptyProfile } from "../src/session/progress";
 import type { Profile } from "../src/session/progress";
 import type { SurvivalState } from "../src/session/SurvivalSession";
 import { DEFAULT_SURVIVAL, startSurvival } from "../src/session/SurvivalSession";
+import { DEFAULT_TIME_ATTACK } from "../src/session/TimeAttackSession";
 import type { CartaoDoDesafio } from "../src/ui/DesafioScreen";
 import { DesafioScreen } from "../src/ui/DesafioScreen";
 import type { ResumoDoDesafio } from "../src/ui/HomeScreen";
@@ -391,6 +392,96 @@ describe("o Contra-Relógio do Dia", () => {
     [...(fim?.querySelectorAll<HTMLElement>(".btn") ?? [])][1]?.click();
     expect(aoRecomecar).toHaveBeenCalledOnce();
     ecra.destruir();
+  });
+
+  /*
+   * O defeito que isto fecha: a tentativa marcava-se ao entrar, e quem abria o
+   * desafio e saía pela seta gravava 0 pontos como resultado do dia. A corrida
+   * a sério, a seguir, já era treino — e não ficava registada.
+   */
+  describe("a tentativa oficial espera pelo «Começar»", () => {
+    const painel = (): HTMLElement | null => host.querySelector<HTMLElement>(".fim:not(.preso)");
+    const botao = (texto: string): HTMLElement | undefined =>
+      [...(painel()?.querySelectorAll<HTMLElement>(".btn") ?? [])].find(
+        (b) => b.textContent === texto,
+      );
+
+    it("**entrar e voltar não gasta nada**: o relógio está parado e o tabuleiro escondido", async () => {
+      const aoComecar = vi.fn();
+      const aoSair = vi.fn();
+      const aoTerminar = vi.fn();
+      const ecra = abrir(7, { aoComecar, aoSair, aoTerminar, desafio: { etiqueta: "Desafio #3" } });
+
+      expect(painel()?.hidden).toBe(false);
+      expect(painel()?.querySelector(".selo")?.textContent).toBe("Desafio #3");
+      expect(painel()?.querySelector(".fim-tempo")?.textContent).toBe("30 segundos");
+      expect(host.querySelector(".palco")?.classList.contains("a-espera")).toBe(true);
+
+      // O tempo passa — também com a aplicação em segundo plano — e nada acaba.
+      await vi.advanceTimersByTimeAsync(60_000);
+      document.dispatchEvent(new Event("visibilitychange"));
+      expect(aoTerminar).not.toHaveBeenCalled();
+      expect(host.querySelector(".relogio")?.textContent).toBe("30");
+
+      // O botão para trás do Android navega sem perguntar: não há corrida.
+      expect(ecra.interceptarVoltar()).toBe(false);
+
+      botao("Voltar")?.click();
+      expect(aoSair).toHaveBeenCalledOnce();
+      expect(aoComecar).not.toHaveBeenCalled();
+      expect(aoTerminar).not.toHaveBeenCalled();
+      ecra.destruir();
+    });
+
+    it("no «Começar» a tentativa marca-se, o tabuleiro aparece, e o relógio arranca dali", async () => {
+      const aoComecar = vi.fn();
+      const aoTerminar = vi.fn();
+      const ecra = abrir(7, { aoComecar, aoTerminar, desafio: { etiqueta: "Desafio #3" } });
+
+      // Ficar a ler o painel não gasta tempo da corrida.
+      await vi.advanceTimersByTimeAsync(20_000);
+      botao("Começar")?.click();
+
+      expect(aoComecar).toHaveBeenCalledOnce();
+      expect(host.querySelector(".palco")?.classList.contains("a-espera")).toBe(false);
+      expect(painel()?.hidden).toBe(true);
+
+      await vi.advanceTimersByTimeAsync(29_000);
+      expect(aoTerminar).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(2_000);
+      expect(aoTerminar).toHaveBeenCalledOnce();
+      ecra.destruir();
+    });
+
+    it("depois de começar, sair pergunta — e diz que é esta a que conta", () => {
+      const ecra = abrir(7, { aoComecar: () => undefined });
+      botao("Começar")?.click();
+
+      expect(ecra.interceptarVoltar()).toBe(true);
+      expect(document.querySelector("dialog")?.textContent).toContain("é esta a que conta");
+      ecra.destruir();
+    });
+
+    it("**com e sem painel, a mesma corrida** — o treino é a tentativa oficial outra vez", () => {
+      // Uma bomba logo no primeiro tabuleiro: é o primeiro sorteio da seed.
+      const afinacao = {
+        bomba: { ...DEFAULT_TIME_ATTACK.bomba, desdeTabuleiro: 0, probabilidade: 1 },
+      };
+      const bomba = (): string | undefined =>
+        host.querySelector<HTMLElement>(".peca.bomba")?.dataset["pos"];
+
+      for (const seed of [11, 22, 33, 44]) {
+        const treino = abrir(seed, { afinacao });
+        const esperado = `${tabuleiro()} bomba:${bomba() ?? "-"}`;
+        treino.destruir();
+
+        const oficial = abrir(seed, { afinacao, aoComecar: () => undefined });
+        botao("Começar")?.click();
+        expect(bomba()).toBeDefined();
+        expect(`${tabuleiro()} bomba:${bomba() ?? "-"}`).toBe(esperado);
+        oficial.destruir();
+      }
+    });
   });
 });
 

@@ -121,6 +121,17 @@ export interface OpcoesTimeAttack {
   readonly seed?: number;
   /** A corrida é o Desafio do Dia. Ver `DesafioNoEcra`. */
   readonly desafio?: DesafioNoEcra;
+  /**
+   * A corrida **espera por um «Começar»**, e chama isto quando ele chega. Sem
+   * isto arranca logo, como sempre.
+   *
+   * Existe para a tentativa oficial do Desafio do Dia, que só se joga uma vez.
+   * Marcada ao entrar, quem abria o desafio para ver o que era e saía pela seta
+   * gastava-o com 0 pontos, sem o saber — e a corrida a sério, a seguir, já
+   * era treino. Com o painel de arranque, entrar não compromete nada: o
+   * relógio, o tabuleiro e a tentativa começam todos no mesmo toque.
+   */
+  readonly aoComecar?: () => void;
 }
 
 /**
@@ -164,6 +175,9 @@ export class TimeAttackScreen {
   private readonly rng: Rng;
   private cronometro: ReturnType<typeof setInterval> | undefined;
   private readonly aoVoltarAoEcra: () => void;
+  private readonly primeiro: Level;
+  /** O relógio já anda. Só é falso à espera do «Começar» — ver `aoComecar`. */
+  private comecou = false;
   private terminado = false;
 
   constructor(host: HTMLElement, opcoes: OpcoesTimeAttack) {
@@ -197,13 +211,14 @@ export class TimeAttackScreen {
       saltoDesde: this.escada.livresDesde,
     };
 
-    const arranque = Date.now();
-    this.estado = armarBomba(
-      startTimeAttack(primeiro, arranque, this.config),
-      arranque,
-      this.rng,
-      this.config,
-    );
+    /*
+     * Ainda sem bomba: armá-la gasta a seed, e só se faz no arranque — ver
+     * `arrancar`. Com e sem painel de arranque, a seed gasta-se pela mesma
+     * ordem, e o treino do Desafio do Dia continua a ser a mesma corrida que
+     * a tentativa oficial.
+     */
+    this.primeiro = primeiro;
+    this.estado = startTimeAttack(primeiro, Date.now(), this.config);
 
     this.raiz = elemento("div", "ecra jogo tempo");
 
@@ -303,10 +318,6 @@ export class TimeAttackScreen {
     });
     this.view.montar(primeiro.board, this.estado.game.marcas);
 
-    this.cronometro = setInterval(() => {
-      this.tique();
-    }, PASSO_RELOGIO);
-
     /*
      * O `setInterval` não é fonte de verdade — é só quem manda repintar. O tempo
      * vive no `deadlineAt` e lê-se sempre de `Date.now()`.
@@ -322,6 +333,9 @@ export class TimeAttackScreen {
     };
     document.addEventListener("visibilitychange", this.aoVoltarAoEcra);
 
+    if (opcoes.aoComecar === undefined) this.arrancar();
+    else this.esperarPeloArranque(opcoes.aoComecar);
+
     this.pintar();
   }
 
@@ -336,11 +350,11 @@ export class TimeAttackScreen {
    * O botão **para trás** do Android: o mesmo caminho da seta.
    *
    * Antes saía direto — sem perguntar, e sem `terminar()`, portanto a
-   * pontuação da corrida nunca chegava a ser gravada. Numa corrida acabada não
-   * há nada a proteger, e deixa-se navegar.
+   * pontuação da corrida nunca chegava a ser gravada. Numa corrida acabada —
+   * ou que ainda não começou — não há nada a proteger, e deixa-se navegar.
    */
   interceptarVoltar(): boolean {
-    if (this.terminado) return false;
+    if (this.terminado || !this.comecou) return false;
 
     this.pedirParaSair();
     return true;
@@ -352,14 +366,18 @@ export class TimeAttackScreen {
    * custava a corrida inteira.
    */
   private pedirParaSair(): void {
-    if (this.terminado) {
+    if (this.terminado || !this.comecou) {
       this.opcoes.aoSair();
       return;
     }
 
     confirmar(this.raiz, {
       titulo: "Sair da corrida?",
-      texto: "O relógio não pára: a corrida acaba aqui.",
+      // Na tentativa do Desafio do Dia, sair é ficar com o resultado que há.
+      texto:
+        this.opcoes.aoComecar === undefined
+          ? "O relógio não pára: a corrida acaba aqui."
+          : "O relógio não pára: a corrida acaba aqui, e é esta a que conta para o desafio de hoje.",
       confirmar: "Sair",
       aoConfirmar: () => {
         this.terminar();
@@ -371,7 +389,7 @@ export class TimeAttackScreen {
   /* ─── jogar ─────────────────────────────────────────────────────────────── */
 
   private async tocar(p: Packed): Promise<void> {
-    if (this.terminado) return;
+    if (this.terminado || !this.comecou) return;
 
     /*
      * Num tabuleiro sem jogadas, nenhum toque fecha grupo — e um que passasse
@@ -532,8 +550,70 @@ export class TimeAttackScreen {
 
   /* ─── relógio ───────────────────────────────────────────────────────────── */
 
+  /**
+   * O relógio arranca: o prazo conta daqui, e a bomba do primeiro tabuleiro
+   * sorteia-se agora.
+   */
+  private arrancar(): void {
+    const agora = Date.now();
+    this.estado = armarBomba(
+      startTimeAttack(this.primeiro, agora, this.config),
+      agora,
+      this.rng,
+      this.config,
+    );
+    this.comecou = true;
+
+    this.cronometro = setInterval(() => {
+      this.tique();
+    }, PASSO_RELOGIO);
+  }
+
+  /**
+   * O painel de arranque da tentativa do Desafio do Dia, no sítio do de fim.
+   *
+   * **O tabuleiro fica escondido até ao «Começar».** Com ele à vista e o
+   * relógio parado, o primeiro tabuleiro estudava-se à vontade antes da
+   * corrida que conta. O painel diz o que vem — quanto tempo, e que só esta
+   * tentativa conta — e é o «Começar» que a marca: até lá, voltar não gasta
+   * nada.
+   */
+  private esperarPeloArranque(aoComecar: () => void): void {
+    this.palco.classList.add("a-espera");
+
+    const comecar = botao("Começar", "primario", () => {
+      this.palco.classList.remove("a-espera");
+      this.elFim.hidden = true;
+      this.elFim.replaceChildren();
+
+      aoComecar();
+      this.arrancar();
+      this.pintar();
+    });
+
+    const acoes = elemento("div", "acoes fim-acoes");
+    acoes.append(
+      botao("Voltar", undefined, () => {
+        this.opcoes.aoSair();
+      }),
+      comecar,
+    );
+
+    this.elFim.replaceChildren(
+      elemento("div", "selo", this.opcoes.desafio?.etiqueta ?? "Contra-Relógio"),
+      elemento("div", "fim-tempo", `${String(this.opcoes.tempoInicial)} segundos`),
+      elemento(
+        "div",
+        "detalhe",
+        "Os mesmos tabuleiros para toda a gente. Só esta tentativa conta: depois de começar, sair acaba a corrida.",
+      ),
+      acoes,
+    );
+    this.elFim.hidden = false;
+  }
+
   private tique(): void {
-    if (this.terminado) return;
+    if (this.terminado || !this.comecou) return;
 
     const agora = Date.now();
     const r = resolverBomba(this.estado, agora, this.config);
