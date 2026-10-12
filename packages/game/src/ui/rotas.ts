@@ -30,11 +30,12 @@ export type Rota =
    */
   | { readonly ecra: "survival"; readonly seed?: number }
   /**
-   * O Desafio do Dia, por modo. **Sem a data no endereço**: o desafio é o de
-   * hoje, e um link de ontem que abrisse a corrida de ontem era uma porta para
-   * a jogar outra vez sabendo o que vem.
+   * O Desafio do Dia: sem modo, o ecrã de escolha; com modo, o desafio.
+   * **Sem a data no endereço**: o desafio é o de hoje, e um link de ontem que
+   * abrisse a corrida de ontem era uma porta para a jogar outra vez sabendo o
+   * que vem.
    */
-  | { readonly ecra: "desafio"; readonly modo: ModoDoDesafio }
+  | { readonly ecra: "desafio"; readonly modo?: ModoDoDesafio }
   | { readonly ecra: "definicoes" }
   /**
    * As regras têm endereço próprio, como tudo o resto — e aqui o endereço faz
@@ -62,9 +63,11 @@ export function paraHash(r: Rota): string {
         ? "#/survival"
         : `#/survival/${String(r.seed)}`;
     case "desafio":
-      return r.modo === "tempo"
-        ? "#/desafio/contrarrelogio"
-        : `#/desafio/${r.modo}`;
+      return r.modo === undefined
+        ? "#/desafio"
+        : r.modo === "tempo"
+          ? "#/desafio/contrarrelogio"
+          : `#/desafio/${r.modo}`;
     case "definicoes":
       return "#/definicoes";
     case "regras":
@@ -93,6 +96,7 @@ export function deHash(hash: string): Rota {
   }
 
   if (primeira === "desafio") {
+    if (segunda === undefined) return { ecra: "desafio" };
     if (segunda === "survival") return { ecra: "desafio", modo: "survival" };
     if (segunda === "puzzle") return { ecra: "desafio", modo: "puzzle" };
     if (segunda === "contrarrelogio" || segunda === "tempo") {
@@ -177,6 +181,10 @@ export function rotaAcima(r: Rota, capitulo?: string): Rota | undefined {
     case "niveis":
       return { ecra: "bandas" };
 
+    // Um desafio sobe para a escolha dos desafios, e a escolha para a Home.
+    case "desafio":
+      return r.modo === undefined ? { ecra: "home" } : { ecra: "desafio" };
+
     default:
       return { ecra: "home" };
   }
@@ -210,10 +218,12 @@ function profundidade(r: Rota): number {
     case "bandas":
     case "tempo":
     case "survival":
-    case "desafio":
     case "definicoes":
     case "regras":
       return 1;
+
+    case "desafio":
+      return r.modo === undefined ? 1 : 2;
 
     case "niveis":
       return 2;

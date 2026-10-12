@@ -65,7 +65,9 @@ import { CapitulosScreen } from "./ui/CapitulosScreen";
 import { ComoJogarScreen } from "./ui/ComoJogarScreen";
 import { DefinicoesScreen } from "./ui/DefinicoesScreen";
 import { elemento } from "./ui/dom";
-import type { CartaoDoDesafio, EstadoNoCartao } from "./ui/HomeScreen";
+import type { CartaoDoDesafio, EstadoNoCartao } from "./ui/DesafioScreen";
+import { DesafioScreen } from "./ui/DesafioScreen";
+import type { ResumoDoDesafio } from "./ui/HomeScreen";
 import { HomeScreen } from "./ui/HomeScreen";
 import { JokerTutorial } from "./ui/JokerTutorial";
 import { NiveisScreen } from "./ui/NiveisScreen";
@@ -306,7 +308,7 @@ async function montar(rota: Rota): Promise<void> {
         nome: preferencias.nome,
         avatar: preferencias.avatar,
         aoEditarPerfil: editarPerfil,
-        desafio: cartaoDoDesafio(),
+        desafio: resumoDoDesafio(),
       });
       return;
 
@@ -377,6 +379,13 @@ async function montar(rota: Rota): Promise<void> {
       return mostrarSurvival(rota.seed);
 
     case "desafio":
+      if (rota.modo === undefined) {
+        atual = new DesafioScreen(app as HTMLElement, {
+          cartao: cartaoDoDesafio(),
+          aoVoltar: voltarA({ ecra: "home" }),
+        });
+        return;
+      }
       return mostrarDesafio(rota.modo);
   }
 }
@@ -709,6 +718,22 @@ function estadoNoCartao(data: string, modo: ModoDoDesafio): EstadoNoCartao {
   return { tipo: "interrompido" };
 }
 
+/** O cartão da Home: só o resumo de hoje. Tocar-lhe abre o ecrã do desafio. */
+function resumoDoDesafio(): ResumoDoDesafio {
+  const data = hoje();
+  arrumarDesafio(data);
+
+  return {
+    numero: numeroDoDia(data),
+    data: dataCurta(data),
+    sequencia: sequencia(desafios, data),
+    estados: (["puzzle", "tempo", "survival"] as const).map(
+      (modo) => estadoNoCartao(data, modo).tipo,
+    ),
+    aoAbrir: voltarA({ ecra: "desafio" }),
+  };
+}
+
 function cartaoDoDesafio(): CartaoDoDesafio {
   const data = hoje();
   arrumarDesafio(data);
@@ -795,7 +820,7 @@ async function mostrarDesafio(modo: ModoDoDesafio): Promise<void> {
         });
         guardarOsDesafios();
       },
-      aoVoltar: voltarA({ ecra: "home" }),
+      aoVoltar: voltarA({ ecra: "desafio" }),
       // O joker como na campanha: o `?` depois de o ter visto, e o tutorial
       // obrigatório da primeira vez, por cima do tabuleiro.
       ...(temJoker || perfil.sawJokerTutorial
@@ -827,7 +852,7 @@ async function mostrarDesafio(modo: ModoDoDesafio): Promise<void> {
         desafios = registar(desafios, data, "tempo", { pontos, tabuleiros, saltados });
         guardarOsDesafios();
       },
-      aoSair: voltarA({ ecra: "home" }),
+      aoSair: voltarA({ ecra: "desafio" }),
       aoRecomecar: outraVez,
     });
     return;
@@ -847,7 +872,7 @@ async function mostrarDesafio(modo: ModoDoDesafio): Promise<void> {
       guardarOsDesafios();
     },
     aoRecomecar: outraVez,
-    aoSair: voltarA({ ecra: "home" }),
+    aoSair: voltarA({ ecra: "desafio" }),
   });
 }
 

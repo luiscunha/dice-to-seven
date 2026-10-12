@@ -1104,22 +1104,23 @@ eram determinísticos na seed.
   e a sequência, pela folha de partilha do sistema quando existe e copiado
   quando não (o WebView do Android não a tem). Uma tabela de classificação
   precisa de backend, e fica para depois.
-- **Na Home, um bilhete.** A primeira versão era um cartão branco com dois
-  blocos coloridos — os mesmos «Contra-Relógio» e «Survival» dos mosaicos logo
-  abaixo, e lia-se como um formulário e como os mesmos botões duas vezes. Ficou:
-  - uma faixa com as seis faces da rampa no topo, o número do desafio grande na
-    letra da marca, e **os dados do dia** — seis faces tiradas da seed
-    (`dadosDoDia`), só desenho, diferentes todos os dias;
-  - os dois desafios como **uma lista do dia**, uma linha cada, com o ícone na
-    cor do modo e o estado: «Jogar», «Continuar · 1:20», «✓ 1240 pontos»,
-    «Interrompido»;
-  - a sequência 🔥 e o partilhar (só o ícone) no canto.
-- **O resto da Home arrumou-se à volta dele**: os modos ganharam o rótulo «Modos
-  de jogo» e mosaicos mais baixos, e as regras passaram de cartão alto a uma
-  faixa — a conta 3 + 4 = 7 em peças, «Como jogar?», e a seta. **Quem ainda não
-  fez um nível vê os modos primeiro**: a campanha é a porta de entrada, e um
-  Contra-Relógio do dia como primeira coisa do jogo era a porta errada. A 375×812
-  cabe tudo; num ecrã mais baixo a Home desliza em vez de encolher os cartões.
+- **Um cartão na Home, e um ecrã próprio.** A primeira versão punha o desafio
+  inteiro na Home — o bilhete e a lista dos desafios —, e a Home ficou a ser um
+  ecrã sobre o desafio do dia, com os modos de jogo encostados por baixo. Ficou
+  assim:
+  - **Na Home, um cartão compacto**, que se toca inteiro: a faixa com as seis
+    faces, «Desafio do dia», o número e a data, a sequência 🔥, e o progresso de
+    hoje — um quadrado por desafio, cheio quando está feito, e «1 de 3».
+  - **O ecrã do desafio** (`#/desafio`, `DesafioScreen`): o bilhete — o número
+    grande na letra da marca, **os dados do dia** (seis faces da seed, só
+    desenho, `dadosDoDia`), a sequência e uma frase a explicar a regra —, os
+    desafios num cartão cada, com o que é e o estado, o Partilhar e a nota de que
+    amanhã há outro. Sair de um desafio volta a este ecrã, e daqui à Home.
+- **O resto da Home ficou como era**: os modos com o rótulo «Modos de jogo» e os
+  mosaicos de pé, e as regras numa faixa — a conta 3 + 4 = 7 em peças, «Como
+  jogar?», e a seta. **Quem ainda não fez um nível vê os modos primeiro**: a
+  campanha é a porta de entrada. A 375×812 cabe tudo; num ecrã mais baixo a
+  Home desliza em vez de encolher os cartões.
 
 **O Puzzle do Dia veio a seguir**, e ficou à frente dos outros dois. Nos modos de
 corrida, depois do primeiro tabuleiro nada é ao calhas — o Contra-Relógio dá a
@@ -1141,9 +1142,7 @@ tabuleiro fixo, o mesmo para toda a gente**.
   `🧩 Puzzle: 1:23.4 · ★ perfeito`. A brecha conhecida: sair e voltar recomeça
   o tabuleiro e o relógio, portanto pode-se estudar o tabuleiro antes de o jogar
   a contar. Sem tabela de classificação, não vale a pena fechá-la.
-- Na Home, o bilhete passou a ter três linhas, com o Puzzle primeiro, e os
-  mosaicos dos modos de corrida deitaram-se — de pé mediam 136px, e com o
-  bilhete de três linhas a Home não cabia em 812px.
+- No ecrã do desafio, o Puzzle é o primeiro dos três.
 
 O desafio #1 é o de 12 de outubro de 2026 (`EPOCA_DESAFIO`).
 

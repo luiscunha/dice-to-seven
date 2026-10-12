@@ -18,7 +18,9 @@ import { emptyProfile } from "../src/session/progress";
 import type { Profile } from "../src/session/progress";
 import type { SurvivalState } from "../src/session/SurvivalSession";
 import { DEFAULT_SURVIVAL, startSurvival } from "../src/session/SurvivalSession";
-import type { CartaoDoDesafio } from "../src/ui/HomeScreen";
+import type { CartaoDoDesafio } from "../src/ui/DesafioScreen";
+import { DesafioScreen } from "../src/ui/DesafioScreen";
+import type { ResumoDoDesafio } from "../src/ui/HomeScreen";
 import { HomeScreen } from "../src/ui/HomeScreen";
 import {
   botaoPartilhar,
@@ -135,14 +137,14 @@ describe("partilhar", () => {
 
 /* ─── O cartão da Home ────────────────────────────────────────────────────── */
 
-describe("o cartão do Desafio do Dia", () => {
+describe("o cartão do Desafio do Dia, na Home", () => {
   /** Quem já fez um nível: o desafio vem por cima dos modos. */
   const jogador: Profile = {
     ...emptyProfile(),
     levels: { "inicio-000001": { seal: "completed", bestTimeMs: 9_000 } },
   };
 
-  const abrir = (d: Partial<CartaoDoDesafio> = {}, perfil: Profile = jogador): HomeScreen =>
+  const abrir = (d: Partial<ResumoDoDesafio> = {}, perfil: Profile = jogador): HomeScreen =>
     new HomeScreen(host, {
       perfil,
       totalNiveis: 143,
@@ -152,6 +154,98 @@ describe("o cartão do Desafio do Dia", () => {
       aoEscolherSurvival: () => undefined,
       aoEscolherDefinicoes: () => undefined,
       desafio: {
+        numero: 3,
+        data: "14 out",
+        sequencia: 0,
+        estados: ["por-jogar", "por-jogar", "por-jogar"],
+        aoAbrir: () => undefined,
+        ...d,
+      },
+    });
+
+  const ordem = (): string[] =>
+    [...host.querySelectorAll(".ecra.home > *")].map((e) => e.className);
+
+  it("**é um cartão só, que se toca inteiro** — a escolha é noutro ecrã", () => {
+    const aoAbrir = vi.fn();
+    const ecra = abrir({ aoAbrir });
+
+    const cartao = host.querySelector<HTMLButtonElement>("button.home-desafio");
+    expect(cartao).not.toBeNull();
+    // Nada de desafios dentro do cartão: esses estão no ecrã do desafio.
+    expect(cartao?.querySelectorAll("button")).toHaveLength(0);
+    expect(host.querySelector(".home-desafio-cardinal")?.textContent).toBe("#3");
+    expect(host.querySelector(".home-desafio-data")?.textContent).toBe("14 out");
+
+    cartao?.click();
+    expect(aoAbrir).toHaveBeenCalledOnce();
+    ecra.destruir();
+  });
+
+  it("o progresso de hoje: um quadrado por desafio, e quantos estão feitos", () => {
+    const resumo = (): string | null | undefined =>
+      host.querySelector(".home-desafio-resumo")?.textContent;
+
+    let ecra = abrir();
+    expect(resumo()).toBe("Por jogar");
+    ecra.destruir();
+
+    ecra = abrir({ estados: ["feito", "a-meio", "por-jogar"] });
+    expect(resumo()).toBe("1 de 3");
+    const pontos = [...host.querySelectorAll<HTMLElement>(".home-desafio-ponto")];
+    expect(pontos.map((p) => p.dataset["estado"])).toEqual(["feito", "a-meio", "por-jogar"]);
+    ecra.destruir();
+
+    ecra = abrir({ estados: ["feito", "feito", "feito"] });
+    expect(resumo()).toBe("Feito ✓");
+    ecra.destruir();
+  });
+
+  it("a sequência só aparece quando há", () => {
+    let ecra = abrir();
+    expect(host.querySelector(".home-desafio .desafio-sequencia")).toBeNull();
+    ecra.destruir();
+
+    ecra = abrir({ sequencia: 4 });
+    expect(host.querySelector(".home-desafio .desafio-sequencia")?.textContent).toBe("🔥 4");
+    ecra.destruir();
+  });
+
+  it("para quem chega, os Puzzles vêm primeiro — a campanha é a porta de entrada", () => {
+    const ecra = abrir({}, emptyProfile());
+    expect(ordem().indexOf("home-modos")).toBeLessThan(ordem().indexOf("home-desafio"));
+    ecra.destruir();
+  });
+
+  it("para quem já joga, fica por cima dos modos", () => {
+    const ecra = abrir();
+    expect(ordem().indexOf("home-desafio")).toBeLessThan(ordem().indexOf("home-modos"));
+    expect(host.querySelector(".home-modos .home-seccao")?.textContent).toBe("Modos de jogo");
+    ecra.destruir();
+  });
+
+  it("sem desafio, a Home é a de sempre", () => {
+    const ecra = new HomeScreen(host, {
+      perfil: emptyProfile(),
+      totalNiveis: 143,
+      melhorTempoSurvival: "0:00.0",
+      aoEscolherNiveis: () => undefined,
+      aoEscolherTempo: () => undefined,
+      aoEscolherSurvival: () => undefined,
+      aoEscolherDefinicoes: () => undefined,
+    });
+    expect(host.querySelector(".home-desafio")).toBeNull();
+    ecra.destruir();
+  });
+});
+
+/* ─── O ecrã do Desafio do Dia ────────────────────────────────────────────── */
+
+describe("o ecrã do Desafio do Dia", () => {
+  const abrir = (d: Partial<CartaoDoDesafio> = {}, aoVoltar = (): void => undefined) =>
+    new DesafioScreen(host, {
+      aoVoltar,
+      cartao: {
         numero: 3,
         data: "14 out",
         sequencia: 0,
@@ -167,85 +261,61 @@ describe("o cartão do Desafio do Dia", () => {
     });
 
   const estado = (modo: string): string | undefined =>
-    host.querySelector(`.home-desafio-modo[data-modo="${modo}"] .home-desafio-modo-estado`)
+    host.querySelector(`.desafio-modo[data-modo="${modo}"] .desafio-modo-estado`)
       ?.textContent ?? undefined;
 
-  const ordem = (): string[] =>
-    [...host.querySelectorAll(".ecra.home > *")].map((e) => e.className);
-
-  it("para quem chega, os Puzzles vêm primeiro — a campanha é a porta de entrada", () => {
-    const ecra = abrir({}, emptyProfile());
-    expect(ordem().indexOf("home-modos")).toBeLessThan(ordem().indexOf("home-desafio"));
+  it("o bilhete: o número, o dia, e os dados do dia como peças a sério", () => {
+    const ecra = abrir();
+    expect(host.querySelector(".desafio-cardinal")?.textContent).toBe("#3");
+    expect(host.querySelector(".desafio-data")?.textContent).toBe("14 out");
+    const dados = [...host.querySelectorAll<HTMLElement>(".desafio-dados .peca")];
+    expect(dados.map((p) => p.dataset["valor"])).toEqual(["1", "2", "3", "4", "5", "6"]);
     ecra.destruir();
   });
 
-  it("**para quem já joga, fica por cima dos modos**, com o número e o dia", () => {
+  it("**os três desafios, o Puzzle primeiro**, cada um com o que é", () => {
     const ecra = abrir();
-    expect(ordem().indexOf("home-desafio")).toBeLessThan(ordem().indexOf("home-modos"));
-    expect(host.querySelector(".home-modos .home-seccao")?.textContent).toBe("Modos de jogo");
-    expect(host.querySelector(".home-desafio-cardinal")?.textContent).toBe("#3");
-    expect(host.querySelector(".home-desafio-data")?.textContent).toBe("14 out");
-    // Os dados do dia, como peças a sério.
-    const dados = [...host.querySelectorAll<HTMLElement>(".home-desafio-dados .peca")];
-    expect(dados.map((p) => p.dataset["valor"])).toEqual(["1", "2", "3", "4", "5", "6"]);
+    const modos = [...host.querySelectorAll<HTMLElement>(".desafio-modo")];
+    expect(modos.map((b) => b.dataset["modo"])).toEqual(["puzzle", "tempo", "survival"]);
+    expect(modos.every((b) => (b.querySelector(".desafio-modo-legenda")?.textContent ?? "") !== "")).toBe(
+      true,
+    );
     ecra.destruir();
   });
 
   it("cada desafio diz o seu estado", () => {
     const ecra = abrir({
-      tempo: { tipo: "feito", texto: "1240 pontos" },
+      puzzle: { tipo: "feito", texto: "1:23.4 ★" },
+      tempo: { tipo: "interrompido" },
       survival: { tipo: "a-meio", texto: "1:20.0" },
     });
-    expect(estado("tempo")).toBe("✓ 1240 pontos");
+    expect(estado("puzzle")).toBe("✓ 1:23.4 ★");
+    expect(estado("tempo")).toBe("Interrompido");
     expect(estado("survival")).toBe("Continuar · 1:20.0");
     ecra.destruir();
-
-    const outro = abrir({ tempo: { tipo: "interrompido" } });
-    expect(estado("tempo")).toBe("Interrompido");
-    expect(estado("survival")).toBe("Jogar");
-    outro.destruir();
   });
 
-  it("**o Puzzle vem primeiro na lista do dia**", () => {
-    const ecra = abrir();
-    const modos = [...host.querySelectorAll<HTMLElement>(".home-desafio-modo")].map(
-      (b) => b.dataset["modo"],
-    );
-    expect(modos).toEqual(["puzzle", "tempo", "survival"]);
+  it("tocar num desafio joga-o, e a seta volta", () => {
+    const aoJogarTempo = vi.fn();
+    const aoVoltar = vi.fn();
+    const ecra = abrir({ aoJogarTempo }, aoVoltar);
+
+    host.querySelector<HTMLElement>('.desafio-modo[data-modo="tempo"]')?.click();
+    expect(aoJogarTempo).toHaveBeenCalledOnce();
+
+    host.querySelector<HTMLElement>(".topo .btn")?.click();
+    expect(aoVoltar).toHaveBeenCalledOnce();
     ecra.destruir();
   });
 
-  it("tocar num desafio joga-o", () => {
-    const aoJogarSurvival = vi.fn();
-    const ecra = abrir({ aoJogarSurvival });
-    host.querySelector<HTMLElement>('.home-desafio-modo[data-modo="survival"]')?.click();
-    expect(aoJogarSurvival).toHaveBeenCalledOnce();
+  it("partilhar só aparece com um resultado", () => {
+    let ecra = abrir();
+    expect(host.querySelector(".desafio-partilhar")).toBeNull();
     ecra.destruir();
-  });
 
-  it("a sequência e o partilhar só aparecem quando há o que mostrar", () => {
-    const vazio = abrir();
-    expect(host.querySelector(".home-desafio-sequencia")).toBeNull();
-    expect(host.querySelector(".home-desafio-partilhar")).toBeNull();
-    vazio.destruir();
-
-    const cheio = abrir({ sequencia: 4, aoPartilhar: () => Promise.resolve("copiado") });
-    expect(host.querySelector(".home-desafio-sequencia")?.textContent).toBe("🔥 4");
-    expect(host.querySelector(".home-desafio-partilhar")).not.toBeNull();
-    cheio.destruir();
-  });
-
-  it("sem desafio, a Home é a de sempre", () => {
-    const ecra = new HomeScreen(host, {
-      perfil: emptyProfile(),
-      totalNiveis: 143,
-      melhorTempoSurvival: "0:00.0",
-      aoEscolherNiveis: () => undefined,
-      aoEscolherTempo: () => undefined,
-      aoEscolherSurvival: () => undefined,
-      aoEscolherDefinicoes: () => undefined,
-    });
-    expect(host.querySelector(".home-desafio")).toBeNull();
+    ecra = abrir({ sequencia: 2, aoPartilhar: () => Promise.resolve("copiado") });
+    expect(host.querySelector(".desafio-partilhar")?.textContent).toBe("Partilhar");
+    expect(host.querySelector(".desafio-bilhete .desafio-sequencia")?.textContent).toBe("🔥 2");
     ecra.destruir();
   });
 });

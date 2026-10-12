@@ -40,9 +40,10 @@
  * **As definições ficam no canto de cima.** São a ação menos frequente da Home,
  * e o fundo de um telemóvel é a zona do polegar — o sítio mais caro do ecrã.
  *
- * **O Desafio do Dia fica por cima dos modos.** É a única coisa da Home que
- * muda todos os dias, e a razão de alguém a abrir amanhã: tem de ser a primeira
- * a ver-se, e a dizer o que falta jogar hoje.
+ * **O Desafio do Dia é um cartão, e só um.** É a única coisa da Home que muda
+ * todos os dias, e a razão de alguém a abrir amanhã — mas é um cartão entre os
+ * outros, e não o ecrã. Esteve aqui inteiro, com os três desafios, e a Home
+ * ficou a ser sobre ele; a escolha passou para o ecrã do desafio.
  */
 
 import type { Cell } from "@dicetoseven/engine";
@@ -59,35 +60,22 @@ import {
   iconeSeguir,
   iconeSurvival,
 } from "./icones";
-import type { DesfechoDaPartilha } from "./partilha";
-import { botaoPartilhar } from "./partilha";
+import type { EstadoNoCartao } from "./DesafioScreen";
+import { sinalDaSequencia } from "./DesafioScreen";
 
 /**
- * Um dos dois desafios do dia, como o cartão o mostra. Os textos vêm feitos:
- * a Home não sabe converter milissegundos em tempo, nem pontos em frases.
+ * O cartão do Desafio do Dia na Home: só o resumo. O bilhete inteiro e a
+ * escolha entre os três desafios vivem no ecrã dele (`DesafioScreen`).
  */
-export type EstadoNoCartao =
-  | { readonly tipo: "por-jogar" }
-  | { readonly tipo: "a-meio"; readonly texto: string }
-  | { readonly tipo: "feito"; readonly texto: string }
-  | { readonly tipo: "interrompido" };
-
-export interface CartaoDoDesafio {
+export interface ResumoDoDesafio {
   readonly numero: number;
   /** Já curta: «12 out». */
   readonly data: string;
   /** Dias seguidos com desafio feito. */
   readonly sequencia: number;
-  /** Os dados do dia: seis faces da seed, só para desenho. Ver `dadosDoDia`. */
-  readonly dados: readonly Cell[];
-  readonly puzzle: EstadoNoCartao;
-  readonly tempo: EstadoNoCartao;
-  readonly survival: EstadoNoCartao;
-  readonly aoJogarPuzzle: () => void;
-  readonly aoJogarTempo: () => void;
-  readonly aoJogarSurvival: () => void;
-  /** Só quando há pelo menos um resultado oficial hoje. */
-  readonly aoPartilhar?: () => Promise<DesfechoDaPartilha>;
+  /** O estado de cada desafio, pela ordem do ecrã: Puzzle, Contra-Relógio, Survival. */
+  readonly estados: readonly EstadoNoCartao["tipo"][];
+  readonly aoAbrir: () => void;
 }
 
 export interface OpcoesHome {
@@ -118,7 +106,7 @@ export interface OpcoesHome {
   readonly corridaAMeio?: string;
   readonly modoFace?: ModoFace;
   /** O Desafio do Dia. Sem isto, o cartão não aparece. */
-  readonly desafio?: CartaoDoDesafio;
+  readonly desafio?: ResumoDoDesafio;
 }
 
 export class HomeScreen {
@@ -155,10 +143,7 @@ export class HomeScreen {
      * primeira coisa do jogo era a porta errada.
      */
     const novato = Object.keys(opcoes.perfil.levels).length === 0;
-    const desafio =
-      opcoes.desafio === undefined
-        ? []
-        : [this.desafio(opcoes.desafio, opcoes.modoFace ?? "pintas")];
+    const desafio = opcoes.desafio === undefined ? [] : [this.desafio(opcoes.desafio)];
 
     // Com o desafio, os modos ganham um nome: são duas secções, e não uma lista.
     if (opcoes.desafio !== undefined) {
@@ -479,115 +464,54 @@ export class HomeScreen {
   /* ─── O Desafio do Dia ──────────────────────────────────────────────────── */
 
   /**
-   * O cartão do dia, desenhado como um **bilhete**: uma faixa com as cores das
-   * seis faces no topo, o número do desafio grande, na letra da marca, e os
-   * dados do dia — seis faces tiradas da seed, diferentes todos os dias. É a
-   * cara do dia, e é o que faz o cartão parecer do jogo e não de um formulário.
-   *
-   * Por baixo, **a lista do dia**: os três desafios, um por linha, cada um com o
-   * ícone do modo e o estado — por jogar, a meio, feito (com o resultado) ou
-   * interrompido. O Puzzle primeiro: é o que qualquer pessoa consegue jogar. Uma lista e não dois blocos coloridos: os blocos repetiam os
-   * mosaicos dos modos logo abaixo, e liam-se como os mesmos botões duas vezes.
-   *
-   * A sequência e o partilhar ficam no canto, onde não pedem espaço próprio.
+   * O cartão do dia: um bilhete pequeno, que se toca inteiro e abre o ecrã do
+   * desafio. A faixa com as seis faces, o rótulo, o número e a data, a
+   * sequência, e o progresso de hoje — um quadrado por desafio, cheio quando
+   * está feito.
    */
-  private desafio(d: CartaoDoDesafio, face: ModoFace): HTMLElement {
-    const el = elemento("section", "home-desafio");
-    el.setAttribute("aria-labelledby", "home-desafio-titulo");
+  private desafio(d: ResumoDoDesafio): HTMLButtonElement {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "home-desafio";
+    b.addEventListener("click", d.aoAbrir);
 
-    const rotulo = elemento("h2", "home-desafio-rotulo");
-    rotulo.id = "home-desafio-titulo";
+    const rotulo = elemento("span", "home-desafio-rotulo");
     rotulo.append(iconeCalendario(), "Desafio do dia");
 
-    const extras = elemento("div", "home-desafio-extras");
-    if (d.sequencia > 0) {
-      const seq = elemento("span", "home-desafio-sequencia", `🔥 ${String(d.sequencia)}`);
-      seq.setAttribute(
-        "aria-label",
-        d.sequencia === 1 ? "1 dia seguido" : `${String(d.sequencia)} dias seguidos`,
-      );
-      extras.appendChild(seq);
-    }
-    if (d.aoPartilhar !== undefined) {
-      extras.appendChild(botaoPartilhar(d.aoPartilhar, "home-desafio-partilhar", true));
-    }
+    const cabeca = elemento("span", "home-desafio-cabeca");
+    cabeca.appendChild(rotulo);
+    if (d.sequencia > 0) cabeca.appendChild(sinalDaSequencia(d.sequencia));
 
-    const cabeca = elemento("div", "home-desafio-cabeca");
-    cabeca.append(rotulo, extras);
-
-    const numero = elemento("p", "home-desafio-numero");
+    const numero = elemento("span", "home-desafio-numero");
     numero.append(
       elemento("span", "home-desafio-cardinal", `#${String(d.numero)}`),
       elemento("span", "home-desafio-data", d.data),
     );
 
-    const dados = elemento("div", "home-desafio-dados");
-    dados.setAttribute("aria-hidden", "true");
-    for (const v of d.dados) dados.appendChild(pecaDeAmostra(v, face));
-
-    const bilhete = elemento("div", "home-desafio-bilhete");
-    bilhete.append(numero, dados);
-
-    const lista = elemento("ul", "home-desafio-lista");
-    for (const linha of [
-      this.desafioDoModo("puzzle", "Puzzle", d.puzzle, d.aoJogarPuzzle),
-      this.desafioDoModo("tempo", "Contra-Relógio", d.tempo, d.aoJogarTempo),
-      this.desafioDoModo("survival", "Survival", d.survival, d.aoJogarSurvival),
-    ]) {
-      const li = document.createElement("li");
-      li.appendChild(linha);
-      lista.appendChild(li);
+    const feitos = d.estados.filter((e) => e === "feito").length;
+    const progresso = elemento("span", "home-desafio-progresso");
+    const pontos = elemento("span", "home-desafio-pontos");
+    for (const e of d.estados) {
+      const ponto = elemento("span", "home-desafio-ponto");
+      ponto.dataset["estado"] = e;
+      pontos.appendChild(ponto);
     }
+    const resumo =
+      feitos === d.estados.length
+        ? "Feito ✓"
+        : feitos === 0
+          ? "Por jogar"
+          : `${String(feitos)} de ${String(d.estados.length)}`;
+    progresso.append(pontos, elemento("span", "home-desafio-resumo", resumo));
 
-    el.append(cabeca, bilhete, lista);
-    return el;
-  }
+    const linha = elemento("span", "home-desafio-linha");
+    linha.append(numero, progresso, iconeSeguir());
 
-  private desafioDoModo(
-    modo: "puzzle" | "tempo" | "survival",
-    nome: string,
-    estado: EstadoNoCartao,
-    aoJogar: () => void,
-  ): HTMLButtonElement {
-    const b = this.botaoDeModo("home-desafio-modo", modo, aoJogar);
-    b.dataset["estado"] = estado.tipo;
-
-    const texto =
-      estado.tipo === "por-jogar"
-        ? "Jogar"
-        : estado.tipo === "a-meio"
-          ? `Continuar · ${estado.texto}`
-          : estado.tipo === "feito"
-            ? `✓ ${estado.texto}`
-            : "Interrompido";
-
-    // O ícone na cor do modo: é o elo com o mosaico do mesmo modo, mais abaixo.
-    const icone = elemento("span", "home-desafio-modo-icone");
-    icone.appendChild(
-      modo === "puzzle"
-        ? iconePuzzles()
-        : modo === "tempo"
-          ? iconeCronometro()
-          : iconeSurvival(),
+    b.append(cabeca, linha);
+    b.setAttribute(
+      "aria-label",
+      `Desafio do dia, número ${String(d.numero)}, ${d.data}: ${resumo}. Abrir.`,
     );
-
-    b.append(
-      icone,
-      elemento("span", "home-desafio-modo-nome", nome),
-      elemento("span", "home-desafio-modo-estado", texto),
-    );
-
-    /*
-     * O nome acessível diz o que o toque faz, que muda com o estado: feito ou
-     * interrompido, o toque é treino.
-     */
-    const acao =
-      estado.tipo === "por-jogar"
-        ? "jogar"
-        : estado.tipo === "a-meio"
-          ? "continuar"
-          : "treinar";
-    b.setAttribute("aria-label", `${nome} do dia: ${texto}. Tocar para ${acao}.`);
 
     return b;
   }

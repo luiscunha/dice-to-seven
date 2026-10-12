@@ -30,7 +30,7 @@ import {
   loadSettings,
   saveSettings,
 } from "../src/session/settings";
-import { deHash, paraHash, rotaLegada } from "../src/ui/rotas";
+import { deHash, paraHash, rotaAcima, rotaLegada, sentidoEntre } from "../src/ui/rotas";
 import type { Rota } from "../src/ui/rotas";
 import { TimeAttackScreen } from "../src/ui/TimeAttackScreen";
 
@@ -49,6 +49,7 @@ describe("rotas", () => {
     { ecra: "jogo", banda: "meio-joker", nivel: 12 },
     { ecra: "tempo" },
     { ecra: "survival", seed: 20260822 },
+    { ecra: "desafio" },
     { ecra: "desafio", modo: "puzzle" },
     { ecra: "desafio", modo: "tempo" },
     { ecra: "desafio", modo: "survival" },
@@ -121,9 +122,15 @@ describe("rotas", () => {
     expect(paraHash({ ecra: "desafio", modo: "survival" })).toBe("#/desafio/survival");
     expect(paraHash({ ecra: "desafio", modo: "puzzle" })).toBe("#/desafio/puzzle");
 
-    // Um modo que não existe — ou uma data de outro dia — é a Home.
-    expect(deHash("#/desafio")).toEqual({ ecra: "home" });
+    // Sem modo é o ecrã de escolha; um modo que não existe — ou uma data de
+    // outro dia — é a Home.
+    expect(deHash("#/desafio")).toEqual({ ecra: "desafio" });
     expect(deHash("#/desafio/2026-10-11")).toEqual({ ecra: "home" });
+
+    // Um desafio sobe para a escolha, e a escolha para a Home.
+    expect(rotaAcima({ ecra: "desafio", modo: "puzzle" })).toEqual({ ecra: "desafio" });
+    expect(rotaAcima({ ecra: "desafio" })).toEqual({ ecra: "home" });
+    expect(sentidoEntre({ ecra: "desafio" }, { ecra: "desafio", modo: "tempo" })).toBe("avanca");
   });
 
   it("a forma antiga continua a levar ao sítio certo", () => {

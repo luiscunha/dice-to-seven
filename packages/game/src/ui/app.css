@@ -1390,59 +1390,6 @@ body::before {
 }
 
 /*
- * E os mosaicos dos modos de corrida deitam-se: o ícone à esquerda, o nome e o
- * estado à direita. O cartão do dia já oferece os dois modos a meio do ecrã, e
- * os mosaicos ficam como a porta para a corrida livre — de pé mediam 136px, e
- * com o cartão do dia a Home não cabia num telemóvel. Deitados, metade.
- */
-.ecra.home[data-desafio="sim"] .home-modo.compacto {
-  min-height: 0;
-  grid-template-columns: auto minmax(0, 1fr);
-  grid-template-rows: auto auto;
-  align-items: center;
-  column-gap: 10px;
-  row-gap: 4px;
-}
-
-.ecra.home[data-desafio="sim"] .home-modo.compacto {
-  padding: 10px;
-}
-
-.ecra.home[data-desafio="sim"] .home-modo.compacto .home-modo-icone {
-  grid-row: 1 / span 2;
-  width: 36px;
-  height: 36px;
-}
-
-.ecra.home[data-desafio="sim"] .home-modo.compacto .home-modo-icone .icone {
-  width: 20px;
-  height: 20px;
-}
-
-.ecra.home[data-desafio="sim"] .home-modo.compacto .home-modo-texto {
-  align-self: end;
-}
-
-.ecra.home[data-desafio="sim"] .home-modo.compacto .home-modo-titulo {
-  align-self: auto;
-  font-size: 15px;
-  line-height: 1.2;
-}
-
-.ecra.home[data-desafio="sim"] .home-modo.compacto .home-modo-estado {
-  grid-column: 2;
-  align-self: start;
-  padding: 2px 7px;
-  font-size: 12px;
-}
-
-/* Sem estado, o nome fica ao meio da altura do ícone. */
-.ecra.home[data-desafio="sim"] .home-modo.compacto:not(:has(.home-modo-estado)) .home-modo-texto {
-  grid-row: 1 / span 2;
-  align-self: center;
-}
-
-/*
  * A barra: a marca à esquerda, as definições à direita.
  *
  * A marca era um bloco centrado com o símbolo grande, o nome e o lema, e ficava
@@ -1921,37 +1868,43 @@ body::before {
   opacity: 0.78;
 }
 
-/* ─── Home: o Desafio do Dia ──────────────────────────────────────────────── */
+/* ─── Home: o cartão do Desafio do Dia ────────────────────────────────────── */
 
 /*
- * Um bilhete: a superfície neutra, com uma faixa no topo com as seis faces da
- * rampa — a primeira coisa do ecrã com as cores do tabuleiro todas juntas. Por
- * cima dos modos, porque é a única coisa da Home que muda todos os dias.
+ * Um bilhete pequeno, que se toca inteiro e abre o ecrã do desafio. A faixa
+ * com as seis faces da rampa no topo é o que o distingue dos cartões dos modos
+ * sem lhe dar mais peso do que eles: é um cartão entre os outros.
  */
 .home-desafio {
   position: relative;
   display: grid;
-  gap: 12px;
-  padding: 18px 14px 14px;
+  gap: 6px;
+  width: 100%;
+  padding: 14px 14px 12px;
+  font: inherit;
+  text-align: left;
   border: 1px solid var(--line);
-  border-radius: calc(var(--raio) + 8px);
+  border-radius: calc(var(--raio) + 6px);
   background: var(--surface);
+  color: var(--ink);
   box-shadow: var(--sombra-cartao);
   overflow: hidden;
-  /*
-   * O `overflow: hidden` é para a faixa respeitar os cantos — e numa grelha
-   * tem um efeito escondido: o tamanho mínimo automático do cartão passa a
-   * zero, e num ecrã baixo a linha dele encolhia e cortava-o a meio. Mínimo é o
-   * conteúdo; se não couber, a Home desliza.
-   */
-  min-height: min-content;
+  cursor: pointer;
+  transition: box-shadow var(--t-ui) linear;
 }
 
-.home-desafio::before {
+@media (hover: hover) {
+  .home-desafio:hover {
+    box-shadow: var(--sombra);
+  }
+}
+
+.home-desafio::before,
+.desafio-bilhete::before {
   content: "";
   position: absolute;
   inset: 0 0 auto;
-  height: 5px;
+  height: 4px;
   background: linear-gradient(
     90deg,
     var(--face-1) 0 16.66%,
@@ -1966,16 +1919,15 @@ body::before {
 .home-desafio-cabeca {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
-  min-height: 32px;
 }
 
-/* O rótulo da secção, em versaletes, na cor de destaque: diz o que o cartão é. */
+/* O rótulo em versaletes, na cor de destaque: diz o que o cartão é. */
 .home-desafio-rotulo {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin: 0;
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -1989,15 +1941,80 @@ body::before {
   height: 16px;
 }
 
-.home-desafio-extras {
+.home-desafio-linha {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.home-desafio-linha > .icone-seguir {
+  color: var(--ink-muted);
+}
+
+.home-desafio-numero,
+.desafio-numero {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  min-width: 0;
+}
+
+.home-desafio-cardinal {
+  font-family: var(--fonte-marca);
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--ink);
+}
+
+.home-desafio-data,
+.desafio-data {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+
+/* O progresso de hoje: um quadrado por desafio, cheio quando está feito. */
+.home-desafio-progresso {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-left: auto;
+  gap: 8px;
+}
+
+.home-desafio-pontos {
+  display: flex;
+  gap: 4px;
+}
+
+.home-desafio-ponto {
+  width: 12px;
+  height: 12px;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1.5px var(--line);
+}
+
+.home-desafio-ponto[data-estado="feito"] {
+  background: var(--accent);
+  box-shadow: none;
+}
+
+.home-desafio-ponto[data-estado="a-meio"] {
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+}
+
+.home-desafio-resumo {
+  font-size: 13px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-muted);
+  white-space: nowrap;
 }
 
 /* A sequência: o número que se quer ver crescer, aquecido pelo fogo do jogo. */
-.home-desafio-sequencia {
+.desafio-sequencia {
   padding: 3px 10px;
   border-radius: 999px;
   background: var(--fogo-veu);
@@ -2008,179 +2025,183 @@ body::before {
   white-space: nowrap;
 }
 
-/*
- * Partilhar, só com o ícone, no canto. É redondo e não um botão de texto: o
- * resultado é do dia, e o lugar dele é o canto do bilhete, não uma linha nova.
- */
-.home-desafio-partilhar {
+/* ─── O ecrã do Desafio do Dia ────────────────────────────────────────────── */
+
+.desafio-corpo {
   display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  min-height: 0;
-  padding: 0;
-  border-radius: 50%;
-  font-weight: 700;
-  color: var(--accent);
+  gap: 14px;
+  padding-bottom: 8px;
 }
 
-.home-desafio-partilhar .icone {
-  width: 18px;
-  height: 18px;
+/* O bilhete: a cara do dia, com o número grande na letra da marca. */
+.desafio-bilhete {
+  position: relative;
+  display: grid;
+  gap: 12px;
+  padding: 20px 16px 16px;
+  border: 1px solid var(--line);
+  border-radius: calc(var(--raio) + 8px);
+  background: var(--surface);
+  box-shadow: var(--sombra-cartao);
+  overflow: hidden;
 }
 
-.home-desafio-partilhar[data-desfecho="copiado"] {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--on-accent);
+.desafio-bilhete::before {
+  height: 5px;
 }
 
-/* O número do dia e os dados do dia, numa linha: a cara do bilhete. */
-.home-desafio-bilhete {
+.desafio-bilhete-cabeca {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 8px 12px;
-}
-
-.home-desafio-numero {
-  display: flex;
-  align-items: baseline;
   gap: 8px;
-  margin: 0;
 }
 
-.home-desafio-cardinal {
+.desafio-cardinal {
   font-family: var(--fonte-marca);
-  font-size: 34px;
+  font-size: 40px;
   font-weight: 600;
   line-height: 1;
   color: var(--ink);
 }
 
-.home-desafio-data {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--ink-muted);
-  white-space: nowrap;
-}
-
-.home-desafio-dados {
+.desafio-dados {
   display: flex;
-  gap: 4px;
+  gap: 6px;
 }
 
-.home-desafio-dados .peca {
-  --lado: 24px;
+.desafio-dados .peca {
+  --lado: 30px;
 }
 
-/*
- * A lista do dia: as duas linhas numa só caixa, separadas por um fio. Uma lista
- * e não dois blocos coloridos — os blocos repetiam os mosaicos logo abaixo.
- */
-.home-desafio-lista {
+.desafio-explicacao {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--ink-muted);
+}
+
+/* Os três desafios: um cartão cada, com o que é e o estado. */
+.desafio-lista {
   display: grid;
+  gap: 10px;
   margin: 0;
   padding: 0;
   list-style: none;
-  border: 1px solid var(--line);
-  border-radius: calc(var(--raio) + 2px);
-  overflow: hidden;
 }
 
-.home-desafio-lista > li + li {
-  border-top: 1px solid var(--line);
-}
-
-.home-desafio-modo {
+.desafio-modo {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
-  min-height: 50px;
-  padding: 7px 10px;
+  min-height: 76px;
+  padding: 12px 12px 12px 14px;
   font: inherit;
   text-align: left;
-  border: 0;
-  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: calc(var(--raio) + 4px);
+  background: var(--surface);
   color: var(--ink);
+  box-shadow: var(--sombra-cartao);
   cursor: pointer;
-  transition: background var(--t-ui) linear;
+  transition: box-shadow var(--t-ui) linear;
 }
 
 @media (hover: hover) {
-  .home-desafio-modo:hover {
-    background: var(--surface-alt);
+  .desafio-modo:hover {
+    box-shadow: var(--sombra);
   }
 }
 
-.home-desafio-modo[data-modo="puzzle"] {
+.desafio-modo > .icone-seguir {
+  color: var(--ink-muted);
+}
+
+.desafio-modo[data-modo="puzzle"] {
   --cor: var(--modo-puzzles);
   --tinta-modo: var(--modo-puzzles-tinta);
 }
 
-.home-desafio-modo[data-modo="tempo"] {
+.desafio-modo[data-modo="tempo"] {
   --cor: var(--modo-tempo);
   --tinta-modo: var(--modo-tempo-tinta);
 }
 
-.home-desafio-modo[data-modo="survival"] {
+.desafio-modo[data-modo="survival"] {
   --cor: var(--modo-survival);
   --tinta-modo: var(--modo-survival-tinta);
 }
 
-/* O ícone na cor do modo: o elo com o mosaico do mesmo modo, mais abaixo. */
-.home-desafio-modo-icone {
+/* O ícone na cor do modo: o elo com o modo livre do mesmo nome, na Home. */
+.desafio-modo-icone {
   display: grid;
   place-items: center;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border-radius: var(--raio);
   background: var(--cor);
   color: var(--tinta-modo);
   box-shadow: inset 0 0 0 1px var(--aro);
 }
 
-.home-desafio-modo-icone .icone {
-  width: 20px;
-  height: 20px;
+.desafio-modo-icone .icone {
+  width: 24px;
+  height: 24px;
 }
 
-/* Num ecrã estreito, «Contra-Relógio» parte no hífen em vez de se cortar. */
-.home-desafio-modo-nome {
-  font-size: 15px;
+.desafio-modo-texto {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.desafio-modo-nome {
+  font-size: 16px;
   font-weight: 650;
-  line-height: 1.2;
 }
 
-.home-desafio-modo-estado {
-  max-width: 100%;
+.desafio-modo-legenda {
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: var(--ink-muted);
+}
+
+.desafio-modo-estado {
   padding: 5px 12px;
   border-radius: 999px;
   font-size: 13px;
   font-weight: 650;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   color: var(--ink-muted);
 }
 
 /*
  * Por jogar, ou a meio, é o que pede ação: um botão cheio na cor de destaque.
- * Feito, é um resultado — na cor de destaque, mas sem fundo, com o visto.
+ * Feito, é um resultado — na cor de destaque, sem fundo, com o visto.
  */
-.home-desafio-modo[data-estado="por-jogar"] .home-desafio-modo-estado,
-.home-desafio-modo[data-estado="a-meio"] .home-desafio-modo-estado {
+.desafio-modo[data-estado="por-jogar"] .desafio-modo-estado,
+.desafio-modo[data-estado="a-meio"] .desafio-modo-estado {
   background: var(--accent);
   color: var(--on-accent);
 }
 
-.home-desafio-modo[data-estado="feito"] .home-desafio-modo-estado {
-  padding-inline: 4px;
+.desafio-modo[data-estado="feito"] .desafio-modo-estado {
+  padding-inline: 2px;
   color: var(--accent);
+}
+
+.desafio-partilhar {
+  justify-content: center;
+}
+
+.desafio-nota {
+  margin: 0;
+  font-size: 13px;
+  text-align: center;
+  color: var(--ink-muted);
 }
 
 /* ─── Home: as secções ────────────────────────────────────────────────────── */
