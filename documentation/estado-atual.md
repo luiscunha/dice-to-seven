@@ -411,6 +411,9 @@ Resolvido com `skipJokerMoves`, que exclui as jogadas com joker do piso —
 seguindo a mitigação que o próprio §2.6 propõe (tutorial dedicado + desfazer, não
 o piso). As bandas `meio-joker` e `denso` usam-no.
 
+As soldas e o gelo também ficam fora do piso, mas por decisão de desenho e não
+por medição — ver «O piso de justiça não vê as marcas».
+
 ### 3. O tamanho não é alavanca de dificuldade — o joker é
 
 Passar de 12 para 49 peças custa **−0,31** de sobrevivência. Pôr **um** joker em
@@ -638,6 +641,61 @@ as soldas ao solver como parâmetro solto; com a segunda ficava
 `Marcas` junta-as num objeto. Resolve mais do que a assinatura: a chave de
 memoização compõe-se num sítio só, e **um nível sem marcas continua a dar
 exatamente a chave de sempre, byte a byte**.
+
+### O piso de justiça não vê as marcas — e é de propósito
+
+O piso (§6.2) promete que as primeiras duas jogadas são seguras, jogue-se o que
+se jogar. No pipeline corre **antes** de as marcas serem escolhidas, e o
+`fairnessFloor` nem as recebe. Nos níveis com soldas ou gelo, portanto, a
+promessa não vale: as primeiras jogadas podem deixar o nível sem saída.
+
+Encontrado a 2026-10-12 e medido sobre o pack publicado —
+BFS a profundidade 2 com `gruposMarcados`/`aplicarMarcas`, e
+`isSolvable(..., marcas)` em cada estado alcançado:
+
+| banda | marcas | níveis com 2 jogadas fatais |
+|---|---|---|
+| `avancado` | 2 soldas | **15 de 30** — provados, o solver esgota a pesquisa |
+| `perito` | 4 soldas + 3 gelo | **pelo menos 6 dos 13 primeiros**; os outros 17 ficaram por medir |
+
+Os 30 do avançado passam o piso sem marcas, que é o que o pipeline verificou.
+
+O caso que decidiu, no `perito-1000174`: a peça gelada 1 só sai com um 6, e o
+tabuleiro tem dois. Duas jogadas `1+6` normais, legais e à vista, gastam-nos aos
+dois, e o 1 fica preso à segunda jogada. Em cinco desses seis níveis do perito o
+beco é deste tipo: depois de duas jogadas, uma gelada já não tem nenhum parceiro
+livre no tabuleiro.
+
+**Decidido: fica assim.** É a armadilha que o gelo existe para criar — o
+parceiro é um recurso que se guarda, e gastá-lo vê-se *antes* de o fazer. O piso
+existe para que uma jogada fatal logo no início não se leia como adivinha; estas
+leem-se como erro de quem não olhou. Perder por não pensar, e voltar a tentar, é
+o objetivo, não um defeito.
+
+É a mesma espécie de exceção que o joker tem (`skipJokerMoves`, ver «Onde a
+realidade contrariou os documentos», nº 2), com uma diferença: a do joker foi
+forçada por medição — sem ela nenhum nível passava —, e esta é escolha de
+desenho.
+
+O que **continua** garantido: todo o nível tem solução, e a solução guardada
+respeita as marcas — o `verify` confirma-o nível a nível. O que o piso garante
+num nível com marcas é o que garantia antes de elas lá estarem, e mais nada.
+
+**Se um dia se quiser o piso com marcas**, o caminho ficou medido:
+
+- O `fairnessFloor` passa a receber `Marcas`, com `chaveMarcas` na chave, e o
+  pipeline volta a corrê-lo depois de as escolher. Se falhar, tenta outra seed
+  derivada em vez de recusar o tabuleiro. No avançado, 14 dos 15 níveis acham
+  uma escolha justa em 13 tentativas ou menos. O `avancado-2000099` não acha
+  nenhuma com duas soldas: tem três candidatas, e só uma passa sozinha.
+- **No perito, o solver não chega como está.** Com o orçamento do piso (20 000
+  estados) dá *inconclusive* em 27 dos 30 níveis. Uma poda tornou-o decidível:
+  uma gelada de valor v só sai com uma peça de valor 7 − v que não esteja gelada
+  nem soldada — a soldada levaria a companheira, e o grupo deixava de ser par.
+  Se houver mais geladas de valor v do que peças livres de valor 7 − v, o estado
+  está morto. Numa fronteira de 1826 estados passou de 8,4 M estados e 337 s
+  para 105 k e 2 s, e os 399 *inconclusive* viraram 186 becos e 213 resoluções.
+  Ficou nos scripts de medição; **não entrou no solver**.
 
 ### O desenho do gelo não se via, e a razão é medível
 
