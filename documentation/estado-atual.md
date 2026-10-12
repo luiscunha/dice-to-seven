@@ -1121,9 +1121,31 @@ eram determinísticos na seed.
   Contra-Relógio do dia como primeira coisa do jogo era a porta errada. A 375×812
   cabe tudo; num ecrã mais baixo a Home desliza em vez de encolher os cartões.
 
-O desafio #1 é o de 12 de outubro de 2026 (`EPOCA_DESAFIO`). O puzzle diário da
-campanha, com os 30 níveis reservados, continua por fazer: dão um mês, e depois
-é preciso gerar mais.
+**O Puzzle do Dia veio a seguir**, e ficou à frente dos outros dois. Nos modos de
+corrida, depois do primeiro tabuleiro nada é ao calhas — o Contra-Relógio dá a
+toda a gente os mesmos tabuleiros pela mesma ordem, e o Survival as mesmas
+linhas —, mas o que se compara é o que cada um fez com isso. Faltava o desafio
+que se percebe sem explicação, e que qualquer pessoa consegue jogar: **um
+tabuleiro fixo, o mesmo para toda a gente**.
+
+- Sai dos **níveis que a campanha reservou**: os das bandas com joker que a
+  intercalação não usa (`meio-joker` e `denso`), que nunca aparecem na campanha
+  — 34 ao todo. `escolherDoDia` baralha-os uma vez, com uma seed fixa, e cada
+  dia leva o seguinte. **Ao fim de 34 dias recomeça**: antes disso é preciso uma
+  banda própria no pipeline.
+- Todos têm joker, e o tutorial do joker abre-se por cima da primeira vez, como
+  na campanha.
+- **A tentativa oficial fica aberta até ser resolvida**: não há relógio contra
+  ninguém, e sair para pensar não é desistir. Conta o tempo e o selo da
+  resolução (perfeito, limpo ou concluído), e partilha-se como
+  `🧩 Puzzle: 1:23.4 · ★ perfeito`. A brecha conhecida: sair e voltar recomeça
+  o tabuleiro e o relógio, portanto pode-se estudar o tabuleiro antes de o jogar
+  a contar. Sem tabela de classificação, não vale a pena fechá-la.
+- Na Home, o bilhete passou a ter três linhas, com o Puzzle primeiro, e os
+  mosaicos dos modos de corrida deitaram-se — de pé mediam 136px, e com o
+  bilhete de três linhas a Home não cabia em 812px.
+
+O desafio #1 é o de 12 de outubro de 2026 (`EPOCA_DESAFIO`).
 
 ---
 

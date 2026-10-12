@@ -62,7 +62,9 @@ export function paraHash(r: Rota): string {
         ? "#/survival"
         : `#/survival/${String(r.seed)}`;
     case "desafio":
-      return r.modo === "tempo" ? "#/desafio/contrarrelogio" : "#/desafio/survival";
+      return r.modo === "tempo"
+        ? "#/desafio/contrarrelogio"
+        : `#/desafio/${r.modo}`;
     case "definicoes":
       return "#/definicoes";
     case "regras":
@@ -92,6 +94,7 @@ export function deHash(hash: string): Rota {
 
   if (primeira === "desafio") {
     if (segunda === "survival") return { ecra: "desafio", modo: "survival" };
+    if (segunda === "puzzle") return { ecra: "desafio", modo: "puzzle" };
     if (segunda === "contrarrelogio" || segunda === "tempo") {
       return { ecra: "desafio", modo: "tempo" };
     }

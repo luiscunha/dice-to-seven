@@ -1,11 +1,14 @@
 /**
- * O Desafio do Dia — a mesma corrida para toda a gente, uma vez por dia.
+ * O Desafio do Dia — o mesmo desafio para toda a gente, uma vez por dia.
  *
- * Um Contra-Relógio e um Survival por dia, com **a seed tirada da data**: no
- * mesmo dia, toda a gente recebe os mesmos tabuleiros, as mesmas linhas e as
- * mesmas bombas. É o que faz um resultado comparar-se com o de outra pessoa, e
- * sai de graça da regra que proíbe `Math.random()`: os dois modos já eram
- * determinísticos na seed.
+ * Três por dia. **Um Puzzle**: um tabuleiro fixo, o mesmo para toda a gente,
+ * escolhido dos níveis que a campanha reservou (`escolherDoDia`). É o desafio
+ * que se percebe sem explicação — toda a gente resolveu este tabuleiro — e o
+ * mais acessível a quem está a começar. **Um Contra-Relógio e um Survival**,
+ * com **a seed tirada da data**: no mesmo dia, toda a gente recebe os mesmos
+ * tabuleiros, as mesmas linhas e as mesmas bombas. É o que faz um resultado
+ * comparar-se com o de outra pessoa, e sai de graça da regra que proíbe
+ * `Math.random()`: os dois modos já eram determinísticos na seed.
  *
  * ── A tentativa que conta é a primeira ──
  *
@@ -17,7 +20,9 @@
  * que corria mal e se abandonava a meio — a aplicação fechada, o browser a
  * recuar — voltava a ser a primeira, e era a mesma porta aberta. Fica
  * «interrompida», sem resultado, e o resto do dia é treino. O Survival é a
- * exceção boa: guarda-se a meio, como a corrida normal, e retoma-se.
+ * exceção boa: guarda-se a meio, como a corrida normal, e retoma-se. O Puzzle
+ * também: não há relógio a correr contra ninguém, e sair para pensar não é
+ * desistir — a tentativa oficial fica aberta até ser resolvida.
  *
  * ── A sessão não lê as horas ──
  *
@@ -27,11 +32,11 @@
  */
 
 import type { Cell } from "@dicetoseven/engine";
-import { mulberry32, randInt } from "@dicetoseven/engine";
+import { mulberry32, randInt, shuffled } from "@dicetoseven/engine";
 
 import type { ProfileStorage } from "./progress";
 
-export type ModoDoDesafio = "tempo" | "survival";
+export type ModoDoDesafio = "puzzle" | "tempo" | "survival";
 
 /** O dia do primeiro desafio. É o «#1», e daí em diante conta-se. */
 export const EPOCA_DESAFIO = "2026-10-12";
@@ -63,7 +68,16 @@ export interface ResultadoSurvival {
   readonly linhas: number;
 }
 
+/** O selo é o da campanha: perfeito, limpo (com dicas) ou concluído. */
+export type SeloDoPuzzle = "perfect" | "clean" | "completed";
+
+export interface ResultadoPuzzle {
+  readonly tempoMs: number;
+  readonly selo: SeloDoPuzzle;
+}
+
 interface ResultadoDe {
+  readonly puzzle: ResultadoPuzzle;
   readonly tempo: ResultadoTempo;
   readonly survival: ResultadoSurvival;
 }
@@ -74,6 +88,7 @@ export type EstadoDoModo<R> =
   | { readonly estado: "interrompido" };
 
 export interface DiaDeDesafio {
+  readonly puzzle?: EstadoDoModo<ResultadoPuzzle>;
   readonly tempo?: EstadoDoModo<ResultadoTempo>;
   readonly survival?: EstadoDoModo<ResultadoSurvival>;
 }
@@ -149,6 +164,21 @@ export function dadosDoDia(data: string): Cell[] {
   return Array.from({ length: 6 }, () => (randInt(rng, 6) + 1) as Cell);
 }
 
+/**
+ * O nível do Puzzle do Dia, de uma lista que **tem de vir sempre pela mesma
+ * ordem**. A lista é baralhada uma vez, com uma seed fixa — para os dias não
+ * seguirem a ordem do ficheiro, que alterna mal as bandas —, e cada dia leva o
+ * seguinte. Quando a lista acaba, recomeça: com os 30 níveis reservados, isso
+ * acontece ao fim de um mês, e é aí que precisa de uma banda própria.
+ */
+export function escolherDoDia<T>(data: string, pool: readonly T[]): T | undefined {
+  if (pool.length === 0) return undefined;
+
+  const ordem = shuffled(mulberry32(0x9e2d1), pool);
+  const n = numeroDoDia(data) - 1;
+  return ordem[((n % ordem.length) + ordem.length) % ordem.length];
+}
+
 /* ─── A tentativa ─────────────────────────────────────────────────────────── */
 
 export const estadoDoModo = <M extends ModoDoDesafio>(
@@ -198,7 +228,9 @@ export function interromper(d: Desafios, data: string, modo: ModoDoDesafio): Des
 
 /** Um dia conta para a sequência se pelo menos um dos desafios foi feito. */
 const conta = (dia: DiaDeDesafio | undefined): boolean =>
-  dia?.tempo?.estado === "feito" || dia?.survival?.estado === "feito";
+  dia?.puzzle?.estado === "feito" ||
+  dia?.tempo?.estado === "feito" ||
+  dia?.survival?.estado === "feito";
 
 /**
  * Dias seguidos com desafio feito, até hoje.
@@ -259,6 +291,13 @@ const tempoValido = (r: unknown): r is ResultadoTempo => {
   );
 };
 
+const SELOS: readonly unknown[] = ["perfect", "clean", "completed"];
+
+const puzzleValido = (r: unknown): r is ResultadoPuzzle => {
+  const p = r as Partial<ResultadoPuzzle> | null;
+  return typeof p === "object" && p !== null && numero(p.tempoMs) && SELOS.includes(p.selo);
+};
+
 const survivalValido = (r: unknown): r is ResultadoSurvival => {
   const s = r as Partial<ResultadoSurvival> | null;
   return (
@@ -292,12 +331,14 @@ export function lerDesafios(storage: ProfileStorage): Desafios {
   for (const [data, valor] of Object.entries(env.dias as Record<string, unknown>)) {
     if (!eData(data) || typeof valor !== "object" || valor === null) continue;
 
-    const v = valor as { tempo?: unknown; survival?: unknown };
+    const v = valor as { puzzle?: unknown; tempo?: unknown; survival?: unknown };
+    const puzzle = estadoValido(v.puzzle, puzzleValido);
     const tempo = estadoValido(v.tempo, tempoValido);
     const survival = estadoValido(v.survival, survivalValido);
 
-    if (tempo === undefined && survival === undefined) continue;
+    if (puzzle === undefined && tempo === undefined && survival === undefined) continue;
     dias[data] = {
+      ...(puzzle === undefined ? {} : { puzzle }),
       ...(tempo === undefined ? {} : { tempo }),
       ...(survival === undefined ? {} : { survival }),
     };

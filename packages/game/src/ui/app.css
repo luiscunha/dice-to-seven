@@ -1390,12 +1390,56 @@ body::before {
 }
 
 /*
- * E os mosaicos dos modos de corrida descem de altura: o cartão do dia já os
- * oferece a meio do ecrã, e os mosaicos ficam como a porta para a corrida
- * livre. A 812px de altura passam de 195px a 122px.
+ * E os mosaicos dos modos de corrida deitam-se: o ícone à esquerda, o nome e o
+ * estado à direita. O cartão do dia já oferece os dois modos a meio do ecrã, e
+ * os mosaicos ficam como a porta para a corrida livre — de pé mediam 136px, e
+ * com o cartão do dia a Home não cabia num telemóvel. Deitados, metade.
  */
 .ecra.home[data-desafio="sim"] .home-modo.compacto {
-  min-height: clamp(104px, 15vh, 160px);
+  min-height: 0;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  align-items: center;
+  column-gap: 10px;
+  row-gap: 4px;
+}
+
+.ecra.home[data-desafio="sim"] .home-modo.compacto {
+  padding: 10px;
+}
+
+.ecra.home[data-desafio="sim"] .home-modo.compacto .home-modo-icone {
+  grid-row: 1 / span 2;
+  width: 36px;
+  height: 36px;
+}
+
+.ecra.home[data-desafio="sim"] .home-modo.compacto .home-modo-icone .icone {
+  width: 20px;
+  height: 20px;
+}
+
+.ecra.home[data-desafio="sim"] .home-modo.compacto .home-modo-texto {
+  align-self: end;
+}
+
+.ecra.home[data-desafio="sim"] .home-modo.compacto .home-modo-titulo {
+  align-self: auto;
+  font-size: 15px;
+  line-height: 1.2;
+}
+
+.ecra.home[data-desafio="sim"] .home-modo.compacto .home-modo-estado {
+  grid-column: 2;
+  align-self: start;
+  padding: 2px 7px;
+  font-size: 12px;
+}
+
+/* Sem estado, o nome fica ao meio da altura do ícone. */
+.ecra.home[data-desafio="sim"] .home-modo.compacto:not(:has(.home-modo-estado)) .home-modo-texto {
+  grid-row: 1 / span 2;
+  align-self: center;
 }
 
 /*
@@ -2055,8 +2099,8 @@ body::before {
   align-items: center;
   gap: 10px;
   width: 100%;
-  min-height: 54px;
-  padding: 8px 10px;
+  min-height: 50px;
+  padding: 7px 10px;
   font: inherit;
   text-align: left;
   border: 0;
@@ -2070,6 +2114,11 @@ body::before {
   .home-desafio-modo:hover {
     background: var(--surface-alt);
   }
+}
+
+.home-desafio-modo[data-modo="puzzle"] {
+  --cor: var(--modo-puzzles);
+  --tinta-modo: var(--modo-puzzles-tinta);
 }
 
 .home-desafio-modo[data-modo="tempo"] {

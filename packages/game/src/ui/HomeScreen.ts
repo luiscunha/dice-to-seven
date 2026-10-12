@@ -80,8 +80,10 @@ export interface CartaoDoDesafio {
   readonly sequencia: number;
   /** Os dados do dia: seis faces da seed, só para desenho. Ver `dadosDoDia`. */
   readonly dados: readonly Cell[];
+  readonly puzzle: EstadoNoCartao;
   readonly tempo: EstadoNoCartao;
   readonly survival: EstadoNoCartao;
+  readonly aoJogarPuzzle: () => void;
   readonly aoJogarTempo: () => void;
   readonly aoJogarSurvival: () => void;
   /** Só quando há pelo menos um resultado oficial hoje. */
@@ -482,9 +484,9 @@ export class HomeScreen {
    * dados do dia — seis faces tiradas da seed, diferentes todos os dias. É a
    * cara do dia, e é o que faz o cartão parecer do jogo e não de um formulário.
    *
-   * Por baixo, **a lista do dia**: os dois desafios, um por linha, cada um com o
+   * Por baixo, **a lista do dia**: os três desafios, um por linha, cada um com o
    * ícone do modo e o estado — por jogar, a meio, feito (com o resultado) ou
-   * interrompido. Uma lista e não dois blocos coloridos: os blocos repetiam os
+   * interrompido. O Puzzle primeiro: é o que qualquer pessoa consegue jogar. Uma lista e não dois blocos coloridos: os blocos repetiam os
    * mosaicos dos modos logo abaixo, e liam-se como os mesmos botões duas vezes.
    *
    * A sequência e o partilhar ficam no canto, onde não pedem espaço próprio.
@@ -528,6 +530,7 @@ export class HomeScreen {
 
     const lista = elemento("ul", "home-desafio-lista");
     for (const linha of [
+      this.desafioDoModo("puzzle", "Puzzle", d.puzzle, d.aoJogarPuzzle),
       this.desafioDoModo("tempo", "Contra-Relógio", d.tempo, d.aoJogarTempo),
       this.desafioDoModo("survival", "Survival", d.survival, d.aoJogarSurvival),
     ]) {
@@ -541,7 +544,7 @@ export class HomeScreen {
   }
 
   private desafioDoModo(
-    modo: "tempo" | "survival",
+    modo: "puzzle" | "tempo" | "survival",
     nome: string,
     estado: EstadoNoCartao,
     aoJogar: () => void,
@@ -560,7 +563,13 @@ export class HomeScreen {
 
     // O ícone na cor do modo: é o elo com o mosaico do mesmo modo, mais abaixo.
     const icone = elemento("span", "home-desafio-modo-icone");
-    icone.appendChild(modo === "tempo" ? iconeCronometro() : iconeSurvival());
+    icone.appendChild(
+      modo === "puzzle"
+        ? iconePuzzles()
+        : modo === "tempo"
+          ? iconeCronometro()
+          : iconeSurvival(),
+    );
 
     b.append(
       icone,

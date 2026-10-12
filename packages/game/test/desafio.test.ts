@@ -15,6 +15,7 @@ import {
   comecar,
   dataDe,
   diaAnterior,
+  escolherDoDia,
   estadoDoModo,
   guardarDesafios,
   interromper,
@@ -180,6 +181,55 @@ describe("guardar e ler", () => {
   it("lixo no armazenamento não rebenta nada", () => {
     const s = memoria();
     s.setItem(DESAFIO_KEY, "{isto não é json");
+    expect(lerDesafios(s)).toEqual(SEM_DESAFIOS);
+  });
+});
+
+describe("o Puzzle do Dia", () => {
+  const POOL = Array.from({ length: 30 }, (_, i) => `nivel-${String(i)}`);
+
+  it("**o mesmo nível para toda a gente no mesmo dia**", () => {
+    expect(escolherDoDia("2026-10-14", POOL)).toBe(escolherDoDia("2026-10-14", POOL));
+  });
+
+  it("muda todos os dias, e só repete quando a lista acaba", () => {
+    const mes = Array.from({ length: 30 }, (_, i) =>
+      escolherDoDia(new Date(Date.UTC(2026, 9, 12 + i)).toISOString().slice(0, 10), POOL),
+    );
+    expect(new Set(mes).size).toBe(30);
+    // O dia 31 volta ao primeiro.
+    expect(escolherDoDia("2026-11-11", POOL)).toBe(mes[0]);
+  });
+
+  it("não segue a ordem do ficheiro", () => {
+    expect(escolherDoDia("2026-10-12", POOL)).not.toBe(POOL[0]);
+  });
+
+  it("sem níveis, não há puzzle", () => {
+    expect(escolherDoDia("2026-10-12", [])).toBeUndefined();
+  });
+
+  it("o resultado grava-se, conta para a sequência, e volta do armazenamento", () => {
+    const s = memoria();
+    const d = registar(comecar(SEM_DESAFIOS, "2026-10-12", "puzzle"), "2026-10-12", "puzzle", {
+      tempoMs: 83_400,
+      selo: "perfect",
+    });
+
+    expect(sequencia(d, "2026-10-12")).toBe(1);
+    guardarDesafios(s, d);
+    expect(lerDesafios(s)).toEqual(d);
+  });
+
+  it("um selo que não existe perde o dia", () => {
+    const s = memoria();
+    s.setItem(
+      DESAFIO_KEY,
+      JSON.stringify({
+        versao: 1,
+        dias: { "2026-10-12": { puzzle: { estado: "feito", resultado: { tempoMs: 1, selo: "ouro" } } } },
+      }),
+    );
     expect(lerDesafios(s)).toEqual(SEM_DESAFIOS);
   });
 });

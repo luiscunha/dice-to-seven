@@ -49,6 +49,7 @@ import {
   comecar,
   dadosDoDia,
   dataDe,
+  escolherDoDia,
   estadoDoModo,
   guardarDesafios,
   interromper,
@@ -616,6 +617,31 @@ function mostrarSurvival(seed: number | undefined): void {
 
 /* ─── O Desafio do Dia ─────────────────────────────────────────────────────── */
 
+/**
+ * Os níveis do Puzzle do Dia: os que a campanha **reservou** — os das bandas
+ * com joker que a intercalação não chegou a usar (`capitulos.ts`). Nunca
+ * aparecem na campanha, portanto o puzzle do dia é sempre um tabuleiro novo.
+ *
+ * Sempre pela mesma ordem — a dos capítulos, e dentro da banda a do ficheiro —,
+ * que é o que deixa `escolherDoDia` dar o mesmo nível a toda a gente.
+ */
+async function niveisDoPuzzleDoDia(): Promise<readonly Level[]> {
+  const pool: Level[] = [];
+
+  for (const { capitulo, niveis } of campanha) {
+    const banda = capitulo.joker;
+    if (banda === undefined || bandaPorId(banda) === undefined) continue;
+
+    const usados = new Set(niveis.filter((n) => n.banda === banda).map((n) => n.indice));
+    const todos = await carregarBanda(banda);
+    todos.forEach((nivel, i) => {
+      if (!usados.has(i) && cabeNoEcra(nivel.board.length)) pool.push(nivel);
+    });
+  }
+
+  return pool;
+}
+
 /** Hoje, no fuso de quem joga. É o único sítio que lê a data. */
 const hoje = (): string => dataDe(new Date());
 
@@ -645,7 +671,22 @@ function arrumarDesafio(data: string): void {
   if (desafios !== antes) guardarOsDesafios();
 }
 
+/** O glifo do selo, o mesmo da grelha de níveis. */
+const GLIFO_DO_SELO = { perfect: " ★", clean: " ◆", completed: "" } as const;
+
 function estadoNoCartao(data: string, modo: ModoDoDesafio): EstadoNoCartao {
+  /*
+   * O Puzzle não tem «a meio» nem «interrompido»: não há relógio contra
+   * ninguém, e a tentativa oficial fica aberta até ser resolvida — ver
+   * `mostrarDesafio`.
+   */
+  if (modo === "puzzle") {
+    const e = estadoDoModo(desafios, data, "puzzle");
+    if (e?.estado !== "feito") return { tipo: "por-jogar" };
+    const r = e.resultado;
+    return { tipo: "feito", texto: `${relogio(r.tempoMs)}${GLIFO_DO_SELO[r.selo]}` };
+  }
+
   if (modo === "tempo") {
     const e = estadoDoModo(desafios, data, "tempo");
     if (e === undefined) return { tipo: "por-jogar" };
@@ -680,11 +721,13 @@ function cartaoDoDesafio(): CartaoDoDesafio {
     data: dataCurta(data),
     sequencia: sequencia(desafios, data),
     dados: dadosDoDia(data),
+    puzzle: estadoNoCartao(data, "puzzle"),
     tempo: estadoNoCartao(data, "tempo"),
     survival: estadoNoCartao(data, "survival"),
+    aoJogarPuzzle: voltarA({ ecra: "desafio", modo: "puzzle" }),
     aoJogarTempo: voltarA({ ecra: "desafio", modo: "tempo" }),
     aoJogarSurvival: voltarA({ ecra: "desafio", modo: "survival" }),
-    ...(feito("tempo") || feito("survival")
+    ...(feito("puzzle") || feito("tempo") || feito("survival")
       ? { aoPartilhar: () => partilharDia(data) }
       : {}),
   };
@@ -713,7 +756,12 @@ async function mostrarDesafio(modo: ModoDoDesafio): Promise<void> {
     corridaDesafio?.estado.seed === seed
       ? corridaDesafio
       : undefined;
-  const oficial = antes === undefined || retoma !== undefined;
+  const oficial =
+    antes === undefined ||
+    retoma !== undefined ||
+    // O Puzzle oficial fica aberto até ser resolvido: sair para pensar não é
+    // desistir. Volta-se ao tabuleiro do início, e o relógio também.
+    (modo === "puzzle" && antes.estado === "a-jogar");
 
   if (antes === undefined) {
     desafios = comecar(desafios, data, modo);
@@ -727,6 +775,38 @@ async function mostrarDesafio(modo: ModoDoDesafio): Promise<void> {
   const outraVez = (): void => {
     void mostrar({ ecra: "desafio", modo });
   };
+
+  if (modo === "puzzle") {
+    const nivel = escolherDoDia(data, await niveisDoPuzzleDoDia());
+    if (nivel === undefined) {
+      ir({ ecra: "home" });
+      return;
+    }
+
+    const temJoker = nivel.joker !== undefined;
+    atual = new PuzzleScreen(app as HTMLElement, nivel, {
+      titulo: etiqueta,
+      desafio,
+      aoTerminar: ({ selo, tempoMs }) => {
+        if (!oficial) return;
+        desafios = registar(desafios, data, "puzzle", {
+          tempoMs,
+          selo: selo as Seal,
+        });
+        guardarOsDesafios();
+      },
+      aoVoltar: voltarA({ ecra: "home" }),
+      // O joker como na campanha: o `?` depois de o ter visto, e o tutorial
+      // obrigatório da primeira vez, por cima do tabuleiro.
+      ...(temJoker || perfil.sawJokerTutorial
+        ? { aoPedirAjuda: () => { abrirTutorial(true); } }
+        : {}),
+      mostrarSomaDasFaces: temJoker && mostraSomaDasFaces(countCompleted(perfil, idsComJoker)),
+    });
+
+    if (temJoker && !perfil.sawJokerTutorial) abrirTutorial(false);
+    return;
+  }
 
   if (modo === "tempo") {
     const tempo = await carregarTempo();

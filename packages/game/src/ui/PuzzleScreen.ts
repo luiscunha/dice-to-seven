@@ -48,7 +48,7 @@ import {
   vibrarPeloToque,
   vibrarVitoria,
 } from "../plataforma/nativo";
-import { botaoRedondo, confirmar, reanimar } from "./dom";
+import { botaoRedondo, confirmar, elemento, reanimar } from "./dom";
 import {
   iconeDesfazer,
   iconeDica,
@@ -59,6 +59,8 @@ import {
 } from "./icones";
 import { BoardView } from "./BoardView";
 import { JokerPicker } from "./JokerPicker";
+import type { DesafioNoEcra } from "./partilha";
+import { botaoPartilhar } from "./partilha";
 
 const SELO_TEXTO: Readonly<Record<string, string>> = {
   perfect: "Perfeito",
@@ -127,6 +129,16 @@ export interface OpcoesPuzzleScreen {
    * `main.ts` sabe em que lugar da série ele caiu.
    */
   readonly titulo?: string;
+
+  /**
+   * O nível é o Puzzle do Dia. Ver `DesafioNoEcra`.
+   *
+   * O fim diz o desafio em vez do recorde — o recorde pessoal não é a
+   * comparação de um dia em que toda a gente resolveu o mesmo tabuleiro —, e
+   * oferece partilhar. «Repetir» passa a «Treinar outra vez»: a primeira
+   * resolução é a que conta.
+   */
+  readonly desafio?: DesafioNoEcra;
 
   /**
    * A linha da soma por baixo do tabuleiro — `3 + ✳4 = 7`, e o `faltam 3`.
@@ -973,7 +985,8 @@ export class PuzzleScreen {
     const acoes = document.createElement("div");
     acoes.className = "acoes fim-acoes";
 
-    const repetir = botao("Repetir", "com-icone");
+    const desafio = this.opcoes.desafio;
+    const repetir = botao(desafio === undefined ? "Repetir" : "Treinar outra vez", "com-icone");
     repetir.prepend(iconeReiniciar());
     repetir.addEventListener("click", () => {
       this.novaTentativa();
@@ -992,7 +1005,21 @@ export class PuzzleScreen {
       principal = seguinte;
     }
 
-    this.elFim.replaceChildren(cabeca, tempo, detalhe, this.marcaDoRecorde(), acoes);
+    const aoPartilhar = desafio?.aoPartilhar;
+    if (aoPartilhar !== undefined) {
+      principal = botaoPartilhar(aoPartilhar);
+      acoes.appendChild(principal);
+    }
+
+    this.elFim.replaceChildren(
+      cabeca,
+      tempo,
+      detalhe,
+      desafio === undefined
+        ? this.marcaDoRecorde()
+        : elemento("div", "recorde fim-desafio", desafio.etiqueta),
+      acoes,
+    );
 
     /*
      * Quem jogou por teclado continua no teclado: o foco passa para a ação

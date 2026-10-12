@@ -279,7 +279,7 @@ export class ComoJogarScreen {
       ],
       [
         "Desafio do dia",
-        "Todos os dias, um Contra-Relógio e um Survival iguais para toda a gente. Conta a primeira tentativa de cada um; depois é treino, com os mesmos tabuleiros. No fim, partilha o resultado — e não deixes partir a sequência de dias.",
+        "Todos os dias, um Puzzle, um Contra-Relógio e um Survival iguais para toda a gente. Conta a primeira tentativa de cada um; depois é treino, com os mesmos tabuleiros. No fim, partilha o resultado — e não deixes partir a sequência de dias.",
       ],
     ];
 

@@ -7,6 +7,7 @@
  * aconteceu.
  *
  *   DiceToSeven · Desafio #3 · 14 out
+ *   🧩 Puzzle: 1:23.4 · ★ perfeito
  *   ⏱️ Contra-Relógio: 1240 pontos · 14 tabuleiros
  *   🧱 Survival: 3:42.1 · 18 linhas
  *   🔥 3 dias seguidos
@@ -22,6 +23,13 @@ const MESES = [
   "jan", "fev", "mar", "abr", "mai", "jun",
   "jul", "ago", "set", "out", "nov", "dez",
 ] as const;
+
+/** O selo do puzzle, com o glifo da grelha de níveis. */
+const SELO_PARTILHADO = {
+  perfect: "★ perfeito",
+  clean: "◆ limpo",
+  completed: "concluído",
+} as const;
 
 /** `2026-10-14` → `14 out`. */
 export function dataCurta(data: string): string {
@@ -43,6 +51,12 @@ export function textoDoDesafio(
   sequencia: number,
 ): string {
   const linhas = [`DiceToSeven · Desafio #${String(numeroDoDia(data))} · ${dataCurta(data)}`];
+
+  const puzzle = dia.puzzle;
+  if (puzzle?.estado === "feito") {
+    const r = puzzle.resultado;
+    linhas.push(`🧩 Puzzle: ${relogio(r.tempoMs)} · ${SELO_PARTILHADO[r.selo]}`);
+  }
 
   const tempo = dia.tempo;
   if (tempo?.estado === "feito") {

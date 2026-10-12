@@ -49,6 +49,7 @@ describe("rotas", () => {
     { ecra: "jogo", banda: "meio-joker", nivel: 12 },
     { ecra: "tempo" },
     { ecra: "survival", seed: 20260822 },
+    { ecra: "desafio", modo: "puzzle" },
     { ecra: "desafio", modo: "tempo" },
     { ecra: "desafio", modo: "survival" },
     { ecra: "definicoes" },
@@ -118,6 +119,7 @@ describe("rotas", () => {
   it("o Desafio do Dia tem endereço por modo, e sem data", () => {
     expect(paraHash({ ecra: "desafio", modo: "tempo" })).toBe("#/desafio/contrarrelogio");
     expect(paraHash({ ecra: "desafio", modo: "survival" })).toBe("#/desafio/survival");
+    expect(paraHash({ ecra: "desafio", modo: "puzzle" })).toBe("#/desafio/puzzle");
 
     // Um modo que não existe — ou uma data de outro dia — é a Home.
     expect(deHash("#/desafio")).toEqual({ ecra: "home" });

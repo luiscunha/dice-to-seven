@@ -26,6 +26,7 @@ import {
   partilhar,
   textoDoDesafio,
 } from "../src/ui/partilha";
+import { PuzzleScreen } from "../src/ui/PuzzleScreen";
 import { SurvivalScreen } from "../src/ui/SurvivalScreen";
 import { TimeAttackScreen } from "../src/ui/TimeAttackScreen";
 
@@ -49,10 +50,14 @@ describe("o texto que se partilha", () => {
     resultado: { tempoMs: 222_100, limpou: false, linhas: 18 },
   } as const;
 
-  it("diz o número e o dia, e os dois resultados", () => {
-    expect(textoDoDesafio("2026-10-14", { tempo: TEMPO, survival: SURVIVAL }, 3)).toBe(
+  it("diz o número e o dia, e os três resultados — o puzzle primeiro", () => {
+    const PUZZLE = { estado: "feito", resultado: { tempoMs: 83_400, selo: "perfect" } } as const;
+    expect(
+      textoDoDesafio("2026-10-14", { puzzle: PUZZLE, tempo: TEMPO, survival: SURVIVAL }, 3),
+    ).toBe(
       [
         "DiceToSeven · Desafio #3 · 14 out",
+        "🧩 Puzzle: 1:23.4 · ★ perfeito",
         "⏱️ Contra-Relógio: 1240 pontos · 14 tabuleiros",
         "🧱 Survival: 3:42.1 · 18 linhas",
         "🔥 3 dias seguidos",
@@ -151,8 +156,10 @@ describe("o cartão do Desafio do Dia", () => {
         data: "14 out",
         sequencia: 0,
         dados: [1, 2, 3, 4, 5, 6],
+        puzzle: { tipo: "por-jogar" },
         tempo: { tipo: "por-jogar" },
         survival: { tipo: "por-jogar" },
+        aoJogarPuzzle: () => undefined,
         aoJogarTempo: () => undefined,
         aoJogarSurvival: () => undefined,
         ...d,
@@ -197,6 +204,15 @@ describe("o cartão do Desafio do Dia", () => {
     expect(estado("tempo")).toBe("Interrompido");
     expect(estado("survival")).toBe("Jogar");
     outro.destruir();
+  });
+
+  it("**o Puzzle vem primeiro na lista do dia**", () => {
+    const ecra = abrir();
+    const modos = [...host.querySelectorAll<HTMLElement>(".home-desafio-modo")].map(
+      (b) => b.dataset["modo"],
+    );
+    expect(modos).toEqual(["puzzle", "tempo", "survival"]);
+    ecra.destruir();
   });
 
   it("tocar num desafio joga-o", () => {
@@ -361,6 +377,46 @@ describe("o Survival do Dia", () => {
 
     [...(popup?.querySelectorAll<HTMLElement>(".btn") ?? [])][1]?.click();
     expect(aoRecomecar).toHaveBeenCalledWith(5);
+    ecra.destruir();
+  });
+});
+
+/* ─── O Puzzle do Dia ─────────────────────────────────────────────────────── */
+
+describe("o Puzzle do Dia", () => {
+  /** Uma jogada: 3+4. */
+  const NIVEL: Level = { id: "denso-000099", seed: 99, board: [[3], [4]], solution: [] };
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("o fim diz o desafio em vez do recorde, oferece partilhar, e repetir é treinar", async () => {
+    const aoTerminar = vi.fn();
+    const ecra = new PuzzleScreen(host, NIVEL, {
+      titulo: "Desafio #3",
+      desafio: { etiqueta: "Desafio #3", aoPartilhar: () => Promise.resolve("copiado") },
+      aoTerminar,
+    });
+
+    for (const p of [0, 64]) {
+      host
+        .querySelector(`.tabuleiro .peca[data-pos="${String(p)}"]`)
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    }
+    await vi.advanceTimersByTimeAsync(2_000);
+
+    expect(aoTerminar).toHaveBeenCalledWith(expect.objectContaining({ selo: "perfect" }));
+
+    const fim = host.querySelector(".fim");
+    expect(fim?.querySelector(".fim-desafio")?.textContent).toBe("Desafio #3");
+    const botoes = [...(fim?.querySelectorAll(".btn") ?? [])].map((b) => b.textContent);
+    expect(botoes).toEqual(["Treinar outra vez", "Partilhar"]);
     ecra.destruir();
   });
 });
