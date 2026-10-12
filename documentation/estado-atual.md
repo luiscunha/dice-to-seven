@@ -180,6 +180,9 @@ invalida o que essa pessoa jogou:
   `perito` são 15 jogadas com a primeira fatal à décima segunda. Não é afinável:
   em 250 candidatos, o melhor está nos 65%. A ramificação de 33 grupos por jogada
   não deixa errar cedo. Ver "O que fica por decidir".
+  - Medido depois: os ~78% são quando o jogador **dá pelo** erro; o erro em si
+    comete-se a meio do nível. A contagem decrescente foi testada contra isto e
+    não passa como está. Ver "A contagem decrescente".
 
 ---
 
@@ -652,6 +655,94 @@ o anel de seleção já usava, escrito no próprio ficheiro.
 A moldura do gelo é por dentro e a da seleção é por fora, portanto coexistem sem
 competir — e têm de coexistir, porque uma peça gelada selecionada é o caso
 normal: é assim que ela sai.
+
+---
+
+## A contagem decrescente — medida, e não passa como está
+
+A proposta: uma peça com um número, por exemplo 3, tem de sair numa das
+próximas 3 jogadas. Atacava o problema dos ~78%: obrigar a decidir cedo. Ficou
+combinado medir antes de construir, só no pipeline, com o critério fixado antes:
+o momento em que o jogador dá pelo erro tem de descer para menos de metade do
+nível, e o piso de justiça tem de continuar a aceitar níveis suficientes.
+
+O protótipo está em `packages/tools/src/contagem.ts` e mede-se com
+`tsx packages/tools/src/medir-contagem.ts` (~7 min em 15 workers). A contagem
+escolhe-se sobre o pack publicado, a partir da solução guardada (sai na jogada
+*k* → contagem *k* + folga), e passa a ida-e-volta e o piso de justiça com as
+marcas e a contagem. A engine não mudou.
+
+### Os 78% são quando se dá pelo erro, não quando se comete
+
+A `firstFatalDepth` do pack mede onde o jogo ao calhas **bloqueia**. Encontrando,
+em cada playout, a jogada exata depois da qual já não há saída:
+
+| banda | erro cometido | dá por isso |
+|---|---|---|
+| avancado | 52% do nível | 78% |
+| perito | 46% | 80% |
+
+No `perito` são ~6 jogadas entre o erro e o bloqueio. O problema não é só o
+jogador errar tarde — é **o erro só se ver muito depois**, e por isso ler-se como
+azar.
+
+### Numa peça que já se pode tirar, a contagem é uma dica
+
+A primeira medição parecia um êxito: com folga 1, o momento de dar pelo erro
+caía de 78% para 48% no `avancado` e de 79% para 42% no `perito`. Mas 26 das 27
+contagens escolhidas estavam em peças que **já se podiam tirar na primeira
+jogada** — com ~33 jogadas por posição quase todas as peças entram nalgum grupo
+logo no início. O jogo ao calhas ignora o número; uma pessoa tira a peça logo, e
+o piso garante que a primeira jogada é sempre segura.
+
+Medido com um jogador **atento** — tira a peça da contagem logo que pode, e de
+resto joga ao calhas:
+
+| `avancado`, 15 níveis | sobrevivência | erro | dá por isso |
+|---|---|---|---|
+| sem contagem | 28,6% | 53,7% | 78,2% |
+| contagem, jogador ao calhas | 8,4% | 40,0% | 48,2% |
+| contagem, jogador **atento** | 29,2% | 52,6% | **75,7%** |
+
+No `perito`, igual: 79,0% sem contagem, 79,3% com ela. **Para quem lê o número,
+a contagem não faz nada.** É o mesmo defeito das soldas que somavam 7.
+
+### Numa peça enterrada funciona — mas quase nunca cabe
+
+Só com peças que não se podem tirar no início, e a folga que o piso exigir (1 a
+4), o jogador atento dá pelo erro aos **52%** em vez de 77% no `avancado`, e os
+erros no primeiro terço do nível passam de 6% para 40%. É a mecânica a fazer o
+que devia.
+
+Só que só cabe em **3 dos 30** níveis do `avancado` e **1 dos 30** do `perito`.
+Faltam primeiro as peças: uma peça enterrada que a solução tire entre a 3.ª
+jogada e o meio do nível existe em 9 dos 30 níveis do `avancado` e 6 dos 30 do
+`perito` (0,37 e 0,27 por nível). Das que existem, o piso de justiça recusa a
+maioria: se as duas primeiras jogadas podem ser quaisquer, sobra pouco tempo
+para desenterrar a peça.
+
+### O que fica decidido
+
+- **Não entra no jogo assim.** Acrescentada a níveis já feitos, ou é uma dica,
+  ou quase nunca cabe.
+- O único caminho que resta é o gerador construir o nível **à volta** de uma
+  peça enterrada, filtrando os candidatos que a admitem. Com 4 níveis medidos,
+  o ganho para o jogador atento ainda não está provado, e o custo seria aceitar
+  uma fração pequena de candidatos que já são caros.
+- Os números do protótipo valem para qualquer marca futura: **uma regra tem de
+  ser medida com um jogador que a lê**, não só com o jogo ao calhas.
+
+### O piso de justiça não conta com as marcas
+
+Apareceu de lado. O piso corre no pipeline **antes** de as soldas e o gelo serem
+escolhidos, e o `fairnessFloor` da engine não as recebe. Contando com elas, em
+**15 dos 30** níveis do `avancado` há duas primeiras jogadas legais que deixam o
+nível sem solução — confirmado com o `isSolvable` da engine. No `perito`, a
+20 000 estados, o piso com marcas dá 5 sim e 25 inconclusivos.
+
+A garantia central não é tocada: a solução guardada continua legal. O que falha
+é a promessa do piso, de que as primeiras jogadas são seguras qualquer que seja
+a escolha. Fica por corrigir à parte.
 
 ---
 
