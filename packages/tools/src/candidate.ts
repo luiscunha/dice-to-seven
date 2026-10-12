@@ -246,6 +246,18 @@ export function avaliar(
   /*
    * As marcas entram aqui, no fim, e não no gerador: dependem da solução, que só
    * existe depois de o nível estar construído e aceite. Ver `marcasDoNivel`.
+   *
+   * ── E entram depois do piso de justiça, de propósito ──
+   *
+   * O piso verificou o tabuleiro **sem marcas**. Com elas, as primeiras jogadas
+   * podem ser fatais: um 1 gelado num tabuleiro com dois 6, e duas jogadas `1+6`
+   * à vista, deixam-no preso à segunda jogada. Não é um defeito a corrigir — é a
+   * armadilha que o gelo existe para criar, e vê-se antes de se cair nela. Medido
+   * e decidido: metade do avançado tem uma sequência assim. Ver
+   * `estado-atual.md`, «O piso de justiça não vê as marcas».
+   *
+   * A garantia central não é tocada: a solução guardada respeita as marcas, e o
+   * `verify` confirma-o nível a nível.
    */
   const marcas = marcasDoNivel(gerado, band, seed);
 
