@@ -785,6 +785,35 @@ describe("a peça-bomba", () => {
     expect(vistas).toEqual(new Set([packed(1, 0), packed(2, 0)]));
   });
 
+  /*
+   * Com gelo: `1 5 1` soma 7, mas com o 5 gelado não é jogada — uma gelada só
+   * sai a par. As únicas peças que se podem tirar já são o 3 e o 4.
+   */
+  it("**conta com o gelo**: só arma peças de jogadas legais, e nunca a gelada", () => {
+    const comGelo = (board: Board, gelo: readonly number[]): TimeAttackState => ({
+      ...startTimeAttack({ ...level(board), gelo }, 0),
+      boardsCleared: DEFAULT_TIME_ATTACK.bomba.desdeTabuleiro,
+    });
+
+    const vistas = new Set<number>();
+    for (let seed = 0; seed < 100; seed++) {
+      const s = armarBomba(
+        comGelo([[1], [5], [1], [3], [4]], [packed(1, 0)]),
+        0,
+        mulberry32(seed),
+        sempre,
+      );
+      if (s.bomba !== undefined) vistas.add(s.bomba.at);
+    }
+    expect(vistas).toEqual(new Set([packed(3, 0), packed(4, 0)]));
+
+    // 5+2 é legal com o 5 gelado, mas a bomba fica no 2, nunca no 5.
+    for (let seed = 0; seed < 100; seed++) {
+      const s = armarBomba(comGelo([[5], [2]], [packed(0, 0)]), 0, mulberry32(seed), sempre);
+      expect(s.bomba?.at).toBe(packed(1, 0));
+    }
+  });
+
   it("a mesma seed arma sempre a mesma peça", () => {
     const a = armarBomba(elegivel(TORRE), 0, mulberry32(42), sempre);
     const b = armarBomba(elegivel(TORRE), 0, mulberry32(42), sempre);

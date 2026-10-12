@@ -2456,11 +2456,7 @@ body::before {
   justify-self: end;
 }
 
-/*
- * A coluna da esquerda leva a seta e, a partir do sétimo tabuleiro, o salto.
- * Dois botões de 44px e a folga entre eles cabem na coluna mesmo a 320px —
- * a grelha dá-lhe a mesma largura que à do placar, e o relógio fica ao meio.
- */
+/* A coluna da esquerda leva a seta. O salto passou para o rodapé. */
 .tempo-acoes {
   display: flex;
   align-items: center;
@@ -2469,26 +2465,60 @@ body::before {
 }
 
 /*
- * O salto aparece com um pulso, uma vez: é uma regra nova a meio da corrida, e
- * um botão que surge em silêncio no canto passa despercebido até fazer falta.
+ * ── O salto, no rodapé ──
+ *
+ * O botão grande do modo, no sítio do «Puxar linha» do Survival: a largura
+ * toda, onde o polegar o encontra sem olhar.
  */
-.tempo-acoes > .btn.redondo.novo {
-  animation: aparecer-salto 700ms var(--suavizacao);
+.tempo .rodape .acoes > .btn.saltar {
+  flex: 1 1 auto;
+  justify-content: center;
 }
 
-@keyframes aparecer-salto {
+/*
+ * Fechado a cadeado, não apagado. O `:disabled` genérico tira-lhe opacidade e
+ * lia-se como avariado; aqui é um botão neutro, de tinta discreta, e o
+ * cadeado diz que ainda não abre.
+ */
+.tempo .rodape .btn.saltar:disabled {
+  opacity: 1;
+  background: var(--surface-alt);
+  border-color: var(--line);
+  color: var(--ink-muted);
+  font-weight: 500;
+}
+
+/*
+ * Abre com um pulso, uma vez: é uma regra nova a meio da corrida, e um botão
+ * que muda em silêncio passa despercebido até fazer falta.
+ */
+.tempo .rodape .btn.saltar.novo {
+  animation: abrir-salto 700ms var(--suavizacao);
+}
+
+@keyframes abrir-salto {
   from {
-    scale: 0.6;
+    scale: 0.94;
     box-shadow: 0 0 0 0 var(--accent);
   }
   40% {
-    scale: 1.12;
-    box-shadow: 0 0 0 6px rgb(27 107 98 / 0.25);
+    scale: 1.03;
+    box-shadow: 0 0 0 7px rgb(27 107 98 / 0.25);
   }
   to {
     scale: 1;
     box-shadow: 0 0 0 0 transparent;
   }
+}
+
+/*
+ * Num beco sem saída, o salto é a única resposta, e ganha o anel que o
+ * Survival dava ao «Puxar linha» quando não havia jogadas.
+ */
+.tempo .palco.preso ~ .rodape .btn.saltar:not(:disabled) {
+  box-shadow:
+    0 0 0 2px var(--ground),
+    0 0 0 4px var(--accent);
 }
 
 /*
@@ -2509,7 +2539,7 @@ body::before {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .tempo-acoes > .btn.redondo.novo {
+  .tempo .rodape .btn.saltar.novo {
     animation: none;
   }
 }
@@ -2596,6 +2626,13 @@ body::before {
 
 .ganho.perda.grande {
   font-size: 22px;
+}
+
+/* Uma regra, não uma perda: na cor da tinta, e sem pressa de sair. */
+.ganho.aviso {
+  color: var(--ink);
+  font-size: 14px;
+  white-space: nowrap;
 }
 
 /*
@@ -3813,17 +3850,6 @@ body::before {
     grid-area: rodape;
     justify-content: flex-end;
     min-width: 0;
-  }
-
-  /*
-   * O Contra-Relógio deixou de ter rodapé — sair está no cabeçalho, e a soma
-   * corrente saiu. Com as três colunas, a da direita ficava vazia e o tabuleiro
-   * jogava-se com menos `--calha` de largura por nada. Duas colunas, e o palco
-   * fica com o que sobra.
-   */
-  .ecra.jogo.tempo {
-    grid-template-columns: var(--calha) minmax(0, 1fr);
-    grid-template-areas: "topo palco";
   }
 
   /* As ações empilham-se: a calha é estreita, e cada uma fica com a largura toda. */

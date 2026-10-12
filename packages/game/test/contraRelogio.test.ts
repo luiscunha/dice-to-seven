@@ -12,7 +12,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Board, Level, Packed } from "@dicetoseven/engine";
-import { findAllGroups } from "@dicetoseven/engine";
+import { findAllGroups, packed } from "@dicetoseven/engine";
 
 import { DEFAULT_TIME_ATTACK } from "../src/session/TimeAttackSession";
 import type { OpcoesTimeAttack } from "../src/ui/TimeAttackScreen";
@@ -179,7 +179,7 @@ describe("o salto, no ecrã", () => {
     });
 
   const botaoSaltar = (): HTMLButtonElement | null =>
-    host.querySelector<HTMLButtonElement>('.tempo-acoes [aria-label^="saltar"]');
+    host.querySelector<HTMLButtonElement>(".rodape .btn.saltar");
 
   /** Limpa um tabuleiro `[[3],[4]]` e espera que o seguinte entre. */
   const limparSeguro = async (): Promise<void> => {
@@ -188,16 +188,42 @@ describe("o salto, no ecrã", () => {
     await vi.runOnlyPendingTimersAsync();
   };
 
-  it("**só aparece no primeiro tabuleiro sem garantia** — o sétimo", async () => {
+  it("**está no rodapé desde o início, fechado a cadeado até ao sétimo**", async () => {
     ecra = abrirCom(ESCADA, [LIVRE]);
 
     for (let i = 0; i < ESCADA.length; i++) {
-      expect(botaoSaltar()?.hidden).toBe(true);
+      const b = botaoSaltar();
+      expect(b?.hidden).toBe(false);
+      expect(b?.disabled).toBe(true);
+      expect(b?.textContent).toBe("Saltar tabuleiro");
+      expect(b?.getAttribute("aria-label")).toContain("a partir do 7.º tabuleiro");
+      expect(b?.querySelector(".icone-cadeado")).not.toBeNull();
       await limparSeguro();
     }
 
-    expect(botaoSaltar()?.hidden).toBe(false);
+    // O sétimo: abre, com o custo, e pulsa ao abrir.
+    const b = botaoSaltar();
+    expect(b?.disabled).toBe(false);
+    expect(b?.textContent).toBe("Saltar (−10s)");
+    expect(b?.querySelector(".icone-saltar")).not.toBeNull();
+    expect(b?.classList.contains("novo")).toBe(true);
     expect(host.querySelector(".meta")?.textContent).toContain("6 tabuleiros");
+  });
+
+  it("fechado, não salta nada", () => {
+    ecra = abrirCom(ESCADA, [LIVRE]);
+    botaoSaltar()?.click();
+    expect(relogio()).toBe("30");
+  });
+
+  it("num pack sem tabuleiros livres não aparece — o cadeado nunca abria", () => {
+    ecra = abrirCom(ESCADA, []);
+    expect(botaoSaltar()?.hidden).toBe(true);
+  });
+
+  it("já não está no cabeçalho", () => {
+    ecra = abrirCom([], [LIVRE]);
+    expect(host.querySelector('.tempo-topo [aria-label^="saltar"]')).toBeNull();
   });
 
   it("saltar custa 10 s, e o tabuleiro seguinte entra já", () => {
@@ -237,6 +263,36 @@ describe("o salto, no ecrã", () => {
     expect(relogio()).toBe("30");
   });
 
+  /*
+   * `1 5 1` com o 5 gelado: soma 7, e não sai — uma gelada só sai a par. O
+   * terceiro toque é recusado pela regra do gelo, e não por passar de 7.
+   */
+  const GELADO: Level = {
+    id: "tempo-livre-gelo",
+    seed: 3,
+    board: [[1], [5], [1], [3], [4]],
+    gelo: [packed(1, 0)],
+    solution: [],
+  };
+
+  it("**os tabuleiros livres trazem as peças geladas**", () => {
+    ecra = abrirCom([], [GELADO]);
+    const gelada = host.querySelector<HTMLElement>(".tabuleiro .peca.gelada");
+    expect(gelada?.dataset["pos"]).toBe(String(packed(1, 0)));
+  });
+
+  it("o gelo recusa o toque, diz porquê — e não custa tempo", () => {
+    ecra = abrirCom([], [GELADO]);
+
+    clicar(packed(0, 0));
+    clicar(packed(1, 0));
+    clicar(packed(2, 0));
+
+    expect(host.querySelector(".ganho.aviso")?.textContent).toBe("❄ só sai a par");
+    expect(host.querySelector(".peca.recusada")).not.toBeNull();
+    expect(relogio()).toBe("30");
+  });
+
   it("o fim diz quantos foram saltados", () => {
     ecra = abrirCom([], [LIVRE]);
     botaoSaltar()?.click();
@@ -246,5 +302,7 @@ describe("o salto, no ecrã", () => {
     expect(host.querySelector(".fim .detalhe")?.textContent).toBe(
       "0 tabuleiros limpos · 1 saltado",
     );
+    // Com a corrida acabada, o botão fica, mas não salta.
+    expect(botaoSaltar()?.disabled).toBe(true);
   });
 });

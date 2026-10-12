@@ -1011,9 +1011,27 @@ uma segunda banda, **`tempo-livre`**: 48 níveis de 21 a 39 peças, em quatro
 degraus, até 7×7. Larga a garantia de não bloquear — **não a de ter solução**:
 passa pela ida-e-volta e pelo piso de justiça a 2, como tudo o resto.
 
-Do sétimo tabuleiro em diante, o modo oferece o **salto**: um botão ao lado da
-seta de sair, por **10 s**. Num tabuleiro sem jogadas abre-se no palco o painel
-«Sem jogadas», com o salto como botão principal.
+Do sétimo tabuleiro em diante, o modo oferece o **salto**, por **10 s**. Num
+tabuleiro sem jogadas abre-se no palco o painel «Sem jogadas», com o salto como
+botão principal.
+
+**O botão vive no rodapé**, no sítio do «Puxar linha» do Survival, à largura
+toda. Esteve ao lado da seta de sair, redondo e só com o ícone, escondido até
+ao sétimo tabuleiro — passava despercebido, e aparecia do nada. Agora **está lá
+desde o início, fechado a cadeado** e só com «Saltar tabuleiro» (o nome
+acessível diz a partir de quando abre); abre com um pulso quando o salto passa a existir, e ganha um anel
+num beco sem saída. Estar sempre lá também deixa o tabuleiro em paz: um rodapé
+que aparecesse a meio encolhia-o no momento em que ele começa a ser grande.
+Num pack sem tabuleiros livres o botão não aparece — o cadeado nunca abria.
+
+**E há peças geladas.** A banda `tempo-livre` passou a ter `gelo: 2`,
+escolhido sobre a solução guardada como no `perito`, sem regerar um tabuleiro
+(`remarcar.ts`): 27 dos 48 níveis têm duas peças geladas, 13 têm uma, e 8 não
+têm nenhuma — a solução deles não tem um único par, e uma gelada só sai a par.
+`dice7 verify`: 288 níveis, 0 falhas. No jogo, o toque que o gelo recusa abana
+a peça e diz a regra («❄ só sai a par», «❄ não sai com gelo»), **sem custar
+tempo**: é uma regra a aprender, não um descuido como passar de 7. A bomba
+conta com o gelo — só arma peças de jogadas legais — e nunca vai numa gelada.
 
 **O que a medição decidiu** (80 candidatos por janela):
 

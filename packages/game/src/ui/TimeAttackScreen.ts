@@ -24,6 +24,7 @@ import type {
   TimeAttackConfig,
   TimeAttackState,
 } from "../session/TimeAttackSession";
+import type { TapRejection } from "../session/GameSession";
 import { isBlocked } from "../session/GameSession";
 import {
   DEFAULT_TIME_ATTACK,
@@ -49,7 +50,7 @@ import {
 import { anunciar } from "./anuncio";
 import { BoardView } from "./BoardView";
 import { botao, botaoRedondo, confirmar, elemento, reanimar } from "./dom";
-import { iconeReiniciar, iconeSaltar, iconeVoltar } from "./icones";
+import { iconeCadeado, iconeReiniciar, iconeSaltar, iconeVoltar } from "./icones";
 
 /** De quanto em quanto o relógio se repinta. Décimos chegam, e custam pouco. */
 const PASSO_RELOGIO = 100;
@@ -143,6 +144,8 @@ export class TimeAttackScreen {
   private readonly elFim: HTMLElement;
   private readonly elPreso: HTMLElement;
   private readonly btSaltar: HTMLButtonElement;
+  /** O que o botão de saltar está a mostrar, para só o redesenhar quando muda. */
+  private estadoSalto: "fechado" | "aberto" | undefined;
 
   private estado: TimeAttackState;
   private readonly config: TimeAttackConfig;
@@ -200,31 +203,8 @@ export class TimeAttackScreen {
       this.pedirParaSair();
     });
 
-    /*
-     * ── O salto vive ao lado da saída ──
-     *
-     * No cabeçalho e não num rodapé: o modo tirou o rodapé para dar o espaço
-     * ao tabuleiro, e um rodapé que aparecesse ao sétimo tabuleiro encolhia o
-     * tabuleiro no momento exato em que ele começa a ser grande. Escondido, o
-     * botão não ocupa nada; aparecido, cabe na coluna da seta, que a grelha do
-     * cabeçalho já reserva com a mesma largura da do placar — o relógio não
-     * sai do meio.
-     *
-     * Redondo e só com o ícone, porque a 320px não cabe mais. O custo diz-se
-     * no nome acessível, e diz-se por extenso no painel de beco sem saída, que
-     * é onde o salto é a resposta.
-     */
-    this.btSaltar = botaoRedondo(
-      iconeSaltar(),
-      `saltar o tabuleiro, custa ${String(this.config.saltarMs / 1000)} segundos`,
-      () => {
-        this.saltar();
-      },
-    );
-    this.btSaltar.hidden = true;
-
     const esquerda = elemento("div", "tempo-acoes");
-    esquerda.append(sair, this.btSaltar);
+    esquerda.append(sair);
 
     this.elRelogio = elemento("div", "relogio");
     this.elRelogio.setAttribute("role", "timer");
@@ -255,18 +235,35 @@ export class TimeAttackScreen {
     this.palco.appendChild(this.elPreso);
 
     /*
-     * ── Sem rodapé ──
+     * ── O salto vive no rodapé, como o «Puxar linha» do Survival ──
      *
-     * Tinha um, e tinha lá dentro uma coisa só: «Toca nas peças para somar 7»,
-     * que passava a «4 / 7» com a seleção aberta. Andaime a mais para um modo
-     * contra o relógio — a conta está nas peças acesas, e relê-la em texto no
-     * fundo do ecrã é tempo gasto a olhar para onde não se joga.
+     * Esteve no cabeçalho, redondo e só com o ícone, escondido até ao sétimo
+     * tabuleiro. Passava despercebido no sítio onde o polegar não está, e
+     * aparecia do nada a meio da corrida. Agora é o botão grande do rodapé, no
+     * mesmo sítio que o dos outros modos, e **está lá desde o início, fechado
+     * a cadeado**: o jogador sabe que existe e quando abre, antes de precisar
+     * dele.
      *
-     * Sem ele o rodapé ficava vazio a ocupar uma linha da grelha, e na
-     * composição deitada uma calha inteira. Sai o elemento, e o tabuleiro fica
-     * com o espaço — que num modo em que os tabuleiros crescem é o que vale.
+     * Estar lá desde o início é também o que deixa o tabuleiro em paz. Um
+     * rodapé que aparecesse ao sétimo tabuleiro encolhia-o no momento exato em
+     * que ele começa a ser grande; um que está sempre lá tira a mesma altura do
+     * princípio ao fim, e a peça mede-se uma vez.
+     *
+     * (Teve um rodapé antes, com «Toca nas peças para somar 7» e a soma
+     * corrente. Saiu por ser andaime; o que volta é uma ação.)
      */
-    this.raiz.append(topo, this.palco);
+    const rodape = elemento("footer", "rodape");
+    const acoes = elemento("div", "acoes");
+    this.btSaltar = botao("", "primario com-icone saltar", () => {
+      this.saltar();
+    });
+    // Nasce fechado: `pintarSalto` abre-o quando for a altura. Nascer aberto
+    // fazia-o piscar na cor do primário antes da primeira pintura.
+    this.btSaltar.disabled = true;
+    acoes.append(this.btSaltar);
+    rodape.append(acoes);
+
+    this.raiz.append(topo, this.palco, rodape);
     host.replaceChildren(this.raiz);
 
     this.view = new BoardView(this.palco, {
@@ -293,7 +290,7 @@ export class TimeAttackScreen {
     this.view.dimensionarPara(maiorTabuleiro([...opcoes.niveis, ...(opcoes.livres ?? [])]), {
       caixaPorTabuleiro: true,
     });
-    this.view.montar(primeiro.board);
+    this.view.montar(primeiro.board, this.estado.game.marcas);
 
     this.cronometro = setInterval(() => {
       this.tique();
@@ -395,6 +392,7 @@ export class TimeAttackScreen {
     }
 
     if (r.penalizado) this.multar(p);
+    this.avisarGelo(r.state.game.rejection, p);
 
     const grupo = r.state.game.lastMove;
 
@@ -440,7 +438,8 @@ export class TimeAttackScreen {
       this.rng,
       this.config,
     );
-    this.view.montar(seguinte.board);
+    // Com as marcas: do sétimo tabuleiro em diante há peças geladas.
+    this.view.montar(seguinte.board, this.estado.game.marcas);
   }
 
   /**
@@ -497,6 +496,27 @@ export class TimeAttackScreen {
     this.anunciar(`−${segundos(this.config.penalizacaoMs)}`, [p], "perda");
     this.view.recusarPeca(p);
     reanimar(this.elRelogio, "perdeu");
+  }
+
+  /**
+   * O gelo recusou o toque: a peça abana, e a regra sobe dela em duas
+   * palavras. Não custa tempo — é uma regra a aprender, e não um descuido como
+   * passar de 7 —, mas sem o aviso o toque recusado lia-se como defeito.
+   *
+   * As mesmas duas regras que a campanha diz por extenso na linha de aviso,
+   * que este modo não tem.
+   */
+  private avisarGelo(rejeicao: TapRejection | undefined, p: Packed): void {
+    const texto =
+      rejeicao === "gelo-so-a-par"
+        ? "❄ só sai a par"
+        : rejeicao === "gelo-com-gelo"
+          ? "❄ não sai com gelo"
+          : undefined;
+    if (texto === undefined) return;
+
+    this.view.recusarPeca(p);
+    this.anunciar(texto, [p], "aviso");
   }
 
   /* ─── relógio ───────────────────────────────────────────────────────────── */
@@ -565,17 +585,49 @@ export class TimeAttackScreen {
   /**
    * O botão de saltar e o painel de beco sem saída.
    *
-   * O botão aparece no primeiro tabuleiro que pode bloquear, e **pulsa ao
-   * aparecer**: é uma regra nova a meio da corrida, e um botão que surge em
-   * silêncio no canto do cabeçalho passa despercebido até ao dia em que faz
-   * falta.
+   * O botão está sempre no rodapé. **Fechado a cadeado** até ao primeiro
+   * tabuleiro que pode bloquear, só com «Saltar tabuleiro» — o cadeado diz que
+   * ainda não abre, e o nome acessível diz quando; aberto daí em diante, com o
+   * custo. Ao abrir **pulsa**: é uma regra nova a meio da
+   * corrida, e o pulso é o que diz que mudou.
+   *
+   * Num pack sem tabuleiros livres o salto nunca abre, e o botão nem aparece —
+   * um cadeado que não abre nunca é uma promessa falsa.
    */
   private pintarSalto(): void {
     const pode =
       !this.terminado && podeSaltar(this.estado, Date.now(), this.config);
+    const abre = Number.isFinite(this.config.saltoDesde);
 
-    if (pode && this.btSaltar.hidden) reanimar(this.btSaltar, "novo");
-    this.btSaltar.hidden = !pode;
+    this.btSaltar.hidden = !pode && !abre;
+    this.btSaltar.disabled = !pode;
+
+    const estado = pode || this.terminado ? "aberto" : "fechado";
+    if (estado !== this.estadoSalto) {
+      const custo = `−${String(this.config.saltarMs / 1000)}s`;
+      const ordinal = `${String(this.config.saltoDesde + 1)}.º`;
+
+      if (estado === "aberto") {
+        this.btSaltar.replaceChildren(iconeSaltar(), `Saltar (${custo})`);
+        this.btSaltar.setAttribute(
+          "aria-label",
+          `saltar o tabuleiro, custa ${String(this.config.saltarMs / 1000)} segundos`,
+        );
+      } else {
+        this.btSaltar.replaceChildren(iconeCadeado(), "Saltar tabuleiro");
+        this.btSaltar.setAttribute(
+          "aria-label",
+          `saltar o tabuleiro: disponível a partir do ${ordinal} tabuleiro`,
+        );
+      }
+
+      this.btSaltar.dataset["salto"] = estado;
+      // Pulsa ao abrir, e só aí: no arranque já está fechado, e no fim não abre.
+      if (estado === "aberto" && this.estadoSalto === "fechado" && pode) {
+        reanimar(this.btSaltar, "novo");
+      }
+      this.estadoSalto = estado;
+    }
 
     const preso = pode && isBlocked(this.estado.game);
     this.palco.classList.toggle("preso", preso);

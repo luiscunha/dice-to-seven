@@ -106,6 +106,16 @@ export const iconeSeguir = (): SVGElement =>
 export const iconeSaltar = (): SVGElement =>
   icone("icone-saltar", ["M5.5 6.5 11 12l-5.5 5.5", "M11 6.5l5.5 5.5-5.5 5.5", "M18.5 6v12"]);
 
+/**
+ * Um cadeado: o arco e o corpo. É o salto **antes** de existir — o botão está
+ * lá, e diz que ainda não abre.
+ */
+export const iconeCadeado = (): SVGElement =>
+  icone("icone-cadeado", [
+    "M6.5 11h11a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1z",
+    "M8.5 11V8a3.5 3.5 0 0 1 7 0v3",
+  ]);
+
 /** Fechar uma caixa. */
 export const iconeFechar = (): SVGElement =>
   icone("icone-fechar", ["M6.5 6.5l11 11", "M17.5 6.5l-11 11"]);
