@@ -43,7 +43,7 @@
  * **O Desafio do Dia é um cartão, e só um.** É a única coisa da Home que muda
  * todos os dias, e a razão de alguém a abrir amanhã — mas é um cartão entre os
  * outros, e não o ecrã. Diz o desafio de hoje, com o ícone e a cor do modo, e
- * em que pé está; o calendário do mês vive no ecrã do desafio.
+ * em que pé está; o trilho dos dias vive no ecrã do desafio.
  */
 
 import type { Cell } from "@dicetoseven/engine";
@@ -66,7 +66,7 @@ import { iconeDoModo, sinalDaSequencia } from "./DesafioScreen";
 import { NOME_DO_MODO } from "./partilha";
 
 /**
- * O cartão do Desafio do Dia na Home: só o de hoje. O calendário do mês vive
+ * O cartão do Desafio do Dia na Home: só o de hoje. O trilho dos dias vive
  * no ecrã do desafio (`DesafioScreen`).
  */
 export interface ResumoDoDesafio {

@@ -15,8 +15,7 @@ import {
   comecar,
   dataDe,
   diaAnterior,
-  diaDaSemana,
-  diasDoMes,
+  diasDoTrilho,
   escolherDoDia,
   estadoDoModo,
   guardarDesafios,
@@ -27,6 +26,7 @@ import {
   registar,
   seedDoDia,
   sequencia,
+  somarDias,
 } from "../src/session/desafio";
 import type { ProfileStorage } from "../src/session/progress";
 
@@ -63,27 +63,11 @@ describe("as datas", () => {
     expect(numeroDoDia("2027-10-12")).toBe(366);
   });
 
-  it("os dias do mês, do primeiro ao último — com os bissextos", () => {
-    const outubro = diasDoMes("2026-10-12");
-    expect(outubro).toHaveLength(31);
-    expect(outubro[0]).toBe("2026-10-01");
-    expect(outubro.at(-1)).toBe("2026-10-31");
-
-    expect(diasDoMes("2028-02-10")).toHaveLength(29);
-    expect(diasDoMes("2026-02-10")).toHaveLength(28);
-    expect(diasDoMes("2026-12-31").at(-1)).toBe("2026-12-31");
-  });
-
-  it("a semana começa na segunda", () => {
-    expect(diaDaSemana("2026-10-12")).toBe(0); // segunda, o #1
-    expect(diaDaSemana("2026-10-01")).toBe(3); // quinta
-    expect(diaDaSemana("2026-10-18")).toBe(6); // domingo
-
-    // E bate com o calendário do sistema, um ano inteiro.
-    for (let i = 0; i < 366; i++) {
-      const d = new Date(Date.UTC(2026, 0, 1 + i));
-      expect(diaDaSemana(d.toISOString().slice(0, 10))).toBe((d.getUTCDay() + 6) % 7);
-    }
+  it("somar dias atravessa meses e anos, para a frente e para trás", () => {
+    expect(somarDias("2026-10-31", 1)).toBe("2026-11-01");
+    expect(somarDias("2027-01-01", -1)).toBe("2026-12-31");
+    expect(somarDias("2028-02-28", 1)).toBe("2028-02-29");
+    expect(somarDias("2026-10-12", 0)).toBe("2026-10-12");
   });
 
   it("o dia anterior atravessa meses e anos", () => {
@@ -95,7 +79,7 @@ describe("as datas", () => {
 
 describe("um desafio por dia, à vez", () => {
   it("**Puzzle, Contra-Relógio, Survival**, e outra vez — o #1 é um Puzzle", () => {
-    const semana = diasDoMes("2026-10-12").slice(11, 18).map(modoDoDia);
+    const semana = Array.from({ length: 7 }, (_, i) => modoDoDia(somarDias("2026-10-12", i)));
     expect(semana).toEqual(["puzzle", "tempo", "survival", "puzzle", "tempo", "survival", "puzzle"]);
   });
 
@@ -111,6 +95,26 @@ describe("um desafio por dia, à vez", () => {
       const data = new Date(Date.UTC(2026, 9, 12 + i)).toISOString().slice(0, 10);
       expect(modoDoDia(data)).toBe(modos[i % 3]);
     }
+  });
+});
+
+describe("o trilho", () => {
+  it("**duas semanas para trás, hoje, e dois dias à frente**, do mais antigo ao mais recente", () => {
+    const dias = diasDoTrilho("2026-11-10");
+    expect(dias).toHaveLength(17);
+    expect(dias[0]).toBe("2026-10-27");
+    expect(dias[14]).toBe("2026-11-10");
+    expect(dias.at(-1)).toBe("2026-11-12");
+  });
+
+  it("os dois dias à frente fazem, com hoje, a rotação inteira", () => {
+    const modos = diasDoTrilho("2026-11-10").slice(-3).map(modoDoDia);
+    expect(new Set(modos).size).toBe(3);
+  });
+
+  it("começa no #1: antes dele não houve desafio", () => {
+    expect(diasDoTrilho("2026-10-12")).toEqual(["2026-10-12", "2026-10-13", "2026-10-14"]);
+    expect(diasDoTrilho("2026-10-15")[0]).toBe("2026-10-12");
   });
 });
 

@@ -149,20 +149,29 @@ export const MODOS_DO_DESAFIO: readonly ModoDoDesafio[] = ["puzzle", "tempo", "s
 export const modoDoDia = (data: string): ModoDoDesafio =>
   MODOS_DO_DESAFIO[resto(numeroDoDia(data) - 1, MODOS_DO_DESAFIO.length)] ?? "puzzle";
 
-/**
- * O dia da semana de `data`, a começar na segunda: 0 é segunda, 6 é domingo.
- * O dia 0 da contagem, 1 de janeiro de 1970, foi uma quinta-feira.
- */
-export const diaDaSemana = (data: string): number => resto(emDias(data) + 3, 7);
+/** O dia `n` dias depois de `data` — ou antes, com `n` negativo. */
+export const somarDias = (data: string, n: number): string => deDias(emDias(data) + n);
 
-/** Os dias do mês de `data`, do primeiro ao último. */
-export function diasDoMes(data: string): string[] {
-  const mes = data.slice(0, 7);
-  const primeiro = emDias(`${mes}-01`);
+/** Os dias que o trilho mostra para trás de hoje: duas semanas. */
+export const DIAS_PASSADOS_NO_TRILHO = 14;
+
+/**
+ * Os dias que o trilho mostra à frente de hoje: dois, que com hoje fazem a
+ * rotação inteira — os três modos sempre à vista.
+ */
+export const DIAS_FUTUROS_NO_TRILHO = 2;
+
+/**
+ * Os dias do trilho do desafio, do mais antigo ao mais recente: as últimas duas
+ * semanas, hoje, e os dois dias seguintes. Antes do #1 não houve desafio, e o
+ * trilho começa nele.
+ */
+export function diasDoTrilho(hoje: string): string[] {
   const dias: string[] = [];
 
-  for (let d = deDias(primeiro); d.startsWith(mes); d = deDias(primeiro + dias.length)) {
-    dias.push(d);
+  for (let n = -DIAS_PASSADOS_NO_TRILHO; n <= DIAS_FUTUROS_NO_TRILHO; n++) {
+    const data = somarDias(hoje, n);
+    if (numeroDoDia(data) >= 1) dias.push(data);
   }
 
   return dias;

@@ -116,6 +116,9 @@ export const iconeCadeado = (): SVGElement =>
     "M8.5 11V8a3.5 3.5 0 0 1 7 0v3",
   ]);
 
+/** O visto: um desafio do dia feito, no trilho. */
+export const iconeVisto = (): SVGElement => icone("icone-visto", ["M5 12.5l4.5 4.5L19 7.5"]);
+
 /**
  * Partilhar: a seta a sair da caixa — o desenho que os dois sistemas de
  * telemóvel já ensinaram.

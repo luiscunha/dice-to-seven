@@ -1909,7 +1909,7 @@ body::before {
 }
 
 .home-desafio::before,
-.desafio-bilhete::before {
+.desafio-faixa::before {
   content: "";
   position: absolute;
   inset: 0 0 auto;
@@ -2004,17 +2004,17 @@ body::before {
 /* ─── O modo do desafio: a cor e o ícone ──────────────────────────────────── */
 
 /* As cores dos modos, as mesmas dos cartões da Home, onde o desafio as usa. */
-:is(.home-desafio, .desafio-bilhete, .desafio-dia, .desafio-legenda-item)[data-modo="puzzle"] {
+:is(.home-desafio, .trilho-dia, .desafio-legenda-item)[data-modo="puzzle"] {
   --cor: var(--modo-puzzles);
   --tinta-modo: var(--modo-puzzles-tinta);
 }
 
-:is(.home-desafio, .desafio-bilhete, .desafio-dia, .desafio-legenda-item)[data-modo="tempo"] {
+:is(.home-desafio, .trilho-dia, .desafio-legenda-item)[data-modo="tempo"] {
   --cor: var(--modo-tempo);
   --tinta-modo: var(--modo-tempo-tinta);
 }
 
-:is(.home-desafio, .desafio-bilhete, .desafio-dia, .desafio-legenda-item)[data-modo="survival"] {
+:is(.home-desafio, .trilho-dia, .desafio-legenda-item)[data-modo="survival"] {
   --cor: var(--modo-survival);
   --tinta-modo: var(--modo-survival-tinta);
 }
@@ -2078,7 +2078,7 @@ body::before {
   color: var(--accent);
 }
 
-/* ─── O ecrã do Desafio do Dia ────────────────────────────────────────────── */
+/* ─── O ecrã do Desafio do Dia: o trilho ──────────────────────────────────── */
 
 .desafio-corpo {
   display: grid;
@@ -2086,12 +2086,13 @@ body::before {
   padding-bottom: 8px;
 }
 
-/* O bilhete: o dia selecionado, com o número grande na letra da marca. */
-.desafio-bilhete {
+/* A faixa da série, com as seis faces por cima — como o cartão da Home. */
+.desafio-faixa {
   position: relative;
   display: grid;
-  gap: 14px;
-  padding: 20px 16px 16px;
+  gap: 2px;
+  padding: 16px 16px 12px;
+  text-align: center;
   border: 1px solid var(--line);
   border-radius: calc(var(--raio) + 8px);
   background: var(--surface);
@@ -2099,71 +2100,310 @@ body::before {
   overflow: hidden;
 }
 
-.desafio-bilhete::before {
-  height: 5px;
+.desafio-faixa-serie {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
 }
 
-.desafio-bilhete-cabeca {
+.desafio-faixa-hoje {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-muted);
+}
+
+/*
+ * ── O caminho ──
+ *
+ * Um SVG por trás das casas, desenhado depois de elas estarem no sítio — ver
+ * `desenharCaminho`. A estrada é um traço largo com um tracejado claro por
+ * cima: na cor de destaque o que já se andou, em cinzento o que falta.
+ */
+.trilho {
+  position: relative;
+  padding: 6px 0 4px;
+}
+
+.trilho-caminho {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.trilho-estrada,
+.trilho-tracejado {
+  fill: none;
+  stroke-linecap: round;
+}
+
+.trilho-estrada {
+  stroke-width: 14;
+}
+
+.trilho-estrada.por-andar {
+  stroke: var(--line);
+}
+
+.trilho-estrada.andado {
+  stroke: var(--accent);
+  stroke-opacity: 0.5;
+}
+
+.trilho-tracejado {
+  stroke: var(--surface);
+  stroke-width: 3;
+  stroke-dasharray: 6 10;
+}
+
+/* As casas, de cima para baixo: o que vem, hoje, e o que ficou para trás. */
+.trilho-dias {
+  position: relative;
+  display: grid;
+  gap: 22px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.trilho-dia {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+}
+
+/*
+ * A onda: cada casa desvia-se do centro pelo seu `--x`. `translate`, e não
+ * `transform`, para o toque poder afundar a casa sem desfazer o desvio.
+ */
+.trilho-no,
+.trilho-rotulo {
+  translate: var(--x, 0) 0;
+}
+
+/*
+ * ── A casa ──
+ *
+ * Uma peça redonda e grossa, com a sombra dura por baixo — um botão de jogo de
+ * tabuleiro, que afunda ao toque. Na cor do modo, com o ícone dele; feita,
+ * leva o visto no lugar do ícone.
+ */
+.trilho-no {
+  position: relative;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  width: 64px;
+  height: 64px;
+  padding: 0;
+  font: inherit;
+  border: 0;
+  border-radius: 50%;
+  background: var(--cor);
+  color: var(--tinta-modo);
+  box-shadow:
+    0 5px 0 rgb(0 0 0 / 0.22),
+    inset 0 0 0 1px var(--aro);
+  cursor: pointer;
+  transition:
+    transform 80ms linear,
+    box-shadow 80ms linear;
+}
+
+.trilho-no:active {
+  transform: translateY(3px);
+  box-shadow:
+    0 2px 0 rgb(0 0 0 / 0.22),
+    inset 0 0 0 1px var(--aro);
+}
+
+.trilho-no .icone {
+  width: 28px;
+  height: 28px;
+}
+
+.trilho-no .icone-visto {
+  width: 32px;
+  height: 32px;
+  stroke-width: 2.6;
+}
+
+/* O que vem: cinzento, e fechado a cadeado. */
+.trilho-dia[data-estado="futuro"] .trilho-no {
+  background: var(--surface-alt);
+  color: var(--ink-muted);
+}
+
+.trilho-cadeado {
+  position: absolute;
+  right: -4px;
+  bottom: -2px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--ink-muted);
+  box-shadow: 0 0 0 2px var(--line);
+}
+
+.trilho-cadeado .icone {
+  width: 14px;
+  height: 14px;
+}
+
+/* O que ficou por jogar: a casa vazia, só o contorno. */
+.trilho-dia[data-estado="perdido"] .trilho-no {
+  background: var(--surface);
+  color: var(--ink-muted);
+  box-shadow:
+    0 5px 0 rgb(0 0 0 / 0.08),
+    inset 0 0 0 2px var(--line);
+}
+
+.trilho-dia[data-estado="perdido"] .trilho-no .icone {
+  opacity: 0.5;
+}
+
+/* Hoje: maior, com o nome escrito, e um aro aceso que respira. */
+.trilho-dia[data-hoje] .trilho-no {
+  gap: 3px;
+  width: 84px;
+  height: 84px;
+  box-shadow:
+    0 6px 0 rgb(0 0 0 / 0.25),
+    inset 0 0 0 1px var(--aro);
+}
+
+.trilho-dia[data-hoje] .trilho-no .icone {
+  width: 30px;
+  height: 30px;
+}
+
+.trilho-dia[data-hoje] .trilho-no::before {
+  content: "";
+  position: absolute;
+  inset: -9px;
+  border: 3px solid var(--accent);
+  border-radius: 50%;
+  opacity: 0.5;
+  animation: trilho-aceso 2.4s ease-in-out infinite;
+}
+
+@keyframes trilho-aceso {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+
+  50% {
+    transform: scale(1.07);
+    opacity: 0.18;
+  }
+}
+
+.trilho-no-hoje {
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* O rótulo tem o fundo da página: a estrada passa por baixo dele, e não por cima. */
+.trilho-rotulo {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--ground);
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+
+.trilho-dia[data-hoje] .trilho-rotulo {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/*
+ * ── O balão ──
+ *
+ * Por cima da casa selecionada, no fluxo da página: empurra as casas de baixo
+ * em vez de tapar as de cima — a de amanhã, por cima da de hoje, é a que mais
+ * interessa ver. O bico aponta para a casa, onde quer que a onda a ponha.
+ */
+.trilho-balao {
+  position: relative;
+  display: grid;
+  gap: 10px;
+  width: min(340px, 100%);
+  margin-bottom: 8px;
+  padding: 0 12px 12px;
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: calc(var(--raio) + 6px);
+  background: var(--surface);
+  box-shadow: var(--sombra);
+  animation: entrar-popup 200ms var(--suavizacao) backwards;
+}
+
+.trilho-balao::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: calc(50% + var(--x, 0px));
+  width: 16px;
+  height: 16px;
+  background: var(--surface);
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.trilho-balao-cabeca {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  margin: 0 -12px;
+  padding: 8px 12px;
+  border-radius: calc(var(--raio) + 5px) calc(var(--raio) + 5px) 0 0;
+  background: var(--surface-alt);
 }
 
-.desafio-numero {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  margin: 0;
-  min-width: 0;
-}
-
-.desafio-cardinal {
-  font-family: var(--fonte-marca);
-  font-size: 34px;
-  font-weight: 600;
-  line-height: 1;
+.trilho-balao-quando {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: var(--ink);
 }
 
-.desafio-data {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--ink-muted);
+.trilho-balao-premio {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink);
   white-space: nowrap;
 }
 
-/* Quando é: «Hoje», «Amanhã», «Há 3 dias». */
-.desafio-quando {
-  padding: 3px 10px;
-  border-radius: 999px;
-  box-shadow: inset 0 0 0 1px var(--line);
-  font-size: 12.5px;
-  font-weight: 700;
-  color: var(--ink-muted);
-  white-space: nowrap;
-}
-
-.desafio-bilhete[data-estado="por-jogar"] .desafio-quando,
-.desafio-bilhete[data-estado="a-meio"] .desafio-quando {
-  box-shadow: none;
-  background: var(--accent);
-  color: var(--on-accent);
-}
-
-.desafio-bilhete-modo {
+.trilho-balao-corpo {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
 }
 
-.desafio-bilhete-pe {
-  display: grid;
-  gap: 10px;
+.trilho-jogar {
+  justify-content: center;
+  min-width: 96px;
 }
 
-.desafio-bilhete-pe > .btn {
+.trilho-balao > .btn {
   justify-content: center;
 }
 
@@ -2176,7 +2416,7 @@ body::before {
 }
 
 /* Um resultado feito é o número do dia: maior, e na cor de destaque. */
-.desafio-bilhete[data-estado="feito"] .desafio-resultado {
+.trilho-balao[data-estado="feito"] .desafio-resultado {
   font-size: 20px;
   font-weight: 700;
   color: var(--accent);
@@ -2192,155 +2432,27 @@ body::before {
   white-space: nowrap;
 }
 
-/* ─── O calendário ────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .trilho-dia[data-hoje] .trilho-no::before,
+  .trilho-balao {
+    animation: none;
+  }
 
-.desafio-mes {
-  display: grid;
-  gap: 8px;
-  padding: 14px 12px 12px;
-  border: 1px solid var(--line);
-  border-radius: calc(var(--raio) + 8px);
-  background: var(--surface);
-  box-shadow: var(--sombra-cartao);
+  .trilho-no {
+    transition: none;
+  }
 }
 
-.desafio-mes-cabeca {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 0 4px 4px;
-}
-
-.desafio-mes-nome {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 650;
-}
-
-.desafio-semana,
-.desafio-dias {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 5px;
-}
-
-.desafio-semana span {
-  font-size: 11.5px;
-  font-weight: 700;
-  text-align: center;
-  color: var(--ink-muted);
-}
-
-/* Um dia: o número em cima, o ícone do modo por baixo. */
-.desafio-dia {
-  position: relative;
-  display: grid;
-  grid-template-rows: auto auto;
-  place-content: center;
-  justify-items: center;
-  gap: 4px;
-  min-width: 0;
-  aspect-ratio: 1;
-  padding: 0;
-  font: inherit;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--surface);
-  color: var(--ink);
-  cursor: pointer;
-}
-
-.desafio-dia-numero {
-  font-size: 12.5px;
-  font-weight: 650;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-}
-
-.desafio-dia-icone {
-  display: grid;
-  place-items: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 6px;
-  background: var(--cor);
-  color: var(--tinta-modo);
-}
-
-.desafio-dia-icone .icone {
-  width: 13px;
-  height: 13px;
-}
-
-/*
- * **Feito, o dia enche-se com a cor do modo.** É o mês a ganhar cor à medida
- * que se joga — o progresso inteiro numa olhadela, sem números.
- */
-.desafio-dia[data-estado="feito"] {
-  border-color: transparent;
-  background: var(--cor);
-  color: var(--tinta-modo);
-}
-
-.desafio-dia[data-estado="feito"] .desafio-dia-icone {
-  background: transparent;
-}
-
-.desafio-dia[data-estado="feito"]::after {
-  content: "✓";
-  position: absolute;
-  top: 3px;
-  right: 3px;
-  font-size: 9px;
-  font-weight: 800;
-  line-height: 1;
-}
-
-/* O que vem ainda não abriu; o que passou sem ser jogado apaga-se mais. */
-.desafio-dia[data-estado="futuro"] {
-  border-style: dashed;
-  color: var(--ink-muted);
-}
-
-.desafio-dia[data-estado="futuro"] .desafio-dia-icone {
-  opacity: 0.55;
-}
-
-.desafio-dia[data-estado="perdido"] {
-  background: transparent;
-  color: var(--ink-muted);
-}
-
-.desafio-dia[data-estado="perdido"] .desafio-dia-icone {
-  opacity: 0.3;
-}
-
-/* Antes do #1: o mês tem a forma de um mês, e estes dias não têm nada. */
-.desafio-dia[data-estado="sem-desafio"] {
-  border-color: transparent;
-  background: transparent;
-  color: var(--ink-muted);
-  opacity: 0.5;
-  cursor: default;
-}
-
-/* Hoje tem o aro da cor de destaque; o dia selecionado, um contorno por fora. */
-.desafio-dia[data-hoje] {
-  border: 2px solid var(--accent);
-}
-
-.desafio-dia[aria-pressed="true"] {
-  outline: 2px solid var(--ink);
-  outline-offset: 1px;
-}
-
+/* A legenda: os três modos, com o ícone e a cor que têm no trilho. */
 .desafio-legenda {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   gap: 6px 14px;
-  padding-top: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: calc(var(--raio) + 6px);
+  background: var(--surface);
   font-size: 12.5px;
   font-weight: 600;
   color: var(--ink-muted);
@@ -2350,6 +2462,21 @@ body::before {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+}
+
+.desafio-legenda-icone {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--cor);
+  color: var(--tinta-modo);
+}
+
+.desafio-legenda-icone .icone {
+  width: 14px;
+  height: 14px;
 }
 
 .desafio-nota {

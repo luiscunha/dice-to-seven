@@ -1130,18 +1130,35 @@ outros modos de um dia de quando havia três ficam guardados sem contar.
     faces, «Desafio do dia», a sequência 🔥, e o desafio de hoje — o ícone na
     cor do modo, o nome, o número e a data — com o estado: «Jogar»,
     «Continuar», o resultado, ou «Interrompido».
-  - **O ecrã do desafio** (`#/desafio`, `DesafioScreen`) é **um calendário**.
-    Em cima, o bilhete do dia selecionado: o número grande na letra da marca,
-    a data, quando é («Hoje», «Amanhã», «Há 3 dias»), o modo com o que é, e o
-    estado. Hoje é onde se joga — jogar, continuar, ou treinar e partilhar
-    depois da tentativa que conta. Por baixo, **o mês**, a começar na segunda:
-    cada dia com o ícone do seu modo, e **cheio com a cor do modo quando
-    feito** — o mês ganha cor à medida que se joga. Os dias passados por jogar
-    apagam-se, os que vêm têm o contorno tracejado, e os de antes do #1 estão
-    lá vazios, para o mês ter a forma de um mês. Tocar num dia mostra-o no
-    bilhete; **só se joga o de hoje**. Um endereço com outro modo
-    (`#/desafio/survival` num dia de Puzzle) volta ao calendário. Sair de um
-    desafio volta a este ecrã, e daqui à Home.
+  - **O ecrã do desafio** (`#/desafio`, `DesafioScreen`) é **um trilho**,
+    como num jogo de tabuleiro. Esteve como um calendário do mês: mostrava
+    tudo e não dizia nada — trinta casas iguais, e hoje uma entre elas. O
+    trilho diz que se está a avançar:
+    - Em cima, **a faixa da série** («🔥 Série: 5 dias seguidos!») e o desafio
+      de hoje, com o número e a data.
+    - **O caminho sobe.** Os dias são casas redondas e grossas, com a sombra
+      dura por baixo, numa onda presa ao número do dia (uma casa não muda de
+      sítio quando muda o dia): **os dois dias seguintes** em cima, em
+      cinzento e fechados a cadeado — com hoje, são a rotação inteira; **hoje**
+      a meio, maior, com «Hoje» escrito e um aro aceso que respira; e **as
+      duas últimas semanas** em baixo, a partir do #1 — feitas com o visto na
+      cor do modo, perdidas como casa vazia. Por baixo de cada casa, a data e
+      o modo.
+    - **A estrada** é um SVG desenhado depois de as casas estarem no sítio,
+      pelos centros que o browser mede: curvas que saem e chegam na vertical,
+      na cor de destaque de hoje para trás e em cinzento de hoje para a
+      frente, com um tracejado claro por cima.
+    - **O balão** abre por cima da casa selecionada — hoje, ao entrar — e
+      vive no fluxo da página: empurra as casas de baixo em vez de tapar a de
+      amanhã. Diz quando é e em que pé está («Hoje · por jogar»), o que a série
+      ganha («🔥 +1», onde a maqueta tinha pontos que o jogo não tem), o modo
+      com o que é, e a ação: jogar, continuar, ou treinar e partilhar depois
+      da tentativa que conta. Tocar noutra casa leva-lhe o balão, com o
+      resultado, o que ficou por jogar, ou quando abre; a casa tocada não sai
+      do sítio, porque o rolo desliza o mesmo que o balão a empurra.
+    - **Só se joga o de hoje.** Um endereço com outro modo
+      (`#/desafio/survival` num dia de Puzzle) volta ao trilho. Sair de um
+      desafio volta a este ecrã, e daqui à Home.
 - **O resto da Home ficou como era**: os modos com o rótulo «Modos de jogo» e os
   mosaicos de pé, e as regras numa faixa — a conta 3 + 4 = 7 em peças, «Como
   jogar?», e a seta. **Quem ainda não fez um nível vê os modos primeiro**: a

@@ -48,7 +48,7 @@ import {
   SEM_DESAFIOS,
   comecar,
   dataDe,
-  diasDoMes,
+  diasDoTrilho,
   escolherDoDia,
   estadoDoModo,
   guardarDesafios,
@@ -67,9 +67,9 @@ import { ComoJogarScreen } from "./ui/ComoJogarScreen";
 import { DefinicoesScreen } from "./ui/DefinicoesScreen";
 import { elemento } from "./ui/dom";
 import type {
-  CalendarioDoDesafio,
-  EstadoNoCalendario,
   EstadoNoCartao,
+  EstadoNoTrilho,
+  TrilhoDoDesafio,
 } from "./ui/DesafioScreen";
 import { DesafioScreen } from "./ui/DesafioScreen";
 import type { ResumoDoDesafio } from "./ui/HomeScreen";
@@ -77,7 +77,7 @@ import { HomeScreen } from "./ui/HomeScreen";
 import { JokerTutorial } from "./ui/JokerTutorial";
 import { NiveisScreen } from "./ui/NiveisScreen";
 import type { DesafioNoEcra, DesfechoDaPartilha } from "./ui/partilha";
-import { dataCurta, mesPorExtenso, partilhar, textoDoDesafio } from "./ui/partilha";
+import { dataCurta, partilhar, textoDoDesafio } from "./ui/partilha";
 import { abrirPerfil } from "./ui/PerfilDialog";
 import { PuzzleScreen } from "./ui/PuzzleScreen";
 import type { Rota } from "./ui/rotas";
@@ -386,7 +386,7 @@ async function montar(rota: Rota): Promise<void> {
     case "desafio":
       if (rota.modo === undefined) {
         atual = new DesafioScreen(app as HTMLElement, {
-          calendario: calendarioDoDesafio(),
+          trilho: trilhoDoDesafio(),
           aoVoltar: voltarA({ ecra: "home" }),
         });
         return;
@@ -723,7 +723,7 @@ function estadoNoCartao(data: string, modo: ModoDoDesafio): EstadoNoCartao {
   return { tipo: "interrompido" };
 }
 
-/** O cartão da Home: só o desafio de hoje. Tocar-lhe abre o calendário. */
+/** O cartão da Home: só o desafio de hoje. Tocar-lhe abre o trilho. */
 function resumoDoDesafio(): ResumoDoDesafio {
   const data = hoje();
   arrumarDesafio(data);
@@ -740,12 +740,11 @@ function resumoDoDesafio(): ResumoDoDesafio {
 }
 
 /**
- * Um dia do calendário, visto de hoje. Um dia passado está feito ou perdido:
- * a tentativa que ficou a meio ontem — um Survival guardado, um Puzzle aberto —
+ * Uma casa do trilho, vista de hoje. Um dia passado está feito ou perdido: a
+ * tentativa que ficou a meio ontem — um Survival guardado, um Puzzle aberto —
  * já não se acaba, porque o desafio de hoje é outro.
  */
-function estadoNoCalendario(data: string, dataDeHoje: string): EstadoNoCalendario {
-  if (numeroDoDia(data) < 1) return { tipo: "sem-desafio" };
+function estadoNoTrilho(data: string, dataDeHoje: string): EstadoNoTrilho {
   if (data > dataDeHoje) return { tipo: "futuro" };
 
   const estado = estadoNoCartao(data, modoDoDia(data));
@@ -753,19 +752,18 @@ function estadoNoCalendario(data: string, dataDeHoje: string): EstadoNoCalendari
   return { tipo: "perdido" };
 }
 
-function calendarioDoDesafio(): CalendarioDoDesafio {
+function trilhoDoDesafio(): TrilhoDoDesafio {
   const data = hoje();
   arrumarDesafio(data);
   const feito = estadoDoModo(desafios, data, modoDoDia(data))?.estado === "feito";
 
   return {
-    mes: mesPorExtenso(data),
     hoje: data,
-    dias: diasDoMes(data).map((d) => ({
+    dias: diasDoTrilho(data).map((d) => ({
       data: d,
       numero: numeroDoDia(d),
       modo: modoDoDia(d),
-      estado: estadoNoCalendario(d, data),
+      estado: estadoNoTrilho(d, data),
     })),
     sequencia: sequencia(desafios, data),
     aoJogar: voltarA({ ecra: "desafio", modo: modoDoDia(data) }),
@@ -791,7 +789,7 @@ async function mostrarDesafio(modo: ModoDoDesafio): Promise<void> {
 
   /*
    * Só se joga o desafio de hoje. Um endereço com outro modo — de ontem, de um
-   * separador que ficou aberto depois da meia-noite — volta ao calendário.
+   * separador que ficou aberto depois da meia-noite — volta ao trilho.
    */
   if (modo !== modoDoDia(data)) {
     ir({ ecra: "desafio" });
