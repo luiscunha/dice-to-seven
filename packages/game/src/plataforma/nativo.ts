@@ -100,6 +100,52 @@ export function vibrarVitoria(): void {
   );
 }
 
+/**
+ * ── Um toque no tabuleiro vibra igual em todos os modos ──
+ *
+ * Cada ecrã decidia a sua vibração, e só a campanha vibrava a cada toque: no
+ * Survival e no Contra-Relógio, um toque que passava de 7 não vibrava — com a
+ * vibração ligada. A regra passou a viver aqui, num sítio só, e os ecrãs só
+ * dizem o que aconteceu.
+ */
+export interface ToqueVibrado {
+  /** A sessão recusou o toque: passava de 7, era meia solda, ou gelo. */
+  readonly recusado: boolean;
+  /** O toque fechou um grupo, e a jogada aconteceu. */
+  readonly jogou: boolean;
+  /** A jogada deixou o tabuleiro vazio. */
+  readonly limpou?: boolean;
+}
+
+export type Vibracao = "toque" | "jogada" | "recusa" | "vitoria";
+
+/** Qual das vibrações um toque pede. Pura, para se poder testar sem telemóvel. */
+export const vibracaoDoToque = (t: ToqueVibrado): Vibracao =>
+  t.recusado
+    ? "recusa"
+    : t.limpou === true
+      ? "vitoria"
+      : t.jogou
+        ? "jogada"
+        : "toque";
+
+export function vibrarPeloToque(t: ToqueVibrado): void {
+  switch (vibracaoDoToque(t)) {
+    case "recusa":
+      vibrarRecusa();
+      return;
+    case "vitoria":
+      vibrarVitoria();
+      return;
+    case "jogada":
+      vibrarJogada();
+      return;
+    case "toque":
+      vibrarToque();
+      return;
+  }
+}
+
 /* ─── Arranque e aparência ─────────────────────────────────────────────────── */
 
 /**

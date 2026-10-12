@@ -42,6 +42,7 @@ import {
   proximaLinha,
   puxarLinha,
   restoParaLimpar,
+  semJogadas,
   startSurvival,
   survivalTap,
   trazBomba,
@@ -595,7 +596,10 @@ describe("a bomba", () => {
   });
 
   it("antes do fim do pavio não rebenta", () => {
+    // Com um 3+4 à esquerda: sem jogadas, a linha caía de qualquer maneira.
+    const base = baixo();
     const s = baixo({
+      game: { ...base.game, board: [[3], [4], [1], [1], [1], [1]] },
       bomba: { at: packed(2, 0), rebentaEm: 5_000 },
       proximaLinhaMs: 30_000,
     });
@@ -639,7 +643,8 @@ describe("a bomba", () => {
     const base = startSurvival(SEED);
     const s: SurvivalState = {
       ...base,
-      game: { ...base.game, board: [[3], [4], [1]] },
+      // Sobra um 3+4: sem jogadas, a linha caía de qualquer maneira.
+      game: { ...base.game, board: [[3], [4], [3], [4]] },
       bomba: { at: packed(0, 0), rebentaEm: 5_000 },
       proximaLinhaMs: 30_000,
     };
@@ -853,5 +858,51 @@ describe("a explosão aquece as peças à volta", () => {
 
   it("sem bomba a rebentar, nada aquece", () => {
     expect(avancarRelogio(startSurvival(SEED), 30_000).aquecidas).toEqual([]);
+  });
+});
+
+describe("sem jogadas, a linha cai já", () => {
+  /** 1, 2, 1, 2: peças a mais e nenhum 7. */
+  const PRESO: Board = [[1], [2], [1], [2]];
+
+  const preso = (extra: Partial<SurvivalState> = {}): SurvivalState => {
+    const base = startSurvival(SEED);
+    return {
+      ...base,
+      game: { ...base.game, board: PRESO },
+      proximaLinhaMs: 30_000,
+      ...extra,
+    };
+  };
+
+  it("sabe quando não há jogadas — e um tabuleiro vazio não conta", () => {
+    expect(semJogadas(preso())).toBe(true);
+    expect(semJogadas(startSurvival(SEED))).toBe(false);
+
+    const base = startSurvival(SEED);
+    expect(semJogadas({ ...base, game: { ...base.game, board: [] } })).toBe(false);
+  });
+
+  it("**cai antes do prazo**, e o prazo da seguinte recomeça a contar daqui", () => {
+    const s = preso();
+    const r = avancarRelogio(s, 4_000);
+
+    expect(r.caiu).toBe(true);
+    expect(r.forcada).toBe(true);
+    expect(r.state.linhasInjetadas).toBe(s.linhasInjetadas + 1);
+    expect(r.state.proximaLinhaMs).toBe(4_000 + cadencia(r.state));
+  });
+
+  it("não paga o multiplicador de puxar: não foi uma escolha", () => {
+    const r = avancarRelogio(preso(), 4_000);
+    expect(r.state.multiplicador).toBe(1);
+    expect(r.state.jogadasComBonus).toBe(0);
+  });
+
+  it("com jogadas, espera pelo prazo como sempre", () => {
+    const s: SurvivalState = { ...startSurvival(SEED), proximaLinhaMs: 30_000 };
+    const r = avancarRelogio(s, 4_000);
+    expect(r.caiu).toBe(false);
+    expect(r.forcada).toBe(false);
   });
 });

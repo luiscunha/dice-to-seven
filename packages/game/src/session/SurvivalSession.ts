@@ -97,6 +97,7 @@ import {
   JOKER,
   colOf,
   deriveSeed,
+  hasAnyGroup,
   isEmpty,
   jokerAt,
   mulberry32,
@@ -697,6 +698,13 @@ export const folga = (
  * É condição necessária, não suficiente: `0` quer dizer «vale a pena tentar»,
  * qualquer outro valor quer dizer «hoje não dá, de certeza».
  */
+/**
+ * Há peças no tabuleiro e nenhuma jogada — por exemplo, 1, 2, 1, 2 soltos. É o
+ * que faz a linha cair já; ver `avancarRelogio`.
+ */
+export const semJogadas = (s: SurvivalState): boolean =>
+  !isEmpty(s.game.board) && !hasAnyGroup(s.game.board);
+
 export const restoParaLimpar = (s: SurvivalState): number =>
   totalSum(s.game.board) % 7;
 
@@ -910,9 +918,11 @@ export function avancarRelogio(
   readonly rebentou: Packed | undefined;
   /** As peças que a explosão aqueceu. Ver `aquecer`. */
   readonly aquecidas: readonly Packed[];
+  /** A linha caiu antes do prazo, porque não havia jogadas. */
+  readonly forcada: boolean;
 } {
   if (s.morto || s.limpo) {
-    return { state: s, caiu: false, rebentou: undefined, aquecidas: [] };
+    return { state: s, caiu: false, rebentou: undefined, aquecidas: [], forcada: false };
   }
 
   /*
@@ -950,11 +960,34 @@ export function avancarRelogio(
       caiu: true,
       rebentou,
       aquecidas,
+      forcada: false,
+    };
+  }
+
+  /*
+   * ── Sem jogadas, a linha cai já ──
+   *
+   * Um tabuleiro sem jogadas — 1, 2, 1, 2 que não chegam a 7 — deixava o
+   * jogador a olhar para o relógio, ou à procura do botão de puxar. Esperar
+   * não era uma decisão, era tempo morto. A linha cai agora, e o prazo da
+   * seguinte recomeça a contar daqui, como em qualquer injeção.
+   *
+   * Não paga o multiplicador de puxar: não foi uma escolha. E se a linha nova
+   * também não trouxer jogada, o tique seguinte faz cair outra — o ecrã só
+   * chama isto depois de a anterior acabar de cair, portanto vêem-se uma a uma.
+   */
+  if (semJogadas(s)) {
+    return {
+      state: injectRow(s, false, config, agoraMs),
+      caiu: true,
+      rebentou: undefined,
+      aquecidas: [],
+      forcada: true,
     };
   }
 
   if (agoraMs < s.proximaLinhaMs) {
-    return { state: s, caiu: false, rebentou: undefined, aquecidas: [] };
+    return { state: s, caiu: false, rebentou: undefined, aquecidas: [], forcada: false };
   }
 
   return {
@@ -962,6 +995,7 @@ export function avancarRelogio(
     caiu: true,
     rebentou: undefined,
     aquecidas: [],
+    forcada: false,
   };
 }
 

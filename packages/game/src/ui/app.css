@@ -3626,35 +3626,6 @@ body::before {
 }
 
 /*
- * O resto para limpar. Cada jogada tira exatamente 7, portanto o tabuleiro só
- * pode esvaziar se a soma for múltipla de 7 — e `0` é a única leitura sobre a
- * qual há alguma coisa a fazer. É a única que ganha cor.
- */
-.resto {
-  font-size: 13px;
-  color: var(--ink-muted);
-  font-variant-numeric: tabular-nums;
-}
-
-.resto[data-pronto="sim"] {
-  color: var(--accent);
-  font-weight: 600;
-}
-
-/*
- * Sem jogadas, puxar deixa de ser opção e passa a ser a única saída.
- *
- * O botão continua na cor do primário, e ganha um anel à volta. Antes passava a
- * cinzento — e um botão cinzento lê-se como desativado, precisamente no momento
- * em que é o único que faz alguma coisa.
- */
-.survival .btn[data-urgente="sim"] {
-  box-shadow:
-    0 0 0 2px var(--ground),
-    0 0 0 4px var(--accent);
-}
-
-/*
  * Puxar é a ação do modo, e fica com a largura que sobra: é o alvo maior do
  * rodapé, onde o polegar o encontra sem olhar. Recomeçar encosta à direita, do
  * tamanho do nome — é raro, e pergunta antes.

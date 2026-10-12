@@ -41,7 +41,11 @@ import {
   startTimeAttack,
   tapTimeAttack,
 } from "../session/TimeAttackSession";
-import { vibrarExplosao, vibrarRecusa } from "../plataforma/nativo";
+import {
+  vibrarExplosao,
+  vibrarPeloToque,
+  vibrarRecusa,
+} from "../plataforma/nativo";
 import { anunciar } from "./anuncio";
 import { BoardView } from "./BoardView";
 import { botao, botaoRedondo, confirmar, elemento, reanimar } from "./dom";
@@ -377,6 +381,19 @@ export class TimeAttackScreen {
     // a sessão decidiu.
     if (r.rebentou !== undefined) this.rebentar(r.rebentou);
 
+    /*
+     * A vibração do toque, a mesma dos outros modos — ver `vibrarPeloToque`.
+     * Se a bomba rebentou neste toque, a vibração dela é a que conta: duas
+     * seguidas liam-se como uma só, e a mais fraca roubava a outra.
+     */
+    if (r.rebentou === undefined) {
+      vibrarPeloToque({
+        recusado: r.state.game.rejection !== undefined,
+        jogou: r.moved,
+        limpou: r.cleared,
+      });
+    }
+
     if (r.penalizado) this.multar(p);
 
     const grupo = r.state.game.lastMove;
@@ -472,12 +489,14 @@ export class TimeAttackScreen {
     this.pintar();
   }
 
-  /** O toque passava de 7: a peça diz que não, e a perda sobe dela. */
+  /**
+   * O toque passava de 7: a peça diz que não, e a perda sobe dela. A vibração
+   * já foi a do toque recusado.
+   */
   private multar(p: Packed): void {
     this.anunciar(`−${segundos(this.config.penalizacaoMs)}`, [p], "perda");
     this.view.recusarPeca(p);
     reanimar(this.elRelogio, "perdeu");
-    vibrarRecusa();
   }
 
   /* ─── relógio ───────────────────────────────────────────────────────────── */

@@ -19,7 +19,9 @@ import {
   aplicacaoPronta,
   definirVibracao,
   ligarBotaoDeVoltar,
+  vibracaoDoToque,
   vibrarJogada,
+  vibrarPeloToque,
   vibrarRecusa,
   vibrarToque,
   vibrarVitoria,
@@ -73,7 +75,16 @@ describe("o nativo é silencioso na web", () => {
       vibrarJogada();
       vibrarRecusa();
       vibrarVitoria();
+      vibrarPeloToque({ recusado: true, jogou: false });
     }).not.toThrow();
+  });
+
+  it("um toque pede sempre a mesma vibração, seja qual for o modo", () => {
+    expect(vibracaoDoToque({ recusado: false, jogou: false })).toBe("toque");
+    expect(vibracaoDoToque({ recusado: false, jogou: true })).toBe("jogada");
+    expect(vibracaoDoToque({ recusado: false, jogou: true, limpou: true })).toBe("vitoria");
+    // Recusado ganha a tudo: é o caso em que a vibração substitui o aviso.
+    expect(vibracaoDoToque({ recusado: true, jogou: false })).toBe("recusa");
   });
 
   it("o botão de voltar não se liga a nada, e não chama o que lhe deram", () => {

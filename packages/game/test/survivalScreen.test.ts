@@ -110,11 +110,10 @@ describe("SurvivalScreen", () => {
     ecra.destruir();
   });
 
-  it("mostra o resto para limpar, e só o realça quando é acionável", () => {
-    const resto = host.querySelector(".resto");
-    expect(resto?.textContent).toMatch(/limpar/);
-    // A seed de teste não arranca em múltiplo de 7 — o realce fica reservado.
-    expect(resto?.getAttribute("data-pronto")).toBe("nao");
+  it("o rodapé só tem os botões — sem o resto para limpar", () => {
+    expect(host.querySelector(".resto")).toBeNull();
+    expect(host.querySelector(".rodape .linha-selecao")).toBeNull();
+    expect(botaoPuxar()?.textContent).toBe("Puxar linha");
     ecra.destruir();
   });
 
@@ -751,6 +750,51 @@ describe("a bomba no ecrã do Survival", () => {
 
     expect(pavio()).toBe("8");
     expect(pecas()).toBe(DEFAULT_SURVIVAL.largura * DEFAULT_SURVIVAL.alturaInicial);
+  });
+});
+
+describe("sem jogadas, no ecrã", () => {
+  let host: HTMLElement;
+  let ecra: SurvivalScreen | undefined;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+    document.body.replaceChildren();
+    host = document.createElement("div");
+    document.body.appendChild(host);
+  });
+
+  afterEach(() => {
+    ecra?.destruir();
+    ecra = undefined;
+    vi.useRealTimers();
+  });
+
+  it("**a linha cai logo**, e diz porquê", async () => {
+    const base = startSurvival(SEED);
+    const estado: SurvivalState = {
+      ...base,
+      game: { ...base.game, board: [[1], [2], [1], [2]] },
+      proximaLinhaMs: 60_000,
+    };
+
+    ecra = new SurvivalScreen(host, {
+      seed: SEED,
+      retomar: { estado, decorridoMs: 1_000 },
+      melhorTempo: 0,
+      aoGuardar: () => undefined,
+      aoTerminar: () => undefined,
+      aoSair: () => undefined,
+      aoRecomecar: () => undefined,
+    });
+    expect(host.querySelectorAll(".tabuleiro .peca")).toHaveLength(4);
+
+    // Um tique, muito antes do prazo dos 60 s.
+    await vi.advanceTimersByTimeAsync(200);
+
+    expect(host.querySelectorAll(".tabuleiro .peca").length).toBeGreaterThan(4);
+    expect(host.querySelector(".ganho.perda")?.textContent).toBe("sem jogadas");
   });
 });
 

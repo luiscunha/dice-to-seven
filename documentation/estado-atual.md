@@ -967,6 +967,31 @@ linha, que é o que eram).
 Valores em `DEFAULT_SURVIVAL`, por afinar a jogar: `bombaEnterradaDesde: 6`
 linhas caídas, `probabilidadeEnterrada: 0.5`, `profundidadeEnterrada: 3`.
 
+### Sem jogadas, a linha cai já
+
+Um tabuleiro sem jogadas — 1, 2, 1, 2 que não chegam a 7 — deixava o jogador à
+espera do relógio ou à procura do botão, que mudava para «Sem jogadas: puxa uma
+linha». Era tempo morto, não uma decisão. Agora a linha cai logo, com um «sem
+jogadas» por cima do tabuleiro, e o prazo da seguinte recomeça a contar daí.
+Não paga o multiplicador de puxar, porque não foi uma escolha. Se a linha nova
+também não trouxer jogada, cai outra — uma de cada vez, depois de a anterior
+assentar. A regra é `semJogadas`, em `avancarRelogio`.
+
+Saiu também a linha do resto para limpar («dá para limpar», «limpar: faltam
+6»), por baixo do tabuleiro: quase nunca mudava a jogada seguinte, e roubava
+uma linha ao tabuleiro. A conta continua na sessão (`restoParaLimpar`).
+
+### A vibração é a mesma nos três modos
+
+Só a campanha vibrava a cada toque. O Contra-Relógio vibrava na multa e na
+bomba; o Survival, só na bomba — um toque que passava de 7 não vibrava, com a
+vibração ligada. A regra passou para um sítio só, `vibrarPeloToque`, e os três
+ecrãs chamam-na: toque leve ao selecionar, médio ao fechar um grupo, o padrão de
+aviso quando o toque é recusado, e o de sucesso quando a jogada limpa o
+tabuleiro (no Contra-Relógio e no Survival; na campanha, a vitória vibra no
+painel de fim). No Survival, o toque recusado passou também a abanar a peça,
+como nos outros modos.
+
 ### Depois da escada: tabuleiros sem garantia, e o salto
 
 A banda `tempo` para nas 20 peças porque a garantia de não bloquear acaba aí, e

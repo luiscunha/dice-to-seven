@@ -45,9 +45,7 @@ import {
 } from "../session/GameSession";
 import { PASSO_RELOGIO, relogio } from "./tempo";
 import {
-  vibrarJogada,
-  vibrarRecusa,
-  vibrarToque,
+  vibrarPeloToque,
   vibrarVitoria,
 } from "../plataforma/nativo";
 import { botaoRedondo, confirmar, reanimar } from "./dom";
@@ -501,11 +499,13 @@ export class PuzzleScreen {
      * dedo, e chegar depois de meio segundo de peças a cair já não é retorno.
      *
      * Três casos distintos de propósito. Uma vibração sempre igual deixa de
-     * informar e passa a incomodar.
+     * informar e passa a incomodar. A regra é a mesma nos três modos — ver
+     * `vibrarPeloToque`. A vitória vibra no painel de fim, e não aqui.
      */
-    if (jogo.rejection !== undefined) vibrarRecusa();
-    else if (jogo.lastMove !== undefined) vibrarJogada();
-    else vibrarToque();
+    vibrarPeloToque({
+      recusado: jogo.rejection !== undefined,
+      jogou: jogo.lastMove !== undefined,
+    });
 
     this.estado = { ...this.estado, game: jogo };
     this.view.marcarSugestao(undefined);

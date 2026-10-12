@@ -14,15 +14,14 @@
  * as mesmas cores, o mesmo tamanho da peça no tabuleiro. Uma peça na fila tem de
  * ser reconhecível como a peça que vai aterrar, e um número não é.
  *
- * **O resto para limpar.** Cada jogada tira exatamente 7, portanto o tabuleiro
- * só pode esvaziar se a soma for múltipla de 7. As linhas fazem a soma derivar:
- * `0` quer dizer «dá para limpar agora», qualquer outro valor quer dizer «hoje
- * não, de certeza». É condição necessária e não suficiente, e o texto não mente
- * sobre isso.
+ * Havia uma terceira, o resto para limpar — «dá para limpar», «limpar: faltam
+ * 6». Saiu: era uma conta que quase nunca mudava a jogada seguinte, e roubava
+ * uma linha ao tabuleiro.
  *
  * Sem undo e sem dicas, como no Contra-Relógio. Mas ao contrário dele, **ficar
- * sem jogadas não é morrer**: é o momento de puxar uma linha. A mesma deteção do
- * beco sem saída da campanha, com o sentido ao contrário.
+ * sem jogadas não é morrer**: a linha seguinte cai logo, sem esperar pelo
+ * relógio. A mesma deteção do beco sem saída da campanha, com o sentido ao
+ * contrário — ver `semJogadas`.
  *
  * O relógio do sistema entra aqui e só aqui — e agora manda no modo, porque é
  * ele que faz cair as linhas. A `SurvivalSession` continua a não o conhecer:
@@ -35,7 +34,7 @@
  */
 
 import type { Board, Cell, Packed } from "@dicetoseven/engine";
-import { JOKER, cellAt, hasAnyGroup, isEmpty } from "@dicetoseven/engine";
+import { JOKER, cellAt } from "@dicetoseven/engine";
 
 import type { JokerValue } from "../session/GameSession";
 import type {
@@ -53,13 +52,12 @@ import {
   larguraAtual,
   proximaLinha,
   puxarLinha,
-  restoParaLimpar,
   startSurvival,
   survivalTap,
 } from "../session/SurvivalSession";
 import { pavioAcabou, pavioDe } from "../session/bomba";
 import type { CorridaGuardada } from "../session/corridaSurvival";
-import { vibrarExplosao } from "../plataforma/nativo";
+import { vibrarExplosao, vibrarPeloToque } from "../plataforma/nativo";
 import { anunciar } from "./anuncio";
 import { BoardView } from "./BoardView";
 import { PASSO_RELOGIO, relogio } from "./tempo";
@@ -114,7 +112,6 @@ export class SurvivalScreen {
 
   private readonly elRelogio: HTMLElement;
   private readonly elFila: HTMLElement;
-  private readonly elResto: HTMLElement;
   private readonly btPuxar: HTMLButtonElement;
   private readonly btRecomecar: HTMLButtonElement;
   private readonly elFim: HTMLDialogElement;
@@ -200,21 +197,14 @@ topo.append(sair, this.elRelogio);
     const rodape = elemento("footer", "rodape");
 
     /*
-     * ── Sem a soma corrente ──
+     * ── Só os botões ──
      *
-     * A linha dizia «Toca nas peças para somar 7» e depois «4 / 7». Nos modos de
-     * corrida isso é andaime a mais: quem chega aqui já jogou a campanha, e a
-     * conta que está a fazer está nas peças que acabou de acender — lê-la
-     * outra vez em texto, no fundo do ecrã, é trabalho a dobrar contra o
-     * relógio. O andaime fica onde foi desenhado para estar: no Tutorial.
-     *
-     * O resto fica, porque diz outra coisa: quanto falta para o tabuleiro poder
-     * **esvaziar**, que não se tira de olhar para a seleção.
+     * A linha por cima deles dizia «Toca nas peças para somar 7» e depois
+     * «4 / 7», e mais tarde o resto para limpar. A soma é andaime do Tutorial —
+     * quem chega aqui já jogou a campanha, e a conta está nas peças acesas. O
+     * resto quase nunca mudava a jogada, e ocupava uma linha que é do
+     * tabuleiro.
      */
-    const linha = elemento("div", "linha-selecao sem-soma");
-    this.elResto = elemento("div", "resto");
-    linha.append(this.elResto);
-
     const acoes = elemento("div", "acoes");
     this.btPuxar = botao("Puxar linha", "primario", () => {
       void this.puxar();
@@ -226,7 +216,7 @@ topo.append(sair, this.elRelogio);
 
     acoes.append(this.btPuxar, this.btRecomecar);
 
-    rodape.append(linha, acoes);
+    rodape.append(acoes);
 
     this.elFim = document.createElement("dialog");
     this.elFim.className = "popup";
@@ -411,6 +401,18 @@ topo.append(sair, this.elRelogio);
     this.picker.fechar();
     this.jokerPendente = undefined;
 
+    // Caiu antes do prazo porque não havia jogadas: diz-se, por cima do
+    // tabuleiro, para a linha não parecer cair do nada.
+    if (r.forcada) {
+      const tabuleiro = this.palco.querySelector(".tabuleiro");
+      anunciar(
+        this.palco,
+        tabuleiro === null ? [] : [tabuleiro.getBoundingClientRect()],
+        "sem jogadas",
+        "perda",
+      );
+    }
+
     // A linha caiu por causa da bomba: diz-se antes de ela cair, na peça.
     if (r.rebentou !== undefined) {
       this.rebentar(r.rebentou, r.aquecidas, r.state.game.board);
@@ -496,6 +498,12 @@ topo.append(sair, this.elRelogio);
 
     const r = survivalTap(antes, p, this.config, undefined, jokerAs);
     this.estado = r.state;
+
+    // A mesma vibração dos outros modos — ver `vibrarPeloToque` —, e o mesmo
+    // abanão da peça quando o toque é recusado.
+    const recusado = r.state.game.rejection !== undefined;
+    vibrarPeloToque({ recusado, jogou: r.moved, limpou: r.cleared });
+    if (recusado) this.view.recusarPeca(p);
 
     const grupo = r.state.game.lastMove;
 
@@ -852,23 +860,11 @@ topo.append(sair, this.elRelogio);
     );
   }
 
+  /*
+   * O botão já não muda para «Sem jogadas: puxa uma linha»: sem jogadas, a
+   * linha cai sozinha — ver `semJogadas`.
+   */
   private pintarRodape(): void {
-    const jogo = this.estado.game;
-
-    /*
-     * O resto. `0` é a única leitura acionável, e por isso é a única com cor —
-     * o resto do tempo é um número discreto que se aprende a espreitar.
-     */
-    const resto = restoParaLimpar(this.estado);
-    this.elResto.textContent =
-      resto === 0 ? "dá para limpar" : `limpar: faltam ${String(7 - resto)}`;
-    this.elResto.dataset["pronto"] = resto === 0 ? "sim" : "nao";
-
-    const preso = !isEmpty(jogo.board) && !hasAnyGroup(jogo.board);
-    this.btPuxar.textContent = preso
-      ? "Sem jogadas: puxa uma linha"
-      : "Puxar linha";
-    this.btPuxar.dataset["urgente"] = preso ? "sim" : "nao";
     this.btPuxar.disabled = this.terminado;
   }
 }
