@@ -275,7 +275,7 @@ export class ComoJogarScreen {
       ],
       [
         "Survival",
-        "De vez em quando cai uma linha nova por cima. Vês qual é antes de ela cair; acaba quando a pilha chega ao teto. Algumas linhas trazem uma bomba: tira-a antes de o pavio acabar, ou cai mais uma linha e as peças à volta dela sobem um ponto. Mais à frente, há bombas que se acendem numa peça já na pilha: desenterra-a a tempo.",
+        "De vez em quando cai uma linha nova por cima. Vês qual é antes de ela cair; acaba quando a pilha chega ao teto. Se ficares sem jogadas, a linha cai logo; se passares de 7, chega 3 segundos mais cedo. Algumas linhas trazem uma bomba: tira-a antes de o pavio acabar, ou cai mais uma linha e as peças à volta dela sobem um ponto. Mais à frente, há bombas que se acendem numa peça já na pilha: desenterra-a a tempo.",
       ],
     ];
 

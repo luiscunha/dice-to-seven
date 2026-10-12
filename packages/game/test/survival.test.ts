@@ -42,6 +42,7 @@ import {
   proximaLinha,
   puxarLinha,
   restoParaLimpar,
+  semJogadas,
   startSurvival,
   survivalTap,
   trazBomba,
@@ -595,7 +596,10 @@ describe("a bomba", () => {
   });
 
   it("antes do fim do pavio não rebenta", () => {
+    // Com um 3+4 à esquerda: sem jogadas, a linha caía de qualquer maneira.
+    const base = baixo();
     const s = baixo({
+      game: { ...base.game, board: [[3], [4], [1], [1], [1], [1]] },
       bomba: { at: packed(2, 0), rebentaEm: 5_000 },
       proximaLinhaMs: 30_000,
     });
@@ -639,7 +643,8 @@ describe("a bomba", () => {
     const base = startSurvival(SEED);
     const s: SurvivalState = {
       ...base,
-      game: { ...base.game, board: [[3], [4], [1]] },
+      // Sobra um 3+4: sem jogadas, a linha caía de qualquer maneira.
+      game: { ...base.game, board: [[3], [4], [3], [4]] },
       bomba: { at: packed(0, 0), rebentaEm: 5_000 },
       proximaLinhaMs: 30_000,
     };
@@ -853,5 +858,96 @@ describe("a explosão aquece as peças à volta", () => {
 
   it("sem bomba a rebentar, nada aquece", () => {
     expect(avancarRelogio(startSurvival(SEED), 30_000).aquecidas).toEqual([]);
+  });
+});
+
+describe("sem jogadas, a linha cai já", () => {
+  /** 1, 2, 1, 2: peças a mais e nenhum 7. */
+  const PRESO: Board = [[1], [2], [1], [2]];
+
+  const preso = (extra: Partial<SurvivalState> = {}): SurvivalState => {
+    const base = startSurvival(SEED);
+    return {
+      ...base,
+      game: { ...base.game, board: PRESO },
+      proximaLinhaMs: 30_000,
+      ...extra,
+    };
+  };
+
+  it("sabe quando não há jogadas — e um tabuleiro vazio não conta", () => {
+    expect(semJogadas(preso())).toBe(true);
+    expect(semJogadas(startSurvival(SEED))).toBe(false);
+
+    const base = startSurvival(SEED);
+    expect(semJogadas({ ...base, game: { ...base.game, board: [] } })).toBe(false);
+  });
+
+  it("**cai antes do prazo**, e o prazo da seguinte recomeça a contar daqui", () => {
+    const s = preso();
+    const r = avancarRelogio(s, 4_000);
+
+    expect(r.caiu).toBe(true);
+    expect(r.forcada).toBe(true);
+    expect(r.state.linhasInjetadas).toBe(s.linhasInjetadas + 1);
+    expect(r.state.proximaLinhaMs).toBe(4_000 + cadencia(r.state));
+  });
+
+  it("não paga o multiplicador de puxar: não foi uma escolha", () => {
+    const r = avancarRelogio(preso(), 4_000);
+    expect(r.state.multiplicador).toBe(1);
+    expect(r.state.jogadasComBonus).toBe(0);
+  });
+
+  it("com jogadas, espera pelo prazo como sempre", () => {
+    const s: SurvivalState = { ...startSurvival(SEED), proximaLinhaMs: 30_000 };
+    const r = avancarRelogio(s, 4_000);
+    expect(r.caiu).toBe(false);
+    expect(r.forcada).toBe(false);
+  });
+});
+
+describe("passar de 7 adianta a próxima linha", () => {
+  /** 3+4 e 4+3: o 4 de cima à esquerda e o 4 de baixo à direita passam de 7. */
+  const com = (proximaLinhaMs = 20_000): SurvivalState => {
+    const base = startSurvival(SEED);
+    return {
+      ...base,
+      game: { ...base.game, board: [[3, 4], [4, 3]] },
+      proximaLinhaMs,
+    };
+  };
+
+  it("**o toque que passa de 7 tira 3 s ao prazo**, e a seleção fica", () => {
+    let r = survivalTap(com(), packed(0, 1));
+    r = survivalTap(r.state, packed(1, 0));
+
+    expect(r.penalizado).toBe(true);
+    expect(r.state.proximaLinhaMs).toBe(20_000 - DEFAULT_SURVIVAL.penalizacaoSomaMs);
+    expect(r.state.game.selection).toEqual([packed(0, 1)]);
+  });
+
+  it("só a soma errada paga — selecionar, tirar da seleção e jogar não", () => {
+    let r = survivalTap(com(), packed(0, 1));
+    expect(r.penalizado).toBe(false);
+
+    r = survivalTap(r.state, packed(0, 1));
+    expect(r.penalizado).toBe(false);
+
+    r = survivalTap(r.state, packed(0, 0));
+    r = survivalTap(r.state, packed(0, 1));
+    expect(r.moved).toBe(true);
+    expect(r.penalizado).toBe(false);
+    expect(r.state.proximaLinhaMs).toBe(20_000);
+  });
+
+  it("se o prazo ficar para trás, a linha cai no tique seguinte", () => {
+    let r = survivalTap(com(2_000), packed(0, 1));
+    r = survivalTap(r.state, packed(1, 0));
+
+    const t = avancarRelogio(r.state, 1_500);
+    expect(t.caiu).toBe(true);
+    expect(t.forcada).toBe(false);
+    expect(t.state.proximaLinhaMs).toBe(1_500 + cadencia(t.state));
   });
 });

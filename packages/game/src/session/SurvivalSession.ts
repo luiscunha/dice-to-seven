@@ -97,6 +97,7 @@ import {
   JOKER,
   colOf,
   deriveSeed,
+  hasAnyGroup,
   isEmpty,
   jokerAt,
   mulberry32,
@@ -298,6 +299,17 @@ export interface SurvivalConfig {
    * regras não dependerem dela.
    */
   readonly aqueceVizinhas: boolean;
+
+  /**
+   * Quanto um toque que passa de 7 adianta a próxima linha.
+   *
+   * Sem castigo, tocar ao calhas não custava nada além do toque: a peça era
+   * recusada e a seleção ficava. No Contra-Relógio passar de 7 custa tempo do
+   * relógio; aqui a moeda é a linha, e é ela que chega mais cedo. Três
+   * segundos são um décimo do intervalo do arranque — sente-se, e dois ou três
+   * erros seguidos já custam a linha.
+   */
+  readonly penalizacaoSomaMs: number;
 }
 
 export const DEFAULT_SURVIVAL: SurvivalConfig = {
@@ -326,6 +338,7 @@ export const DEFAULT_SURVIVAL: SurvivalConfig = {
   probabilidadeEnterrada: 0.5,
   profundidadeEnterrada: 3,
   aqueceVizinhas: true,
+  penalizacaoSomaMs: 3_000,
 };
 
 /**
@@ -697,6 +710,13 @@ export const folga = (
  * É condição necessária, não suficiente: `0` quer dizer «vale a pena tentar»,
  * qualquer outro valor quer dizer «hoje não dá, de certeza».
  */
+/**
+ * Há peças no tabuleiro e nenhuma jogada — por exemplo, 1, 2, 1, 2 soltos. É o
+ * que faz a linha cair já; ver `avancarRelogio`.
+ */
+export const semJogadas = (s: SurvivalState): boolean =>
+  !isEmpty(s.game.board) && !hasAnyGroup(s.game.board);
+
 export const restoParaLimpar = (s: SurvivalState): number =>
   totalSum(s.game.board) % 7;
 
@@ -910,9 +930,11 @@ export function avancarRelogio(
   readonly rebentou: Packed | undefined;
   /** As peças que a explosão aqueceu. Ver `aquecer`. */
   readonly aquecidas: readonly Packed[];
+  /** A linha caiu antes do prazo, porque não havia jogadas. */
+  readonly forcada: boolean;
 } {
   if (s.morto || s.limpo) {
-    return { state: s, caiu: false, rebentou: undefined, aquecidas: [] };
+    return { state: s, caiu: false, rebentou: undefined, aquecidas: [], forcada: false };
   }
 
   /*
@@ -950,11 +972,34 @@ export function avancarRelogio(
       caiu: true,
       rebentou,
       aquecidas,
+      forcada: false,
+    };
+  }
+
+  /*
+   * ── Sem jogadas, a linha cai já ──
+   *
+   * Um tabuleiro sem jogadas — 1, 2, 1, 2 que não chegam a 7 — deixava o
+   * jogador a olhar para o relógio, ou à procura do botão de puxar. Esperar
+   * não era uma decisão, era tempo morto. A linha cai agora, e o prazo da
+   * seguinte recomeça a contar daqui, como em qualquer injeção.
+   *
+   * Não paga o multiplicador de puxar: não foi uma escolha. E se a linha nova
+   * também não trouxer jogada, o tique seguinte faz cair outra — o ecrã só
+   * chama isto depois de a anterior acabar de cair, portanto vêem-se uma a uma.
+   */
+  if (semJogadas(s)) {
+    return {
+      state: injectRow(s, false, config, agoraMs),
+      caiu: true,
+      rebentou: undefined,
+      aquecidas: [],
+      forcada: true,
     };
   }
 
   if (agoraMs < s.proximaLinhaMs) {
-    return { state: s, caiu: false, rebentou: undefined, aquecidas: [] };
+    return { state: s, caiu: false, rebentou: undefined, aquecidas: [], forcada: false };
   }
 
   return {
@@ -962,6 +1007,7 @@ export function avancarRelogio(
     caiu: true,
     rebentou: undefined,
     aquecidas: [],
+    forcada: false,
   };
 }
 
@@ -976,6 +1022,8 @@ export interface SurvivalTap {
   readonly cleared: boolean;
   /** A jogada levou a bomba consigo. */
   readonly desarmou: boolean;
+  /** O toque passava de 7, e a próxima linha chegou mais cedo. */
+  readonly penalizado: boolean;
 }
 
 const parado = (s: SurvivalState): SurvivalTap => ({
@@ -984,6 +1032,7 @@ const parado = (s: SurvivalState): SurvivalTap => ({
   gainedScore: 0,
   cleared: false,
   desarmou: false,
+  penalizado: false,
 });
 
 /**
@@ -1012,7 +1061,26 @@ export function survivalTap(
   const game = tap(antes, p, jokerAs);
   const jogou = game.history.length > antes.history.length;
 
-  if (!jogou) return { ...parado(s), state: { ...s, game } };
+  if (!jogou) {
+    /*
+     * **Passar de 7 adianta a próxima linha.** O prazo pode ficar para trás
+     * do relógio: o tique seguinte vê-o vencido e faz cair a linha, e o prazo
+     * da outra conta a partir daí, como sempre. Só a soma errada paga — tirar
+     * uma peça da seleção, ou tocar no vazio, não.
+     */
+    const passou = game.rejection === "over-target";
+    return {
+      ...parado(s),
+      state: {
+        ...s,
+        game,
+        proximaLinhaMs: passou
+          ? s.proximaLinhaMs - config.penalizacaoSomaMs
+          : s.proximaLinhaMs,
+      },
+      penalizado: passou,
+    };
+  }
 
   /*
    * Sem combo por tempo, e continua a ser deliberado — agora por outra razão.
@@ -1057,6 +1125,7 @@ export function survivalTap(
     gainedScore: ganho,
     cleared: limpou,
     desarmou,
+    penalizado: false,
   };
 }
 
