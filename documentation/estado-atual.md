@@ -1018,8 +1018,8 @@ botão principal.
 **O botão vive no rodapé**, no sítio do «Puxar linha» do Survival, à largura
 toda. Esteve ao lado da seta de sair, redondo e só com o ícone, escondido até
 ao sétimo tabuleiro — passava despercebido, e aparecia do nada. Agora **está lá
-desde o início, fechado a cadeado** e a dizer «Saltar a partir do 7.º
-tabuleiro»; abre com um pulso quando o salto passa a existir, e ganha um anel
+desde o início, fechado a cadeado** e só com «Saltar tabuleiro» (o nome
+acessível diz a partir de quando abre); abre com um pulso quando o salto passa a existir, e ganha um anel
 num beco sem saída. Estar sempre lá também deixa o tabuleiro em paz: um rodapé
 que aparecesse a meio encolhia-o no momento em que ele começa a ser grande.
 Num pack sem tabuleiros livres o botão não aparece — o cadeado nunca abria.

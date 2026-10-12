@@ -195,7 +195,8 @@ describe("o salto, no ecrã", () => {
       const b = botaoSaltar();
       expect(b?.hidden).toBe(false);
       expect(b?.disabled).toBe(true);
-      expect(b?.textContent).toBe("Saltar a partir do 7.º tabuleiro");
+      expect(b?.textContent).toBe("Saltar tabuleiro");
+      expect(b?.getAttribute("aria-label")).toContain("a partir do 7.º tabuleiro");
       expect(b?.querySelector(".icone-cadeado")).not.toBeNull();
       await limparSeguro();
     }

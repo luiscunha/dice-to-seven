@@ -2477,8 +2477,8 @@ body::before {
 
 /*
  * Fechado a cadeado, não apagado. O `:disabled` genérico tira-lhe opacidade e
- * lia-se como avariado; aqui é um botão neutro, de tinta discreta, com o
- * cadeado a dizer porquê e o texto a dizer quando abre.
+ * lia-se como avariado; aqui é um botão neutro, de tinta discreta, e o
+ * cadeado diz que ainda não abre.
  */
 .tempo .rodape .btn.saltar:disabled {
   opacity: 1;

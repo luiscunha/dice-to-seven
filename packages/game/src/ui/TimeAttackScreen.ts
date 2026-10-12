@@ -586,8 +586,9 @@ export class TimeAttackScreen {
    * O botão de saltar e o painel de beco sem saída.
    *
    * O botão está sempre no rodapé. **Fechado a cadeado** até ao primeiro
-   * tabuleiro que pode bloquear, a dizer a partir de qual abre; aberto daí em
-   * diante, com o custo. Ao abrir **pulsa**: é uma regra nova a meio da
+   * tabuleiro que pode bloquear, só com «Saltar tabuleiro» — o cadeado diz que
+   * ainda não abre, e o nome acessível diz quando; aberto daí em diante, com o
+   * custo. Ao abrir **pulsa**: é uma regra nova a meio da
    * corrida, e o pulso é o que diz que mudou.
    *
    * Num pack sem tabuleiros livres o salto nunca abre, e o botão nem aparece —
@@ -613,10 +614,7 @@ export class TimeAttackScreen {
           `saltar o tabuleiro, custa ${String(this.config.saltarMs / 1000)} segundos`,
         );
       } else {
-        this.btSaltar.replaceChildren(
-          iconeCadeado(),
-          `Saltar a partir do ${ordinal} tabuleiro`,
-        );
+        this.btSaltar.replaceChildren(iconeCadeado(), "Saltar tabuleiro");
         this.btSaltar.setAttribute(
           "aria-label",
           `saltar o tabuleiro: disponível a partir do ${ordinal} tabuleiro`,
