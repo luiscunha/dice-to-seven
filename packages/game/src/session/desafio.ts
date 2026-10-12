@@ -26,6 +26,9 @@
  * esperar por amanhã.
  */
 
+import type { Cell } from "@dicetoseven/engine";
+import { mulberry32, randInt } from "@dicetoseven/engine";
+
 import type { ProfileStorage } from "./progress";
 
 export type ModoDoDesafio = "tempo" | "survival";
@@ -134,6 +137,16 @@ export function seedDoDia(data: string, modo: ModoDoDesafio): number {
     h = Math.imul(h, 0x01000193);
   }
   return h >>> 0;
+}
+
+/**
+ * Os dados do dia: seis faces tiradas da seed. **Só desenho** — a cara do
+ * desafio na Home, diferente todos os dias e igual para toda a gente no mesmo
+ * dia. Não entram em nenhuma corrida.
+ */
+export function dadosDoDia(data: string): Cell[] {
+  const rng = mulberry32(seedDoDia(data, "tempo") ^ 0xd1ce);
+  return Array.from({ length: 6 }, () => (randInt(rng, 6) + 1) as Cell);
 }
 
 /* ─── A tentativa ─────────────────────────────────────────────────────────── */

@@ -15,6 +15,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Level } from "@dicetoseven/engine";
 
 import { emptyProfile } from "../src/session/progress";
+import type { Profile } from "../src/session/progress";
 import type { SurvivalState } from "../src/session/SurvivalSession";
 import { DEFAULT_SURVIVAL, startSurvival } from "../src/session/SurvivalSession";
 import type { CartaoDoDesafio } from "../src/ui/HomeScreen";
@@ -130,9 +131,15 @@ describe("partilhar", () => {
 /* ─── O cartão da Home ────────────────────────────────────────────────────── */
 
 describe("o cartão do Desafio do Dia", () => {
-  const abrir = (d: Partial<CartaoDoDesafio> = {}): HomeScreen =>
+  /** Quem já fez um nível: o desafio vem por cima dos modos. */
+  const jogador: Profile = {
+    ...emptyProfile(),
+    levels: { "inicio-000001": { seal: "completed", bestTimeMs: 9_000 } },
+  };
+
+  const abrir = (d: Partial<CartaoDoDesafio> = {}, perfil: Profile = jogador): HomeScreen =>
     new HomeScreen(host, {
-      perfil: emptyProfile(),
+      perfil,
       totalNiveis: 143,
       melhorTempoSurvival: "0:00.0",
       aoEscolherNiveis: () => undefined,
@@ -143,6 +150,7 @@ describe("o cartão do Desafio do Dia", () => {
         numero: 3,
         data: "14 out",
         sequencia: 0,
+        dados: [1, 2, 3, 4, 5, 6],
         tempo: { tipo: "por-jogar" },
         survival: { tipo: "por-jogar" },
         aoJogarTempo: () => undefined,
@@ -155,11 +163,24 @@ describe("o cartão do Desafio do Dia", () => {
     host.querySelector(`.home-desafio-modo[data-modo="${modo}"] .home-desafio-modo-estado`)
       ?.textContent ?? undefined;
 
-  it("**fica por cima dos modos**, com o número e o dia", () => {
+  const ordem = (): string[] =>
+    [...host.querySelectorAll(".ecra.home > *")].map((e) => e.className);
+
+  it("para quem chega, os Puzzles vêm primeiro — a campanha é a porta de entrada", () => {
+    const ecra = abrir({}, emptyProfile());
+    expect(ordem().indexOf("home-modos")).toBeLessThan(ordem().indexOf("home-desafio"));
+    ecra.destruir();
+  });
+
+  it("**para quem já joga, fica por cima dos modos**, com o número e o dia", () => {
     const ecra = abrir();
-    const filhos = [...host.querySelectorAll(".ecra.home > *")].map((e) => e.className);
-    expect(filhos.indexOf("home-desafio")).toBeLessThan(filhos.indexOf("home-modos"));
-    expect(host.querySelector(".home-desafio-data")?.textContent).toBe("#3 · 14 out");
+    expect(ordem().indexOf("home-desafio")).toBeLessThan(ordem().indexOf("home-modos"));
+    expect(host.querySelector(".home-modos .home-seccao")?.textContent).toBe("Modos de jogo");
+    expect(host.querySelector(".home-desafio-cardinal")?.textContent).toBe("#3");
+    expect(host.querySelector(".home-desafio-data")?.textContent).toBe("14 out");
+    // Os dados do dia, como peças a sério.
+    const dados = [...host.querySelectorAll<HTMLElement>(".home-desafio-dados .peca")];
+    expect(dados.map((p) => p.dataset["valor"])).toEqual(["1", "2", "3", "4", "5", "6"]);
     ecra.destruir();
   });
 

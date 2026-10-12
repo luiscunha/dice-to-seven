@@ -56,7 +56,6 @@ import {
   iconeCronometro,
   iconeDefinicoes,
   iconePuzzles,
-  iconeRegras,
   iconeSeguir,
   iconeSurvival,
 } from "./icones";
@@ -79,6 +78,8 @@ export interface CartaoDoDesafio {
   readonly data: string;
   /** Dias seguidos com desafio feito. */
   readonly sequencia: number;
+  /** Os dados do dia: seis faces da seed, só para desenho. Ver `dadosDoDia`. */
+  readonly dados: readonly Cell[];
   readonly tempo: EstadoNoCartao;
   readonly survival: EstadoNoCartao;
   readonly aoJogarTempo: () => void;
@@ -143,15 +144,34 @@ export class HomeScreen {
       " A execução é o verdadeiro desafio.",
     );
 
+    /*
+     * ── Quem chega pela primeira vez vai para os Puzzles ──
+     *
+     * O desafio do dia fica por cima dos modos para quem já joga: é a razão de
+     * voltar amanhã. Para quem ainda não fez um único nível, a ordem inverte-se
+     * — a campanha é a porta de entrada, e um Contra-Relógio do dia como
+     * primeira coisa do jogo era a porta errada.
+     */
+    const novato = Object.keys(opcoes.perfil.levels).length === 0;
+    const desafio =
+      opcoes.desafio === undefined
+        ? []
+        : [this.desafio(opcoes.desafio, opcoes.modoFace ?? "pintas")];
+
+    // Com o desafio, os modos ganham um nome: são duas secções, e não uma lista.
+    if (opcoes.desafio !== undefined) {
+      modos.prepend(elemento("h2", "home-seccao", "Modos de jogo"));
+    }
+
     this.raiz.append(
       this.barra(opcoes),
       lema,
-      ...(opcoes.desafio === undefined ? [] : [this.desafio(opcoes.desafio)]),
-      modos,
+      ...(novato ? [modos, ...desafio] : [...desafio, modos]),
       this.ajuda(opcoes),
       this.rodape(opcoes),
     );
     this.raiz.dataset["desafio"] = opcoes.desafio === undefined ? "nao" : "sim";
+    this.raiz.dataset["novato"] = novato ? "sim" : "nao";
 
     host.replaceChildren(this.raiz);
   }
@@ -457,50 +477,66 @@ export class HomeScreen {
   /* ─── O Desafio do Dia ──────────────────────────────────────────────────── */
 
   /**
-   * O cartão do dia: o número e a data, a sequência, e os dois desafios lado a
-   * lado — cada um diz se está por jogar, a meio, feito (com o resultado) ou
-   * interrompido, e tocar-lhe joga-o. Feito, tocar-lhe é treinar.
+   * O cartão do dia, desenhado como um **bilhete**: uma faixa com as cores das
+   * seis faces no topo, o número do desafio grande, na letra da marca, e os
+   * dados do dia — seis faces tiradas da seed, diferentes todos os dias. É a
+   * cara do dia, e é o que faz o cartão parecer do jogo e não de um formulário.
    *
-   * A superfície é a neutra das regras, e não a cor de um modo: o cartão é dos
-   * dois, e cada metade leva a cor do seu.
+   * Por baixo, **a lista do dia**: os dois desafios, um por linha, cada um com o
+   * ícone do modo e o estado — por jogar, a meio, feito (com o resultado) ou
+   * interrompido. Uma lista e não dois blocos coloridos: os blocos repetiam os
+   * mosaicos dos modos logo abaixo, e liam-se como os mesmos botões duas vezes.
+   *
+   * A sequência e o partilhar ficam no canto, onde não pedem espaço próprio.
    */
-  private desafio(d: CartaoDoDesafio): HTMLElement {
+  private desafio(d: CartaoDoDesafio, face: ModoFace): HTMLElement {
     const el = elemento("section", "home-desafio");
     el.setAttribute("aria-labelledby", "home-desafio-titulo");
 
-    const icone = elemento("span", "home-desafio-icone");
-    icone.appendChild(iconeCalendario());
+    const rotulo = elemento("h2", "home-desafio-rotulo");
+    rotulo.id = "home-desafio-titulo";
+    rotulo.append(iconeCalendario(), "Desafio do dia");
 
-    const titulo = elemento("h2", "home-desafio-titulo", "Desafio do dia");
-    titulo.id = "home-desafio-titulo";
-
-    const cabeca = elemento("div", "home-desafio-cabeca");
-    cabeca.append(
-      icone,
-      titulo,
-      elemento("span", "home-desafio-data", `#${String(d.numero)} · ${d.data}`),
-    );
-
+    const extras = elemento("div", "home-desafio-extras");
     if (d.sequencia > 0) {
       const seq = elemento("span", "home-desafio-sequencia", `🔥 ${String(d.sequencia)}`);
       seq.setAttribute(
         "aria-label",
         d.sequencia === 1 ? "1 dia seguido" : `${String(d.sequencia)} dias seguidos`,
       );
-      cabeca.appendChild(seq);
+      extras.appendChild(seq);
+    }
+    if (d.aoPartilhar !== undefined) {
+      extras.appendChild(botaoPartilhar(d.aoPartilhar, "home-desafio-partilhar", true));
     }
 
-    const modos = elemento("div", "home-desafio-modos");
-    modos.append(
-      this.desafioDoModo("tempo", "Contra-Relógio", d.tempo, d.aoJogarTempo),
-      this.desafioDoModo("survival", "Survival", d.survival, d.aoJogarSurvival),
+    const cabeca = elemento("div", "home-desafio-cabeca");
+    cabeca.append(rotulo, extras);
+
+    const numero = elemento("p", "home-desafio-numero");
+    numero.append(
+      elemento("span", "home-desafio-cardinal", `#${String(d.numero)}`),
+      elemento("span", "home-desafio-data", d.data),
     );
 
-    el.append(cabeca, modos);
-    if (d.aoPartilhar !== undefined) {
-      el.appendChild(botaoPartilhar(d.aoPartilhar, "com-icone home-desafio-partilhar"));
+    const dados = elemento("div", "home-desafio-dados");
+    dados.setAttribute("aria-hidden", "true");
+    for (const v of d.dados) dados.appendChild(pecaDeAmostra(v, face));
+
+    const bilhete = elemento("div", "home-desafio-bilhete");
+    bilhete.append(numero, dados);
+
+    const lista = elemento("ul", "home-desafio-lista");
+    for (const linha of [
+      this.desafioDoModo("tempo", "Contra-Relógio", d.tempo, d.aoJogarTempo),
+      this.desafioDoModo("survival", "Survival", d.survival, d.aoJogarSurvival),
+    ]) {
+      const li = document.createElement("li");
+      li.appendChild(linha);
+      lista.appendChild(li);
     }
 
+    el.append(cabeca, bilhete, lista);
     return el;
   }
 
@@ -522,7 +558,12 @@ export class HomeScreen {
             ? `✓ ${estado.texto}`
             : "Interrompido";
 
+    // O ícone na cor do modo: é o elo com o mosaico do mesmo modo, mais abaixo.
+    const icone = elemento("span", "home-desafio-modo-icone");
+    icone.appendChild(modo === "tempo" ? iconeCronometro() : iconeSurvival());
+
     b.append(
+      icone,
       elemento("span", "home-desafio-modo-nome", nome),
       elemento("span", "home-desafio-modo-estado", texto),
     );
@@ -545,46 +586,38 @@ export class HomeScreen {
   /* ─── As regras ─────────────────────────────────────────────────────────── */
 
   /**
-   * O cartão das regras, no fundo.
+   * As regras, numa faixa: a conta em peças, «Como jogar?», e a seta.
    *
-   * **A regra inteira está impressa no cartão**, em peças: um 3, um 4 e o 7 que
-   * eles fazem. É o jogo todo numa linha, e quem a percebe aqui já não precisa
-   * de entrar — que é o melhor desfecho possível para um botão de ajuda.
-   *
-   * O cartão é a superfície neutra, com borda, e a cor vem só das peças e do
-   * número. A alternativa que se recusou foi um painel escuro com dados a
-   * brilhar: a direção de arte não tem néon, e um cartão que grita ao lado dos
-   * modos rouba-lhes o olho para a única coisa da Home que não é jogar.
+   * **A regra inteira continua impressa**, em peças: um 3, um 4 e o 7 que eles
+   * fazem. É o jogo todo numa linha, e quem a percebe aqui já não precisa de
+   * entrar. Foi um cartão alto, com o título, um parágrafo e um botão; numa
+   * Home que passou a ter o desafio do dia, ocupava o espaço de um modo para a
+   * única coisa do ecrã que não é jogar. A faixa inteira é o botão.
    */
   private ajuda(opcoes: OpcoesHome): HTMLElement {
     const el = elemento("section", "home-ajuda");
-    el.setAttribute("aria-labelledby", "home-ajuda-titulo");
+    el.setAttribute("aria-label", "Como jogar");
 
-    const conta = elemento("p", "home-ajuda-conta");
+    const face = opcoes.modoFace ?? "pintas";
+    const conta = elemento("span", "home-ajuda-conta");
+    conta.setAttribute("aria-hidden", "true");
     conta.append(
-      pecaDeAmostra(3, opcoes.modoFace ?? "pintas"),
+      pecaDeAmostra(3, face),
       elemento("span", "home-ajuda-sinal", "+"),
-      pecaDeAmostra(4, opcoes.modoFace ?? "pintas"),
+      pecaDeAmostra(4, face),
       elemento("span", "home-ajuda-sinal", "="),
       elemento("span", "home-ajuda-sete", "7"),
     );
 
-    const titulo = elemento("h2", "home-ajuda-titulo", "Como jogar?");
-    titulo.id = "home-ajuda-titulo";
-
-    const b = botao("Ler as regras", "com-icone", opcoes.aoEscolherComoJogar);
-    b.prepend(iconeRegras());
-
-    el.append(
-      conta,
-      titulo,
-      elemento(
-        "p",
-        "home-ajuda-texto",
-        "Junta peças encostadas até somarem 7. Em meio minuto sabes tudo.",
-      ),
-      b,
+    const texto = elemento("span", "home-ajuda-texto");
+    texto.append(
+      elemento("span", "home-ajuda-titulo", "Como jogar?"),
+      elemento("span", "home-ajuda-legenda", "Junta peças encostadas até somarem 7."),
     );
+
+    const b = botao("", "home-ajuda-faixa", opcoes.aoEscolherComoJogar);
+    b.append(conta, texto, iconeSeguir());
+    el.appendChild(b);
 
     return el;
   }

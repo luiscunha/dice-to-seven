@@ -1104,9 +1104,22 @@ eram determinísticos na seed.
   e a sequência, pela folha de partilha do sistema quando existe e copiado
   quando não (o WebView do Android não a tem). Uma tabela de classificação
   precisa de backend, e fica para depois.
-- **Na Home**, um cartão por cima dos modos: o número e o dia, a sequência, e
-  os dois desafios com o estado de cada um. Com ele, os mosaicos dos modos de
-  corrida descem de altura, para a Home caber em 812px.
+- **Na Home, um bilhete.** A primeira versão era um cartão branco com dois
+  blocos coloridos — os mesmos «Contra-Relógio» e «Survival» dos mosaicos logo
+  abaixo, e lia-se como um formulário e como os mesmos botões duas vezes. Ficou:
+  - uma faixa com as seis faces da rampa no topo, o número do desafio grande na
+    letra da marca, e **os dados do dia** — seis faces tiradas da seed
+    (`dadosDoDia`), só desenho, diferentes todos os dias;
+  - os dois desafios como **uma lista do dia**, uma linha cada, com o ícone na
+    cor do modo e o estado: «Jogar», «Continuar · 1:20», «✓ 1240 pontos»,
+    «Interrompido»;
+  - a sequência 🔥 e o partilhar (só o ícone) no canto.
+- **O resto da Home arrumou-se à volta dele**: os modos ganharam o rótulo «Modos
+  de jogo» e mosaicos mais baixos, e as regras passaram de cartão alto a uma
+  faixa — a conta 3 + 4 = 7 em peças, «Como jogar?», e a seta. **Quem ainda não
+  fez um nível vê os modos primeiro**: a campanha é a porta de entrada, e um
+  Contra-Relógio do dia como primeira coisa do jogo era a porta errada. A 375×812
+  cabe tudo; num ecrã mais baixo a Home desliza em vez de encolher os cartões.
 
 O desafio #1 é o de 12 de outubro de 2026 (`EPOCA_DESAFIO`). O puzzle diário da
 campanha, com os 30 níveis reservados, continua por fazer: dão um mês, e depois

@@ -135,23 +135,46 @@ function copiarAModa(texto: string): boolean {
  * O botão de partilhar, com o desfecho dito **no próprio botão**: «Copiado»
  * durante uns segundos, e volta. Sem isto, copiar era um toque que não fazia
  * nada à vista, e a pessoa tocava outra vez.
+ *
+ * `compacto` é a versão só com o ícone, para um canto: o desfecho diz-se com
+ * um ✓ no lugar do ícone, e no nome acessível.
  */
 export function botaoPartilhar(
   aoPartilhar: () => Promise<DesfechoDaPartilha>,
   classe = "primario com-icone",
+  compacto = false,
 ): HTMLButtonElement {
+  const NOME = "Partilhar o resultado de hoje";
+
   const repor = (): void => {
+    if (compacto) {
+      b.replaceChildren(iconePartilhar());
+      b.setAttribute("aria-label", NOME);
+      return;
+    }
     b.replaceChildren(iconePartilhar(), "Partilhar");
   };
 
   const b = botao("", classe, () => {
     void aoPartilhar().then((desfecho) => {
       if (desfecho !== "copiado" && desfecho !== "falhou") return;
-      b.replaceChildren(desfecho === "copiado" ? "Copiado ✓" : "Não deu para copiar");
-      setTimeout(repor, 2_500);
+      const copiado = desfecho === "copiado";
+
+      if (compacto) {
+        b.replaceChildren(copiado ? "✓" : "✕");
+        b.setAttribute("aria-label", copiado ? "Copiado" : "Não deu para copiar");
+      } else {
+        b.replaceChildren(copiado ? "Copiado ✓" : "Não deu para copiar");
+      }
+      b.dataset["desfecho"] = desfecho;
+      setTimeout(() => {
+        delete b.dataset["desfecho"];
+        repor();
+      }, 2_500);
     });
   });
 
+  if (compacto) b.title = NOME;
   repor();
   return b;
 }
