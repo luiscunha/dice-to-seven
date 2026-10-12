@@ -1,9 +1,9 @@
 /**
  * O Desafio do Dia — o núcleo, sem ecrã.
  *
- * Três promessas: **a mesma seed para toda a gente no mesmo dia**, **só a
- * primeira tentativa conta**, e **a sequência de dias não mente** — nem a
- * quem ainda não jogou hoje, nem a quem falhou um dia.
+ * Quatro promessas: **um desafio por dia, à vez**, **a mesma seed para toda a
+ * gente no mesmo dia**, **só a primeira tentativa conta**, e **a sequência de
+ * dias não mente** — nem a quem ainda não jogou hoje, nem a quem falhou um dia.
  */
 
 import { describe, expect, it } from "vitest";
@@ -15,11 +15,14 @@ import {
   comecar,
   dataDe,
   diaAnterior,
+  diaDaSemana,
+  diasDoMes,
   escolherDoDia,
   estadoDoModo,
   guardarDesafios,
   interromper,
   lerDesafios,
+  modoDoDia,
   numeroDoDia,
   registar,
   seedDoDia,
@@ -36,12 +39,16 @@ const memoria = (): ProfileStorage & { readonly dados: Map<string, string> } => 
   };
 };
 
+const PUZZLE = { tempoMs: 83_400, selo: "perfect" } as const;
 const TEMPO = { pontos: 1240, tabuleiros: 14, saltados: 1 };
 const SURVIVAL = { tempoMs: 222_100, limpou: false, linhas: 18 };
+const RESULTADO = { puzzle: PUZZLE, tempo: TEMPO, survival: SURVIVAL } as const;
 
-/** Um dia com o Contra-Relógio feito. */
-const feito = (d: Desafios, data: string): Desafios =>
-  registar(comecar(d, data, "tempo"), data, "tempo", TEMPO);
+/** Um dia com o desafio desse dia feito. */
+const feito = (d: Desafios, data: string): Desafios => {
+  const modo = modoDoDia(data);
+  return registar(comecar(d, data, modo), data, modo, RESULTADO[modo]);
+};
 
 describe("as datas", () => {
   it("o dia é o do fuso de quem joga, e não o de Greenwich", () => {
@@ -56,10 +63,54 @@ describe("as datas", () => {
     expect(numeroDoDia("2027-10-12")).toBe(366);
   });
 
+  it("os dias do mês, do primeiro ao último — com os bissextos", () => {
+    const outubro = diasDoMes("2026-10-12");
+    expect(outubro).toHaveLength(31);
+    expect(outubro[0]).toBe("2026-10-01");
+    expect(outubro.at(-1)).toBe("2026-10-31");
+
+    expect(diasDoMes("2028-02-10")).toHaveLength(29);
+    expect(diasDoMes("2026-02-10")).toHaveLength(28);
+    expect(diasDoMes("2026-12-31").at(-1)).toBe("2026-12-31");
+  });
+
+  it("a semana começa na segunda", () => {
+    expect(diaDaSemana("2026-10-12")).toBe(0); // segunda, o #1
+    expect(diaDaSemana("2026-10-01")).toBe(3); // quinta
+    expect(diaDaSemana("2026-10-18")).toBe(6); // domingo
+
+    // E bate com o calendário do sistema, um ano inteiro.
+    for (let i = 0; i < 366; i++) {
+      const d = new Date(Date.UTC(2026, 0, 1 + i));
+      expect(diaDaSemana(d.toISOString().slice(0, 10))).toBe((d.getUTCDay() + 6) % 7);
+    }
+  });
+
   it("o dia anterior atravessa meses e anos", () => {
     expect(diaAnterior("2026-11-01")).toBe("2026-10-31");
     expect(diaAnterior("2027-01-01")).toBe("2026-12-31");
     expect(diaAnterior("2028-03-01")).toBe("2028-02-29");
+  });
+});
+
+describe("um desafio por dia, à vez", () => {
+  it("**Puzzle, Contra-Relógio, Survival**, e outra vez — o #1 é um Puzzle", () => {
+    const semana = diasDoMes("2026-10-12").slice(11, 18).map(modoDoDia);
+    expect(semana).toEqual(["puzzle", "tempo", "survival", "puzzle", "tempo", "survival", "puzzle"]);
+  });
+
+  it("a rotação continua para trás do #1, sem buracos", () => {
+    expect(modoDoDia("2026-10-11")).toBe("survival");
+    expect(modoDoDia("2026-10-10")).toBe("tempo");
+    expect(modoDoDia("2026-10-09")).toBe("puzzle");
+  });
+
+  it("atravessa meses e anos sem saltar um modo", () => {
+    const modos = ["puzzle", "tempo", "survival"];
+    for (let i = 0; i < 400; i++) {
+      const data = new Date(Date.UTC(2026, 9, 12 + i)).toISOString().slice(0, 10);
+      expect(modoDoDia(data)).toBe(modos[i % 3]);
+    }
   });
 });
 
@@ -89,7 +140,8 @@ describe("a seed do dia", () => {
 });
 
 describe("a tentativa que conta", () => {
-  const HOJE = "2026-10-12";
+  /** Um dia de Contra-Relógio: o #2. */
+  const HOJE = "2026-10-13";
 
   it("começar marca a tentativa, e acabar grava o resultado", () => {
     let d = comecar(SEM_DESAFIOS, HOJE, "tempo");
@@ -141,8 +193,15 @@ describe("a sequência de dias", () => {
   });
 
   it("uma tentativa interrompida não conta", () => {
-    const d = interromper(comecar(feito(SEM_DESAFIOS, "2026-10-11"), "2026-10-12", "tempo"), "2026-10-12", "tempo");
-    expect(sequencia(d, "2026-10-12")).toBe(1);
+    // O 13 é um Contra-Relógio.
+    const d = interromper(comecar(feito(SEM_DESAFIOS, "2026-10-12"), "2026-10-13", "tempo"), "2026-10-13", "tempo");
+    expect(sequencia(d, "2026-10-13")).toBe(1);
+  });
+
+  it("**só conta o desafio do dia**: outro modo feito nesse dia não faz sequência", () => {
+    // O 12 é um Puzzle; um Contra-Relógio feito nesse dia é de quando havia três.
+    const d = registar(comecar(SEM_DESAFIOS, "2026-10-12", "tempo"), "2026-10-12", "tempo", TEMPO);
+    expect(sequencia(d, "2026-10-12")).toBe(0);
   });
 });
 
@@ -192,13 +251,16 @@ describe("o Puzzle do Dia", () => {
     expect(escolherDoDia("2026-10-14", POOL)).toBe(escolherDoDia("2026-10-14", POOL));
   });
 
-  it("muda todos os dias, e só repete quando a lista acaba", () => {
-    const mes = Array.from({ length: 30 }, (_, i) =>
-      escolherDoDia(new Date(Date.UTC(2026, 9, 12 + i)).toISOString().slice(0, 10), POOL),
+  it("muda a cada Puzzle do Dia — um em cada três dias — e só repete quando a lista acaba", () => {
+    const puzzles = Array.from({ length: 31 }, (_, i) =>
+      new Date(Date.UTC(2026, 9, 12 + 3 * i)).toISOString().slice(0, 10),
     );
-    expect(new Set(mes).size).toBe(30);
-    // O dia 31 volta ao primeiro.
-    expect(escolherDoDia("2026-11-11", POOL)).toBe(mes[0]);
+    expect(puzzles.every((d) => modoDoDia(d) === "puzzle")).toBe(true);
+
+    const niveis = puzzles.map((d) => escolherDoDia(d, POOL));
+    expect(new Set(niveis.slice(0, 30)).size).toBe(30);
+    // O 31.º Puzzle do Dia volta ao primeiro.
+    expect(niveis[30]).toBe(niveis[0]);
   });
 
   it("não segue a ordem do ficheiro", () => {
@@ -211,10 +273,7 @@ describe("o Puzzle do Dia", () => {
 
   it("o resultado grava-se, conta para a sequência, e volta do armazenamento", () => {
     const s = memoria();
-    const d = registar(comecar(SEM_DESAFIOS, "2026-10-12", "puzzle"), "2026-10-12", "puzzle", {
-      tempoMs: 83_400,
-      selo: "perfect",
-    });
+    const d = registar(comecar(SEM_DESAFIOS, "2026-10-12", "puzzle"), "2026-10-12", "puzzle", PUZZLE);
 
     expect(sequencia(d, "2026-10-12")).toBe(1);
     guardarDesafios(s, d);

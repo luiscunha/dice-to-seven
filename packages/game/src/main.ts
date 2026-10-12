@@ -47,13 +47,14 @@ import {
   DESAFIO_TEMPO_INICIAL,
   SEM_DESAFIOS,
   comecar,
-  dadosDoDia,
   dataDe,
+  diasDoMes,
   escolherDoDia,
   estadoDoModo,
   guardarDesafios,
   interromper,
   lerDesafios,
+  modoDoDia,
   numeroDoDia,
   registar,
   seedDoDia,
@@ -65,14 +66,18 @@ import { CapitulosScreen } from "./ui/CapitulosScreen";
 import { ComoJogarScreen } from "./ui/ComoJogarScreen";
 import { DefinicoesScreen } from "./ui/DefinicoesScreen";
 import { elemento } from "./ui/dom";
-import type { CartaoDoDesafio, EstadoNoCartao } from "./ui/DesafioScreen";
+import type {
+  CalendarioDoDesafio,
+  EstadoNoCalendario,
+  EstadoNoCartao,
+} from "./ui/DesafioScreen";
 import { DesafioScreen } from "./ui/DesafioScreen";
 import type { ResumoDoDesafio } from "./ui/HomeScreen";
 import { HomeScreen } from "./ui/HomeScreen";
 import { JokerTutorial } from "./ui/JokerTutorial";
 import { NiveisScreen } from "./ui/NiveisScreen";
 import type { DesafioNoEcra, DesfechoDaPartilha } from "./ui/partilha";
-import { dataCurta, partilhar, textoDoDesafio } from "./ui/partilha";
+import { dataCurta, mesPorExtenso, partilhar, textoDoDesafio } from "./ui/partilha";
 import { abrirPerfil } from "./ui/PerfilDialog";
 import { PuzzleScreen } from "./ui/PuzzleScreen";
 import type { Rota } from "./ui/rotas";
@@ -381,7 +386,7 @@ async function montar(rota: Rota): Promise<void> {
     case "desafio":
       if (rota.modo === undefined) {
         atual = new DesafioScreen(app as HTMLElement, {
-          cartao: cartaoDoDesafio(),
+          calendario: calendarioDoDesafio(),
           aoVoltar: voltarA({ ecra: "home" }),
         });
         return;
@@ -718,43 +723,53 @@ function estadoNoCartao(data: string, modo: ModoDoDesafio): EstadoNoCartao {
   return { tipo: "interrompido" };
 }
 
-/** O cartão da Home: só o resumo de hoje. Tocar-lhe abre o ecrã do desafio. */
+/** O cartão da Home: só o desafio de hoje. Tocar-lhe abre o calendário. */
 function resumoDoDesafio(): ResumoDoDesafio {
   const data = hoje();
   arrumarDesafio(data);
+  const modo = modoDoDia(data);
 
   return {
     numero: numeroDoDia(data),
     data: dataCurta(data),
     sequencia: sequencia(desafios, data),
-    estados: (["puzzle", "tempo", "survival"] as const).map(
-      (modo) => estadoNoCartao(data, modo).tipo,
-    ),
+    modo,
+    estado: estadoNoCartao(data, modo),
     aoAbrir: voltarA({ ecra: "desafio" }),
   };
 }
 
-function cartaoDoDesafio(): CartaoDoDesafio {
+/**
+ * Um dia do calendário, visto de hoje. Um dia passado está feito ou perdido:
+ * a tentativa que ficou a meio ontem — um Survival guardado, um Puzzle aberto —
+ * já não se acaba, porque o desafio de hoje é outro.
+ */
+function estadoNoCalendario(data: string, dataDeHoje: string): EstadoNoCalendario {
+  if (numeroDoDia(data) < 1) return { tipo: "sem-desafio" };
+  if (data > dataDeHoje) return { tipo: "futuro" };
+
+  const estado = estadoNoCartao(data, modoDoDia(data));
+  if (data === dataDeHoje || estado.tipo === "feito") return estado;
+  return { tipo: "perdido" };
+}
+
+function calendarioDoDesafio(): CalendarioDoDesafio {
   const data = hoje();
   arrumarDesafio(data);
-
-  const feito = (modo: ModoDoDesafio): boolean =>
-    estadoDoModo(desafios, data, modo)?.estado === "feito";
+  const feito = estadoDoModo(desafios, data, modoDoDia(data))?.estado === "feito";
 
   return {
-    numero: numeroDoDia(data),
-    data: dataCurta(data),
+    mes: mesPorExtenso(data),
+    hoje: data,
+    dias: diasDoMes(data).map((d) => ({
+      data: d,
+      numero: numeroDoDia(d),
+      modo: modoDoDia(d),
+      estado: estadoNoCalendario(d, data),
+    })),
     sequencia: sequencia(desafios, data),
-    dados: dadosDoDia(data),
-    puzzle: estadoNoCartao(data, "puzzle"),
-    tempo: estadoNoCartao(data, "tempo"),
-    survival: estadoNoCartao(data, "survival"),
-    aoJogarPuzzle: voltarA({ ecra: "desafio", modo: "puzzle" }),
-    aoJogarTempo: voltarA({ ecra: "desafio", modo: "tempo" }),
-    aoJogarSurvival: voltarA({ ecra: "desafio", modo: "survival" }),
-    ...(feito("puzzle") || feito("tempo") || feito("survival")
-      ? { aoPartilhar: () => partilharDia(data) }
-      : {}),
+    aoJogar: voltarA({ ecra: "desafio", modo: modoDoDia(data) }),
+    ...(feito ? { aoPartilhar: () => partilharDia(data) } : {}),
   };
 }
 
@@ -773,6 +788,15 @@ function cartaoDoDesafio(): CartaoDoDesafio {
 async function mostrarDesafio(modo: ModoDoDesafio): Promise<void> {
   const data = hoje();
   arrumarDesafio(data);
+
+  /*
+   * Só se joga o desafio de hoje. Um endereço com outro modo — de ontem, de um
+   * separador que ficou aberto depois da meia-noite — volta ao calendário.
+   */
+  if (modo !== modoDoDia(data)) {
+    ir({ ecra: "desafio" });
+    return;
+  }
 
   const seed = seedDoDia(data, modo);
   const antes = estadoDoModo(desafios, data, modo);

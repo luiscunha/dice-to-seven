@@ -4,10 +4,10 @@
  * O Desafio do Dia, no ecrã.
  *
  * O núcleo está em `desafio.test.ts`. Aqui protege-se o que o jogador vê e
- * toca: o cartão da Home em cada estado, o texto que se partilha, e os dois
- * ecrãs de corrida quando a corrida é o desafio — a mesma seed dá os mesmos
- * tabuleiros, o fim oferece partilhar e treinar, e o Survival do dia não deixa
- * trocar de seed a meio.
+ * toca: o cartão da Home em cada estado, o calendário do mês, o texto que se
+ * partilha, e os ecrãs de cada modo quando são o desafio — a mesma seed dá os
+ * mesmos tabuleiros, o fim oferece partilhar e treinar, e o Survival do dia não
+ * deixa trocar de seed a meio.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -19,13 +19,20 @@ import type { Profile } from "../src/session/progress";
 import type { SurvivalState } from "../src/session/SurvivalSession";
 import { DEFAULT_SURVIVAL, startSurvival } from "../src/session/SurvivalSession";
 import { DEFAULT_TIME_ATTACK } from "../src/session/TimeAttackSession";
-import type { CartaoDoDesafio } from "../src/ui/DesafioScreen";
+import { diasDoMes, modoDoDia, numeroDoDia } from "../src/session/desafio";
+import type {
+  CalendarioDoDesafio,
+  EstadoNoCalendario,
+  EstadoNoCartao,
+} from "../src/ui/DesafioScreen";
 import { DesafioScreen } from "../src/ui/DesafioScreen";
 import type { ResumoDoDesafio } from "../src/ui/HomeScreen";
 import { HomeScreen } from "../src/ui/HomeScreen";
 import {
   botaoPartilhar,
   dataCurta,
+  dataPorExtenso,
+  mesPorExtenso,
   partilhar,
   textoDoDesafio,
 } from "../src/ui/partilha";
@@ -53,30 +60,40 @@ describe("o texto que se partilha", () => {
     resultado: { tempoMs: 222_100, limpou: false, linhas: 18 },
   } as const;
 
-  it("diz o número e o dia, e os três resultados — o puzzle primeiro", () => {
-    const PUZZLE = { estado: "feito", resultado: { tempoMs: 83_400, selo: "perfect" } } as const;
+  const PUZZLE = { estado: "feito", resultado: { tempoMs: 83_400, selo: "perfect" } } as const;
+
+  it("diz o número e o dia, **só o desafio do dia**, e a sequência", () => {
+    // O #3, 14 out, é um Survival: os outros dois, guardados de quando havia
+    // três por dia, não entram.
     expect(
       textoDoDesafio("2026-10-14", { puzzle: PUZZLE, tempo: TEMPO, survival: SURVIVAL }, 3),
     ).toBe(
       [
         "DiceToSeven · Desafio #3 · 14 out",
-        "🧩 Puzzle: 1:23.4 · ★ perfeito",
-        "⏱️ Contra-Relógio: 1240 pontos · 14 tabuleiros",
         "🧱 Survival: 3:42.1 · 18 linhas",
         "🔥 3 dias seguidos",
       ].join("\n"),
     );
   });
 
-  it("só leva o que foi feito, e a sequência só a partir de dois dias", () => {
-    expect(textoDoDesafio("2026-10-12", { tempo: TEMPO, survival: { estado: "a-jogar" } }, 1)).toBe(
-      "DiceToSeven · Desafio #1 · 12 out\n⏱️ Contra-Relógio: 1240 pontos · 14 tabuleiros",
+  it("cada modo no seu dia", () => {
+    expect(textoDoDesafio("2026-10-12", { puzzle: PUZZLE }, 0)).toBe(
+      "DiceToSeven · Desafio #1 · 12 out\n🧩 Puzzle: 1:23.4 · ★ perfeito",
+    );
+    expect(textoDoDesafio("2026-10-13", { tempo: TEMPO }, 0)).toBe(
+      "DiceToSeven · Desafio #2 · 13 out\n⏱️ Contra-Relógio: 1240 pontos · 14 tabuleiros",
+    );
+  });
+
+  it("sem resultado, só o dia; e a sequência só a partir de dois dias", () => {
+    expect(textoDoDesafio("2026-10-13", { tempo: { estado: "a-jogar" } }, 1)).toBe(
+      "DiceToSeven · Desafio #2 · 13 out",
     );
   });
 
   it("um Survival limpo di-lo", () => {
     const limpo = { estado: "feito", resultado: { tempoMs: 95_000, limpou: true, linhas: 9 } } as const;
-    expect(textoDoDesafio("2026-10-12", { survival: limpo }, 0)).toContain(
+    expect(textoDoDesafio("2026-10-14", { survival: limpo }, 0)).toContain(
       "🧱 Survival: limpo em 1:35.0",
     );
   });
@@ -84,6 +101,8 @@ describe("o texto que se partilha", () => {
   it("os meses em português, abreviados", () => {
     expect(dataCurta("2026-01-05")).toBe("5 jan");
     expect(dataCurta("2026-12-31")).toBe("31 dez");
+    expect(dataPorExtenso("2026-03-07")).toBe("7 de março");
+    expect(mesPorExtenso("2026-10-12")).toBe("outubro de 2026");
   });
 });
 
@@ -158,7 +177,8 @@ describe("o cartão do Desafio do Dia, na Home", () => {
         numero: 3,
         data: "14 out",
         sequencia: 0,
-        estados: ["por-jogar", "por-jogar", "por-jogar"],
+        modo: "survival",
+        estado: { tipo: "por-jogar" },
         aoAbrir: () => undefined,
         ...d,
       },
@@ -167,39 +187,39 @@ describe("o cartão do Desafio do Dia, na Home", () => {
   const ordem = (): string[] =>
     [...host.querySelectorAll(".ecra.home > *")].map((e) => e.className);
 
-  it("**é um cartão só, que se toca inteiro** — a escolha é noutro ecrã", () => {
+  it("**é um cartão só, que se toca inteiro**, com o desafio de hoje", () => {
     const aoAbrir = vi.fn();
     const ecra = abrir({ aoAbrir });
 
     const cartao = host.querySelector<HTMLButtonElement>("button.home-desafio");
-    expect(cartao).not.toBeNull();
-    // Nada de desafios dentro do cartão: esses estão no ecrã do desafio.
+    expect(cartao?.dataset["modo"]).toBe("survival");
+    // Nada para escolher dentro do cartão: o calendário está no ecrã do desafio.
     expect(cartao?.querySelectorAll("button")).toHaveLength(0);
-    expect(host.querySelector(".home-desafio-cardinal")?.textContent).toBe("#3");
-    expect(host.querySelector(".home-desafio-data")?.textContent).toBe("14 out");
+    expect(host.querySelector(".home-desafio-nome")?.textContent).toBe("Survival");
+    expect(host.querySelector(".home-desafio-data")?.textContent).toBe("#3 · 14 out");
 
     cartao?.click();
     expect(aoAbrir).toHaveBeenCalledOnce();
     ecra.destruir();
   });
 
-  it("o progresso de hoje: um quadrado por desafio, e quantos estão feitos", () => {
-    const resumo = (): string | null | undefined =>
-      host.querySelector(".home-desafio-resumo")?.textContent;
+  it("o estado diz se há alguma coisa a fazer hoje", () => {
+    const estado = (): string | null | undefined =>
+      host.querySelector(".home-desafio .desafio-modo-estado")?.textContent;
 
-    let ecra = abrir();
-    expect(resumo()).toBe("Por jogar");
-    ecra.destruir();
+    const casos: [ResumoDoDesafio["estado"], string][] = [
+      [{ tipo: "por-jogar" }, "Jogar"],
+      [{ tipo: "a-meio", texto: "1:20.0" }, "Continuar"],
+      [{ tipo: "feito", texto: "3:42.1" }, "✓ 3:42.1"],
+      [{ tipo: "interrompido" }, "Interrompido"],
+    ];
 
-    ecra = abrir({ estados: ["feito", "a-meio", "por-jogar"] });
-    expect(resumo()).toBe("1 de 3");
-    const pontos = [...host.querySelectorAll<HTMLElement>(".home-desafio-ponto")];
-    expect(pontos.map((p) => p.dataset["estado"])).toEqual(["feito", "a-meio", "por-jogar"]);
-    ecra.destruir();
-
-    ecra = abrir({ estados: ["feito", "feito", "feito"] });
-    expect(resumo()).toBe("Feito ✓");
-    ecra.destruir();
+    for (const [e, texto] of casos) {
+      const ecra = abrir({ estado: e });
+      expect(estado()).toBe(texto);
+      expect(host.querySelector<HTMLElement>(".home-desafio")?.dataset["estado"]).toBe(e.tipo);
+      ecra.destruir();
+    }
   });
 
   it("a sequência só aparece quando há", () => {
@@ -243,80 +263,156 @@ describe("o cartão do Desafio do Dia, na Home", () => {
 /* ─── O ecrã do Desafio do Dia ────────────────────────────────────────────── */
 
 describe("o ecrã do Desafio do Dia", () => {
-  const abrir = (d: Partial<CartaoDoDesafio> = {}, aoVoltar = (): void => undefined) =>
+  /** Uma quarta-feira, o #3: um Survival. */
+  const HOJE = "2026-10-14";
+
+  /** O #1 feito, o #2 perdido, hoje por jogar, e o resto do mês por vir. */
+  const estadoDe = (data: string, hoje: EstadoNoCartao): EstadoNoCalendario =>
+    data < "2026-10-12"
+      ? { tipo: "sem-desafio" }
+      : data === "2026-10-12"
+        ? { tipo: "feito", texto: "1:23.4 ★" }
+        : data < HOJE
+          ? { tipo: "perdido" }
+          : data === HOJE
+            ? hoje
+            : { tipo: "futuro" };
+
+  const abrir = (
+    c: Partial<CalendarioDoDesafio> = {},
+    hoje: EstadoNoCartao = { tipo: "por-jogar" },
+    aoVoltar = (): void => undefined,
+  ): DesafioScreen =>
     new DesafioScreen(host, {
       aoVoltar,
-      cartao: {
-        numero: 3,
-        data: "14 out",
+      calendario: {
+        mes: "outubro de 2026",
+        hoje: HOJE,
+        dias: diasDoMes(HOJE).map((data) => ({
+          data,
+          numero: numeroDoDia(data),
+          modo: modoDoDia(data),
+          estado: estadoDe(data, hoje),
+        })),
         sequencia: 0,
-        dados: [1, 2, 3, 4, 5, 6],
-        puzzle: { tipo: "por-jogar" },
-        tempo: { tipo: "por-jogar" },
-        survival: { tipo: "por-jogar" },
-        aoJogarPuzzle: () => undefined,
-        aoJogarTempo: () => undefined,
-        aoJogarSurvival: () => undefined,
-        ...d,
+        aoJogar: () => undefined,
+        ...c,
       },
     });
 
-  const estado = (modo: string): string | undefined =>
-    host.querySelector(`.desafio-modo[data-modo="${modo}"] .desafio-modo-estado`)
-      ?.textContent ?? undefined;
-
-  it("o bilhete: o número, o dia, e os dados do dia como peças a sério", () => {
-    const ecra = abrir();
-    expect(host.querySelector(".desafio-cardinal")?.textContent).toBe("#3");
-    expect(host.querySelector(".desafio-data")?.textContent).toBe("14 out");
-    const dados = [...host.querySelectorAll<HTMLElement>(".desafio-dados .peca")];
-    expect(dados.map((p) => p.dataset["valor"])).toEqual(["1", "2", "3", "4", "5", "6"]);
-    ecra.destruir();
-  });
-
-  it("**os três desafios, o Puzzle primeiro**, cada um com o que é", () => {
-    const ecra = abrir();
-    const modos = [...host.querySelectorAll<HTMLElement>(".desafio-modo")];
-    expect(modos.map((b) => b.dataset["modo"])).toEqual(["puzzle", "tempo", "survival"]);
-    expect(modos.every((b) => (b.querySelector(".desafio-modo-legenda")?.textContent ?? "") !== "")).toBe(
-      true,
+  const celula = (dia: number): HTMLButtonElement | undefined =>
+    [...host.querySelectorAll<HTMLButtonElement>(".desafio-dia")].find(
+      (b) => b.querySelector(".desafio-dia-numero")?.textContent === String(dia),
     );
+
+  const bilhete = (classe: string): string | null | undefined =>
+    host.querySelector(`.desafio-bilhete .${classe}`)?.textContent;
+
+  const botoes = (): (string | null)[] =>
+    [...host.querySelectorAll(".desafio-bilhete .btn")].map((b) => b.textContent);
+
+  it("**o mês inteiro, a começar na segunda**, com o modo de cada dia", () => {
+    const ecra = abrir();
+
+    expect(host.querySelector(".desafio-mes-nome")?.textContent).toBe("Outubro de 2026");
+    expect(host.querySelectorAll(".desafio-dia")).toHaveLength(31);
+    // O dia 1 foi uma quinta: três casas vazias antes dele.
+    expect(host.querySelectorAll(".desafio-dias > .desafio-dia-vazio")).toHaveLength(3);
+
+    expect([12, 13, 14, 15].map((d) => celula(d)?.dataset["modo"])).toEqual([
+      "puzzle",
+      "tempo",
+      "survival",
+      "puzzle",
+    ]);
+
+    // Antes do #1 não houve desafio: os dias estão lá, sem modo, e não se tocam.
+    expect(celula(11)?.disabled).toBe(true);
+    expect(celula(11)?.querySelector(".desafio-dia-icone")).toBeNull();
     ecra.destruir();
   });
 
-  it("cada desafio diz o seu estado", () => {
-    const ecra = abrir({
-      puzzle: { tipo: "feito", texto: "1:23.4 ★" },
-      tempo: { tipo: "interrompido" },
-      survival: { tipo: "a-meio", texto: "1:20.0" },
-    });
-    expect(estado("puzzle")).toBe("✓ 1:23.4 ★");
-    expect(estado("tempo")).toBe("Interrompido");
-    expect(estado("survival")).toBe("Continuar · 1:20.0");
+  it("**hoje abre selecionado**, e joga-se pelo bilhete", () => {
+    const aoJogar = vi.fn();
+    const ecra = abrir({ aoJogar });
+
+    expect(celula(14)?.hasAttribute("data-hoje")).toBe(true);
+    expect(celula(14)?.getAttribute("aria-pressed")).toBe("true");
+    expect(bilhete("desafio-cardinal")).toBe("#3");
+    expect(bilhete("desafio-data")).toBe("14 out");
+    expect(bilhete("desafio-quando")).toBe("Hoje");
+    expect(bilhete("desafio-modo-nome")).toBe("Survival");
+
+    expect(botoes()).toEqual(["Jogar"]);
+    host.querySelector<HTMLElement>(".desafio-bilhete .btn")?.click();
+    expect(aoJogar).toHaveBeenCalledOnce();
     ecra.destruir();
   });
 
-  it("tocar num desafio joga-o, e a seta volta", () => {
-    const aoJogarTempo = vi.fn();
+  it("tocar noutro dia mostra-o no bilhete — e esse não se joga", () => {
+    const ecra = abrir();
+
+    expect(celula(12)?.dataset["estado"]).toBe("feito");
+    celula(12)?.click();
+    expect(bilhete("desafio-quando")).toBe("Há 2 dias");
+    expect(bilhete("desafio-modo-nome")).toBe("Puzzle");
+    expect(bilhete("desafio-resultado")).toBe("✓ 1:23.4 ★");
+    expect(botoes()).toEqual([]);
+
+    celula(13)?.click();
+    expect(bilhete("desafio-quando")).toBe("Ontem");
+    expect(bilhete("desafio-resultado")).toBe("Ficou por jogar.");
+
+    celula(15)?.click();
+    expect(bilhete("desafio-quando")).toBe("Amanhã");
+    expect(bilhete("desafio-resultado")).toBe("Abre à meia-noite.");
+
+    celula(20)?.click();
+    expect(bilhete("desafio-quando")).toBe("Daqui a 6 dias");
+    expect(bilhete("desafio-resultado")).toBe("Abre no dia 20.");
+    expect(botoes()).toEqual([]);
+
+    // Um dia selecionado de cada vez.
+    expect(host.querySelectorAll('.desafio-dia[aria-pressed="true"]')).toHaveLength(1);
+    expect(celula(20)?.getAttribute("aria-pressed")).toBe("true");
+    ecra.destruir();
+  });
+
+  it("feito hoje: o resultado, treinar e partilhar", () => {
+    const aoJogar = vi.fn();
+    const ecra = abrir(
+      { aoJogar, aoPartilhar: () => Promise.resolve("copiado") },
+      { tipo: "feito", texto: "3:42.1" },
+    );
+
+    expect(bilhete("desafio-resultado")).toBe("✓ 3:42.1");
+    expect(botoes()).toEqual(["Treinar", "Partilhar"]);
+    host.querySelector<HTMLElement>(".desafio-bilhete .btn")?.click();
+    expect(aoJogar).toHaveBeenCalledOnce();
+    ecra.destruir();
+  });
+
+  it("a meio continua-se; interrompido, o resto do dia é treino", () => {
+    let ecra = abrir({}, { tipo: "a-meio", texto: "1:20.0" });
+    expect(bilhete("desafio-resultado")).toBe("A meio · 1:20.0");
+    expect(botoes()).toEqual(["Continuar"]);
+    ecra.destruir();
+
+    ecra = abrir({}, { tipo: "interrompido" });
+    expect(botoes()).toEqual(["Treinar"]);
+    ecra.destruir();
+  });
+
+  it("a seta volta, e a sequência só aparece quando há", () => {
     const aoVoltar = vi.fn();
-    const ecra = abrir({ aoJogarTempo }, aoVoltar);
-
-    host.querySelector<HTMLElement>('.desafio-modo[data-modo="tempo"]')?.click();
-    expect(aoJogarTempo).toHaveBeenCalledOnce();
-
+    let ecra = abrir({}, { tipo: "por-jogar" }, aoVoltar);
+    expect(host.querySelector(".desafio-sequencia")).toBeNull();
     host.querySelector<HTMLElement>(".topo .btn")?.click();
     expect(aoVoltar).toHaveBeenCalledOnce();
     ecra.destruir();
-  });
 
-  it("partilhar só aparece com um resultado", () => {
-    let ecra = abrir();
-    expect(host.querySelector(".desafio-partilhar")).toBeNull();
-    ecra.destruir();
-
-    ecra = abrir({ sequencia: 2, aoPartilhar: () => Promise.resolve("copiado") });
-    expect(host.querySelector(".desafio-partilhar")?.textContent).toBe("Partilhar");
-    expect(host.querySelector(".desafio-bilhete .desafio-sequencia")?.textContent).toBe("🔥 2");
+    ecra = abrir({ sequencia: 2 });
+    expect(host.querySelector(".desafio-mes .desafio-sequencia")?.textContent).toBe("🔥 2");
     ecra.destruir();
   });
 });

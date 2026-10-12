@@ -1887,7 +1887,7 @@ body::before {
 .home-desafio {
   position: relative;
   display: grid;
-  gap: 6px;
+  gap: 8px;
   width: 100%;
   padding: 14px 14px 12px;
   font: inherit;
@@ -1950,73 +1950,40 @@ body::before {
   height: 16px;
 }
 
+/* O desafio de hoje: o ícone na cor do modo, o nome e o dia, e o estado. */
 .home-desafio-linha {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .home-desafio-linha > .icone-seguir {
   color: var(--ink-muted);
 }
 
-.home-desafio-numero,
-.desafio-numero {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  margin: 0;
+.home-desafio .desafio-modo-icone {
+  width: 40px;
+  height: 40px;
+}
+
+.home-desafio-texto {
+  display: grid;
+  gap: 1px;
   min-width: 0;
 }
 
-.home-desafio-cardinal {
-  font-family: var(--fonte-marca);
-  font-size: 26px;
-  font-weight: 600;
-  line-height: 1;
-  color: var(--ink);
-}
-
-.home-desafio-data,
-.desafio-data {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--ink-muted);
-  white-space: nowrap;
-}
-
-/* O progresso de hoje: um quadrado por desafio, cheio quando está feito. */
-.home-desafio-progresso {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.home-desafio-pontos {
-  display: flex;
-  gap: 4px;
-}
-
-.home-desafio-ponto {
-  width: 12px;
-  height: 12px;
-  border-radius: 4px;
-  box-shadow: inset 0 0 0 1.5px var(--line);
-}
-
-.home-desafio-ponto[data-estado="feito"] {
-  background: var(--accent);
-  box-shadow: none;
-}
-
-.home-desafio-ponto[data-estado="a-meio"] {
-  box-shadow: inset 0 0 0 1.5px var(--accent);
-}
-
-.home-desafio-resumo {
-  font-size: 13px;
+.home-desafio-nome {
+  overflow: hidden;
+  font-size: 17px;
   font-weight: 650;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.home-desafio-data {
+  font-size: 13px;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--ink-muted);
   white-space: nowrap;
@@ -2034,111 +2001,20 @@ body::before {
   white-space: nowrap;
 }
 
-/* ─── O ecrã do Desafio do Dia ────────────────────────────────────────────── */
+/* ─── O modo do desafio: a cor e o ícone ──────────────────────────────────── */
 
-.desafio-corpo {
-  display: grid;
-  gap: 14px;
-  padding-bottom: 8px;
-}
-
-/* O bilhete: a cara do dia, com o número grande na letra da marca. */
-.desafio-bilhete {
-  position: relative;
-  display: grid;
-  gap: 12px;
-  padding: 20px 16px 16px;
-  border: 1px solid var(--line);
-  border-radius: calc(var(--raio) + 8px);
-  background: var(--surface);
-  box-shadow: var(--sombra-cartao);
-  overflow: hidden;
-}
-
-.desafio-bilhete::before {
-  height: 5px;
-}
-
-.desafio-bilhete-cabeca {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.desafio-cardinal {
-  font-family: var(--fonte-marca);
-  font-size: 40px;
-  font-weight: 600;
-  line-height: 1;
-  color: var(--ink);
-}
-
-.desafio-dados {
-  display: flex;
-  gap: 6px;
-}
-
-.desafio-dados .peca {
-  --lado: 30px;
-}
-
-.desafio-explicacao {
-  margin: 0;
-  font-size: 14px;
-  line-height: 1.45;
-  color: var(--ink-muted);
-}
-
-/* Os três desafios: um cartão cada, com o que é e o estado. */
-.desafio-lista {
-  display: grid;
-  gap: 10px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.desafio-modo {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  min-height: 76px;
-  padding: 12px 12px 12px 14px;
-  font: inherit;
-  text-align: left;
-  border: 1px solid var(--line);
-  border-radius: calc(var(--raio) + 4px);
-  background: var(--surface);
-  color: var(--ink);
-  box-shadow: var(--sombra-cartao);
-  cursor: pointer;
-  transition: box-shadow var(--t-ui) linear;
-}
-
-@media (hover: hover) {
-  .desafio-modo:hover {
-    box-shadow: var(--sombra);
-  }
-}
-
-.desafio-modo > .icone-seguir {
-  color: var(--ink-muted);
-}
-
-.desafio-modo[data-modo="puzzle"] {
+/* As cores dos modos, as mesmas dos cartões da Home, onde o desafio as usa. */
+:is(.home-desafio, .desafio-bilhete, .desafio-dia, .desafio-legenda-item)[data-modo="puzzle"] {
   --cor: var(--modo-puzzles);
   --tinta-modo: var(--modo-puzzles-tinta);
 }
 
-.desafio-modo[data-modo="tempo"] {
+:is(.home-desafio, .desafio-bilhete, .desafio-dia, .desafio-legenda-item)[data-modo="tempo"] {
   --cor: var(--modo-tempo);
   --tinta-modo: var(--modo-tempo-tinta);
 }
 
-.desafio-modo[data-modo="survival"] {
+:is(.home-desafio, .desafio-bilhete, .desafio-dia, .desafio-legenda-item)[data-modo="survival"] {
   --cor: var(--modo-survival);
   --tinta-modo: var(--modo-survival-tinta);
 }
@@ -2167,12 +2043,12 @@ body::before {
 }
 
 .desafio-modo-nome {
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 650;
 }
 
 .desafio-modo-legenda {
-  font-size: 12.5px;
+  font-size: 13px;
   line-height: 1.35;
   color: var(--ink-muted);
 }
@@ -2191,24 +2067,295 @@ body::before {
  * Por jogar, ou a meio, é o que pede ação: um botão cheio na cor de destaque.
  * Feito, é um resultado — na cor de destaque, sem fundo, com o visto.
  */
-.desafio-modo[data-estado="por-jogar"] .desafio-modo-estado,
-.desafio-modo[data-estado="a-meio"] .desafio-modo-estado {
+.home-desafio[data-estado="por-jogar"] .desafio-modo-estado,
+.home-desafio[data-estado="a-meio"] .desafio-modo-estado {
   background: var(--accent);
   color: var(--on-accent);
 }
 
-.desafio-modo[data-estado="feito"] .desafio-modo-estado {
+.home-desafio[data-estado="feito"] .desafio-modo-estado {
   padding-inline: 2px;
   color: var(--accent);
 }
 
-.desafio-partilhar {
+/* ─── O ecrã do Desafio do Dia ────────────────────────────────────────────── */
+
+.desafio-corpo {
+  display: grid;
+  gap: 14px;
+  padding-bottom: 8px;
+}
+
+/* O bilhete: o dia selecionado, com o número grande na letra da marca. */
+.desafio-bilhete {
+  position: relative;
+  display: grid;
+  gap: 14px;
+  padding: 20px 16px 16px;
+  border: 1px solid var(--line);
+  border-radius: calc(var(--raio) + 8px);
+  background: var(--surface);
+  box-shadow: var(--sombra-cartao);
+  overflow: hidden;
+}
+
+.desafio-bilhete::before {
+  height: 5px;
+}
+
+.desafio-bilhete-cabeca {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.desafio-numero {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  min-width: 0;
+}
+
+.desafio-cardinal {
+  font-family: var(--fonte-marca);
+  font-size: 34px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--ink);
+}
+
+.desafio-data {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+
+/* Quando é: «Hoje», «Amanhã», «Há 3 dias». */
+.desafio-quando {
+  padding: 3px 10px;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px var(--line);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+
+.desafio-bilhete[data-estado="por-jogar"] .desafio-quando,
+.desafio-bilhete[data-estado="a-meio"] .desafio-quando {
+  box-shadow: none;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.desafio-bilhete-modo {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+}
+
+.desafio-bilhete-pe {
+  display: grid;
+  gap: 10px;
+}
+
+.desafio-bilhete-pe > .btn {
   justify-content: center;
+}
+
+.desafio-resultado {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-muted);
+}
+
+/* Um resultado feito é o número do dia: maior, e na cor de destaque. */
+.desafio-bilhete[data-estado="feito"] .desafio-resultado {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.desafio-acoes {
+  flex-wrap: nowrap;
+}
+
+.desafio-acoes > .btn {
+  flex: 1 1 0;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+/* ─── O calendário ────────────────────────────────────────────────────────── */
+
+.desafio-mes {
+  display: grid;
+  gap: 8px;
+  padding: 14px 12px 12px;
+  border: 1px solid var(--line);
+  border-radius: calc(var(--raio) + 8px);
+  background: var(--surface);
+  box-shadow: var(--sombra-cartao);
+}
+
+.desafio-mes-cabeca {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 4px 4px;
+}
+
+.desafio-mes-nome {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.desafio-semana,
+.desafio-dias {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.desafio-semana span {
+  font-size: 11.5px;
+  font-weight: 700;
+  text-align: center;
+  color: var(--ink-muted);
+}
+
+/* Um dia: o número em cima, o ícone do modo por baixo. */
+.desafio-dia {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto auto;
+  place-content: center;
+  justify-items: center;
+  gap: 4px;
+  min-width: 0;
+  aspect-ratio: 1;
+  padding: 0;
+  font: inherit;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.desafio-dia-numero {
+  font-size: 12.5px;
+  font-weight: 650;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.desafio-dia-icone {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: var(--cor);
+  color: var(--tinta-modo);
+}
+
+.desafio-dia-icone .icone {
+  width: 13px;
+  height: 13px;
+}
+
+/*
+ * **Feito, o dia enche-se com a cor do modo.** É o mês a ganhar cor à medida
+ * que se joga — o progresso inteiro numa olhadela, sem números.
+ */
+.desafio-dia[data-estado="feito"] {
+  border-color: transparent;
+  background: var(--cor);
+  color: var(--tinta-modo);
+}
+
+.desafio-dia[data-estado="feito"] .desafio-dia-icone {
+  background: transparent;
+}
+
+.desafio-dia[data-estado="feito"]::after {
+  content: "✓";
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+/* O que vem ainda não abriu; o que passou sem ser jogado apaga-se mais. */
+.desafio-dia[data-estado="futuro"] {
+  border-style: dashed;
+  color: var(--ink-muted);
+}
+
+.desafio-dia[data-estado="futuro"] .desafio-dia-icone {
+  opacity: 0.55;
+}
+
+.desafio-dia[data-estado="perdido"] {
+  background: transparent;
+  color: var(--ink-muted);
+}
+
+.desafio-dia[data-estado="perdido"] .desafio-dia-icone {
+  opacity: 0.3;
+}
+
+/* Antes do #1: o mês tem a forma de um mês, e estes dias não têm nada. */
+.desafio-dia[data-estado="sem-desafio"] {
+  border-color: transparent;
+  background: transparent;
+  color: var(--ink-muted);
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Hoje tem o aro da cor de destaque; o dia selecionado, um contorno por fora. */
+.desafio-dia[data-hoje] {
+  border: 2px solid var(--accent);
+}
+
+.desafio-dia[aria-pressed="true"] {
+  outline: 2px solid var(--ink);
+  outline-offset: 1px;
+}
+
+.desafio-legenda {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 14px;
+  padding-top: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+
+.desafio-legenda-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .desafio-nota {
   margin: 0;
   font-size: 13px;
+  line-height: 1.45;
   text-align: center;
   color: var(--ink-muted);
 }

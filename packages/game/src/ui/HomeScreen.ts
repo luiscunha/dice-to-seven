@@ -42,12 +42,13 @@
  *
  * **O Desafio do Dia é um cartão, e só um.** É a única coisa da Home que muda
  * todos os dias, e a razão de alguém a abrir amanhã — mas é um cartão entre os
- * outros, e não o ecrã. Esteve aqui inteiro, com os três desafios, e a Home
- * ficou a ser sobre ele; a escolha passou para o ecrã do desafio.
+ * outros, e não o ecrã. Diz o desafio de hoje, com o ícone e a cor do modo, e
+ * em que pé está; o calendário do mês vive no ecrã do desafio.
  */
 
 import type { Cell } from "@dicetoseven/engine";
 
+import type { ModoDoDesafio } from "../session/desafio";
 import type { Profile } from "../session/progress";
 import type { ModoFace } from "./dice";
 import { pecaDeAmostra } from "./dice";
@@ -61,20 +62,22 @@ import {
   iconeSurvival,
 } from "./icones";
 import type { EstadoNoCartao } from "./DesafioScreen";
-import { sinalDaSequencia } from "./DesafioScreen";
+import { iconeDoModo, sinalDaSequencia } from "./DesafioScreen";
+import { NOME_DO_MODO } from "./partilha";
 
 /**
- * O cartão do Desafio do Dia na Home: só o resumo. O bilhete inteiro e a
- * escolha entre os três desafios vivem no ecrã dele (`DesafioScreen`).
+ * O cartão do Desafio do Dia na Home: só o de hoje. O calendário do mês vive
+ * no ecrã do desafio (`DesafioScreen`).
  */
 export interface ResumoDoDesafio {
   readonly numero: number;
   /** Já curta: «12 out». */
   readonly data: string;
-  /** Dias seguidos com desafio feito. */
+  /** Dias seguidos com o desafio feito. */
   readonly sequencia: number;
-  /** O estado de cada desafio, pela ordem do ecrã: Puzzle, Contra-Relógio, Survival. */
-  readonly estados: readonly EstadoNoCartao["tipo"][];
+  /** O modo de hoje: um por dia, à vez. */
+  readonly modo: ModoDoDesafio;
+  readonly estado: EstadoNoCartao;
   readonly aoAbrir: () => void;
 }
 
@@ -465,14 +468,16 @@ export class HomeScreen {
 
   /**
    * O cartão do dia: um bilhete pequeno, que se toca inteiro e abre o ecrã do
-   * desafio. A faixa com as seis faces, o rótulo, o número e a data, a
-   * sequência, e o progresso de hoje — um quadrado por desafio, cheio quando
-   * está feito.
+   * desafio. A faixa com as seis faces, o rótulo e a sequência; por baixo, o
+   * desafio de hoje — o ícone na cor do modo, o nome, o número e a data — e o
+   * estado, que é o que diz se há alguma coisa a fazer.
    */
   private desafio(d: ResumoDoDesafio): HTMLButtonElement {
     const b = document.createElement("button");
     b.type = "button";
     b.className = "home-desafio";
+    b.dataset["modo"] = d.modo;
+    b.dataset["estado"] = d.estado.tipo;
     b.addEventListener("click", d.aoAbrir);
 
     const rotulo = elemento("span", "home-desafio-rotulo");
@@ -482,35 +487,34 @@ export class HomeScreen {
     cabeca.appendChild(rotulo);
     if (d.sequencia > 0) cabeca.appendChild(sinalDaSequencia(d.sequencia));
 
-    const numero = elemento("span", "home-desafio-numero");
-    numero.append(
-      elemento("span", "home-desafio-cardinal", `#${String(d.numero)}`),
-      elemento("span", "home-desafio-data", d.data),
+    const icone = elemento("span", "desafio-modo-icone");
+    icone.appendChild(iconeDoModo(d.modo));
+
+    const nome = NOME_DO_MODO[d.modo];
+    const texto = elemento("span", "home-desafio-texto");
+    texto.append(
+      elemento("span", "home-desafio-nome", nome),
+      elemento("span", "home-desafio-data", `#${String(d.numero)} · ${d.data}`),
     );
 
-    const feitos = d.estados.filter((e) => e === "feito").length;
-    const progresso = elemento("span", "home-desafio-progresso");
-    const pontos = elemento("span", "home-desafio-pontos");
-    for (const e of d.estados) {
-      const ponto = elemento("span", "home-desafio-ponto");
-      ponto.dataset["estado"] = e;
-      pontos.appendChild(ponto);
-    }
-    const resumo =
-      feitos === d.estados.length
-        ? "Feito ✓"
-        : feitos === 0
-          ? "Por jogar"
-          : `${String(feitos)} de ${String(d.estados.length)}`;
-    progresso.append(pontos, elemento("span", "home-desafio-resumo", resumo));
+    // Na Home, o estado é curto: o tempo da corrida a meio vê-se lá dentro.
+    const e = d.estado;
+    const estado =
+      e.tipo === "por-jogar"
+        ? "Jogar"
+        : e.tipo === "a-meio"
+          ? "Continuar"
+          : e.tipo === "feito"
+            ? `✓ ${e.texto}`
+            : "Interrompido";
 
     const linha = elemento("span", "home-desafio-linha");
-    linha.append(numero, progresso, iconeSeguir());
+    linha.append(icone, texto, elemento("span", "desafio-modo-estado", estado), iconeSeguir());
 
     b.append(cabeca, linha);
     b.setAttribute(
       "aria-label",
-      `Desafio do dia, número ${String(d.numero)}, ${d.data}: ${resumo}. Abrir.`,
+      `Desafio do dia, número ${String(d.numero)}, ${d.data}: ${nome}, ${estado}. Abrir.`,
     );
 
     return b;

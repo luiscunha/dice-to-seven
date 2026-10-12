@@ -7,14 +7,12 @@
  * aconteceu.
  *
  *   DiceToSeven · Desafio #3 · 14 out
- *   🧩 Puzzle: 1:23.4 · ★ perfeito
- *   ⏱️ Contra-Relógio: 1240 pontos · 14 tabuleiros
  *   🧱 Survival: 3:42.1 · 18 linhas
  *   🔥 3 dias seguidos
  */
 
-import type { DiaDeDesafio } from "../session/desafio";
-import { numeroDoDia } from "../session/desafio";
+import type { DiaDeDesafio, ModoDoDesafio } from "../session/desafio";
+import { modoDoDia, numeroDoDia } from "../session/desafio";
 import { botao } from "./dom";
 import { iconePartilhar } from "./icones";
 import { relogio } from "./tempo";
@@ -22,6 +20,11 @@ import { relogio } from "./tempo";
 const MESES = [
   "jan", "fev", "mar", "abr", "mai", "jun",
   "jul", "ago", "set", "out", "nov", "dez",
+] as const;
+
+const MESES_POR_EXTENSO = [
+  "janeiro", "fevereiro", "março", "abril", "maio", "junho",
+  "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
 ] as const;
 
 /** O selo do puzzle, com o glifo da grelha de níveis. */
@@ -37,13 +40,37 @@ export function dataCurta(data: string): string {
   return `${String(dia ?? 1)} ${MESES[(mes ?? 1) - 1] ?? ""}`;
 }
 
+const partes = (data: string): readonly [number, number, number] => {
+  const [ano, mes, dia] = data.split("-").map(Number);
+  return [ano ?? 1970, mes ?? 1, dia ?? 1];
+};
+
+/** `2026-10-14` → `14 de outubro`. */
+export function dataPorExtenso(data: string): string {
+  const [, mes, dia] = partes(data);
+  return `${String(dia)} de ${MESES_POR_EXTENSO[mes - 1] ?? ""}`;
+}
+
+/** `2026-10-14` → `outubro de 2026`. */
+export function mesPorExtenso(data: string): string {
+  const [ano, mes] = partes(data);
+  return `${MESES_POR_EXTENSO[mes - 1] ?? ""} de ${String(ano)}`;
+}
+
+/** O nome de cada modo, como os ecrãs do desafio o escrevem. */
+export const NOME_DO_MODO: Readonly<Record<ModoDoDesafio, string>> = {
+  puzzle: "Puzzle",
+  tempo: "Contra-Relógio",
+  survival: "Survival",
+};
+
 const plural = (n: number, um: string, varios: string): string =>
   `${String(n)} ${n === 1 ? um : varios}`;
 
 /**
- * O texto a partilhar. Só leva os modos feitos — um «por jogar» numa conversa
- * não diz nada a ninguém —, e a sequência só a partir de dois dias, que é
- * quando já é uma sequência.
+ * O texto a partilhar: o desafio do dia e o resultado, se houver — um «por
+ * jogar» numa conversa não diz nada a ninguém —, e a sequência só a partir de
+ * dois dias, que é quando já é uma sequência.
  */
 export function textoDoDesafio(
   data: string,
@@ -52,33 +79,38 @@ export function textoDoDesafio(
 ): string {
   const linhas = [`DiceToSeven · Desafio #${String(numeroDoDia(data))} · ${dataCurta(data)}`];
 
-  const puzzle = dia.puzzle;
-  if (puzzle?.estado === "feito") {
-    const r = puzzle.resultado;
-    linhas.push(`🧩 Puzzle: ${relogio(r.tempoMs)} · ${SELO_PARTILHADO[r.selo]}`);
-  }
-
-  const tempo = dia.tempo;
-  if (tempo?.estado === "feito") {
-    const r = tempo.resultado;
-    linhas.push(
-      `⏱️ Contra-Relógio: ${plural(r.pontos, "ponto", "pontos")} · ${plural(r.tabuleiros, "tabuleiro", "tabuleiros")}`,
-    );
-  }
-
-  const survival = dia.survival;
-  if (survival?.estado === "feito") {
-    const r = survival.resultado;
-    linhas.push(
-      r.limpou
-        ? `🧱 Survival: limpo em ${relogio(r.tempoMs)}`
-        : `🧱 Survival: ${relogio(r.tempoMs)} · ${plural(r.linhas, "linha", "linhas")}`,
-    );
-  }
+  const resultado = linhaDoResultado(modoDoDia(data), dia);
+  if (resultado !== undefined) linhas.push(resultado);
 
   if (sequencia >= 2) linhas.push(`🔥 ${String(sequencia)} dias seguidos`);
 
   return linhas.join("\n");
+}
+
+/**
+ * O resultado do desafio do dia, numa linha. Só o do modo do dia: um dia de
+ * quando havia três desafios pode ter os outros guardados, e não contam.
+ */
+function linhaDoResultado(modo: ModoDoDesafio, dia: DiaDeDesafio): string | undefined {
+  if (modo === "puzzle") {
+    const e = dia.puzzle;
+    if (e?.estado !== "feito") return undefined;
+    return `🧩 Puzzle: ${relogio(e.resultado.tempoMs)} · ${SELO_PARTILHADO[e.resultado.selo]}`;
+  }
+
+  if (modo === "tempo") {
+    const e = dia.tempo;
+    if (e?.estado !== "feito") return undefined;
+    const r = e.resultado;
+    return `⏱️ Contra-Relógio: ${plural(r.pontos, "ponto", "pontos")} · ${plural(r.tabuleiros, "tabuleiro", "tabuleiros")}`;
+  }
+
+  const e = dia.survival;
+  if (e?.estado !== "feito") return undefined;
+  const r = e.resultado;
+  return r.limpou
+    ? `🧱 Survival: limpo em ${relogio(r.tempoMs)}`
+    : `🧱 Survival: ${relogio(r.tempoMs)} · ${plural(r.linhas, "linha", "linhas")}`;
 }
 
 export type DesfechoDaPartilha = "partilhado" | "copiado" | "cancelado" | "falhou";

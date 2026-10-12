@@ -1,14 +1,23 @@
 /**
  * O Desafio do Dia — o mesmo desafio para toda a gente, uma vez por dia.
  *
- * Três por dia. **Um Puzzle**: um tabuleiro fixo, o mesmo para toda a gente,
- * escolhido dos níveis que a campanha reservou (`escolherDoDia`). É o desafio
- * que se percebe sem explicação — toda a gente resolveu este tabuleiro — e o
- * mais acessível a quem está a começar. **Um Contra-Relógio e um Survival**,
- * com **a seed tirada da data**: no mesmo dia, toda a gente recebe os mesmos
+ * **Um por dia, à vez** (`modoDoDia`): um Puzzle, um Contra-Relógio, um
+ * Survival, e outra vez o Puzzle. Foram três por dia, um de cada modo, e o
+ * desafio passou a ser uma lista de tarefas que tirava o lugar ao resto do
+ * jogo; um só é uma coisa a fazer hoje, e a rotação é o que faz amanhã ser
+ * diferente de hoje.
+ *
+ * **O Puzzle** é um tabuleiro fixo, o mesmo para toda a gente, escolhido dos
+ * níveis que a campanha reservou (`escolherDoDia`). É o desafio que se
+ * percebe sem explicação — toda a gente resolveu este tabuleiro — e o mais
+ * acessível a quem está a começar. **O Contra-Relógio e o Survival** têm **a
+ * seed tirada da data**: no mesmo dia, toda a gente recebe os mesmos
  * tabuleiros, as mesmas linhas e as mesmas bombas. É o que faz um resultado
  * comparar-se com o de outra pessoa, e sai de graça da regra que proíbe
  * `Math.random()`: os dois modos já eram determinísticos na seed.
+ *
+ * O registo continua a ser por modo, dentro de cada dia: um dia de quando
+ * havia três guarda os três, e só conta o do dia.
  *
  * ── A tentativa que conta é a primeira ──
  *
@@ -31,8 +40,7 @@
  * esperar por amanhã.
  */
 
-import type { Cell } from "@dicetoseven/engine";
-import { mulberry32, randInt, shuffled } from "@dicetoseven/engine";
+import { mulberry32, shuffled } from "@dicetoseven/engine";
 
 import type { ProfileStorage } from "./progress";
 
@@ -131,6 +139,35 @@ export const diaAnterior = (data: string): string => deDias(emDias(data) - 1);
 export const numeroDoDia = (data: string): number =>
   emDias(data) - emDias(EPOCA_DESAFIO) + 1;
 
+/** O resto que não fica negativo: os dias antes do #1 também têm modo. */
+const resto = (n: number, m: number): number => ((n % m) + m) % m;
+
+/** A ordem da rotação. O #1 é um Puzzle: é o desafio que toda a gente percebe. */
+export const MODOS_DO_DESAFIO: readonly ModoDoDesafio[] = ["puzzle", "tempo", "survival"];
+
+/** O desafio do dia: um modo por dia, à vez. */
+export const modoDoDia = (data: string): ModoDoDesafio =>
+  MODOS_DO_DESAFIO[resto(numeroDoDia(data) - 1, MODOS_DO_DESAFIO.length)] ?? "puzzle";
+
+/**
+ * O dia da semana de `data`, a começar na segunda: 0 é segunda, 6 é domingo.
+ * O dia 0 da contagem, 1 de janeiro de 1970, foi uma quinta-feira.
+ */
+export const diaDaSemana = (data: string): number => resto(emDias(data) + 3, 7);
+
+/** Os dias do mês de `data`, do primeiro ao último. */
+export function diasDoMes(data: string): string[] {
+  const mes = data.slice(0, 7);
+  const primeiro = emDias(`${mes}-01`);
+  const dias: string[] = [];
+
+  for (let d = deDias(primeiro); d.startsWith(mes); d = deDias(primeiro + dias.length)) {
+    dias.push(d);
+  }
+
+  return dias;
+}
+
 /** Uma data bem formada, que é tudo o que se aceita vindo do armazenamento. */
 const eData = (s: string): boolean =>
   /^\d{4}-\d{2}-\d{2}$/.test(s) && deDias(emDias(s)) === s;
@@ -140,10 +177,9 @@ const eData = (s: string): boolean =>
 /**
  * A seed do dia para o modo — a mesma para toda a gente, nesse dia.
  *
- * FNV-1a sobre um texto com o nome do jogo, a data e o modo. O modo entra para
- * os dois desafios do dia não partilharem a seed: o Survival e o Contra-Relógio
- * consomem-na de maneiras diferentes, mas uma relação entre os dois seria um
- * padrão que alguém acabaria por encontrar.
+ * FNV-1a sobre um texto com o nome do jogo, a data e o modo. O modo entra do
+ * tempo em que havia um desafio de cada modo por dia, e fica: mudá-lo mudava as
+ * seeds dos dias que já se jogaram.
  */
 export function seedDoDia(data: string, modo: ModoDoDesafio): number {
   let h = 0x811c9dc5;
@@ -155,27 +191,19 @@ export function seedDoDia(data: string, modo: ModoDoDesafio): number {
 }
 
 /**
- * Os dados do dia: seis faces tiradas da seed. **Só desenho** — a cara do
- * desafio na Home, diferente todos os dias e igual para toda a gente no mesmo
- * dia. Não entram em nenhuma corrida.
- */
-export function dadosDoDia(data: string): Cell[] {
-  const rng = mulberry32(seedDoDia(data, "tempo") ^ 0xd1ce);
-  return Array.from({ length: 6 }, () => (randInt(rng, 6) + 1) as Cell);
-}
-
-/**
  * O nível do Puzzle do Dia, de uma lista que **tem de vir sempre pela mesma
  * ordem**. A lista é baralhada uma vez, com uma seed fixa — para os dias não
- * seguirem a ordem do ficheiro, que alterna mal as bandas —, e cada dia leva o
- * seguinte. Quando a lista acaba, recomeça: com os 30 níveis reservados, isso
- * acontece ao fim de um mês, e é aí que precisa de uma banda própria.
+ * seguirem a ordem do ficheiro, que alterna mal as bandas —, e cada Puzzle do
+ * Dia leva o seguinte: um em cada três dias, pela rotação. Quando a lista
+ * acaba, recomeça: com os 34 níveis reservados, isso acontece ao fim de 102
+ * dias, e é aí que precisa de uma banda própria.
  */
 export function escolherDoDia<T>(data: string, pool: readonly T[]): T | undefined {
   if (pool.length === 0) return undefined;
 
   const ordem = shuffled(mulberry32(0x9e2d1), pool);
-  const n = numeroDoDia(data) - 1;
+  // Quantos Puzzles do Dia houve antes deste.
+  const n = Math.floor((numeroDoDia(data) - 1) / MODOS_DO_DESAFIO.length);
   return ordem[((n % ordem.length) + ordem.length) % ordem.length];
 }
 
@@ -226,11 +254,12 @@ export function interromper(d: Desafios, data: string, modo: ModoDoDesafio): Des
 
 /* ─── A sequência ─────────────────────────────────────────────────────────── */
 
-/** Um dia conta para a sequência se pelo menos um dos desafios foi feito. */
-const conta = (dia: DiaDeDesafio | undefined): boolean =>
-  dia?.puzzle?.estado === "feito" ||
-  dia?.tempo?.estado === "feito" ||
-  dia?.survival?.estado === "feito";
+/**
+ * Um dia conta para a sequência se o desafio desse dia foi feito. Os outros
+ * modos guardados num dia — de quando havia três — não contam.
+ */
+const conta = (d: Desafios, data: string): boolean =>
+  estadoDoModo(d, data, modoDoDia(data))?.estado === "feito";
 
 /**
  * Dias seguidos com desafio feito, até hoje.
@@ -240,10 +269,10 @@ const conta = (dia: DiaDeDesafio | undefined): boolean =>
  * tido hipótese de a continuar.
  */
 export function sequencia(d: Desafios, hoje: string): number {
-  let dia = conta(d.dias[hoje]) ? hoje : diaAnterior(hoje);
+  let dia = conta(d, hoje) ? hoje : diaAnterior(hoje);
   let n = 0;
 
-  while (conta(d.dias[dia])) {
+  while (conta(d, dia)) {
     n++;
     dia = diaAnterior(dia);
   }
