@@ -2816,6 +2816,27 @@ body::before {
 }
 
 /*
+ * As peças que a explosão aqueceu: mudam de face com um clarão vermelho, e
+ * incham um pouco. Curto — tem de acabar antes de a linha extra acabar de
+ * cair, que é quando o tabuleiro se remonta.
+ */
+.peca.aquecida {
+  animation: aquecer 480ms var(--suavizacao);
+}
+
+@keyframes aquecer {
+  from {
+    scale: 1.14;
+    filter: brightness(1.45)
+      drop-shadow(0 0 calc(var(--lado-real) * 0.22) var(--fogo));
+  }
+  to {
+    scale: 1;
+    filter: none;
+  }
+}
+
+/*
  * Sem movimento: ficam as cores, que dizem o mesmo sem mexer em nada. O clarão
  * da peça, o vermelho do relógio e o anel da bomba bastam para se ler o que
  * aconteceu.
@@ -2833,6 +2854,10 @@ body::before {
 
   .peca.acesa {
     animation: clarao 520ms linear 2;
+  }
+
+  .peca.aquecida {
+    animation: clarao 480ms linear;
   }
 
   @keyframes clarao {

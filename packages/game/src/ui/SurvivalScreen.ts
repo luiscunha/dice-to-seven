@@ -34,7 +34,7 @@
  * peças que estão prestes a cair diz *quando* e *o quê* no mesmo sítio.
  */
 
-import type { Cell, Packed } from "@dicetoseven/engine";
+import type { Board, Cell, Packed } from "@dicetoseven/engine";
 import { JOKER, cellAt, hasAnyGroup, isEmpty } from "@dicetoseven/engine";
 
 import type { JokerValue } from "../session/GameSession";
@@ -412,7 +412,9 @@ topo.append(sair, this.elRelogio);
     this.jokerPendente = undefined;
 
     // A linha caiu por causa da bomba: diz-se antes de ela cair, na peça.
-    if (r.rebentou !== undefined) this.rebentar(r.rebentou);
+    if (r.rebentou !== undefined) {
+      this.rebentar(r.rebentou, r.aquecidas, r.state.game.board);
+    }
 
     const bombaAntes = this.estado.bomba;
 
@@ -602,11 +604,16 @@ topo.append(sair, this.elRelogio);
    *
    * A mesma linguagem do Contra-Relógio, com a moeda deste modo: lá a perda é
    * tempo, aqui é uma linha.
+   *
+   * As peças à volta aquecem no mesmo instante — ver `aquecer`. `depois` é o
+   * tabuleiro já com a linha, e as coordenadas delas são as mesmas: a linha
+   * entra por cima e não mexe em nada.
    */
-  private rebentar(at: Packed): void {
+  private rebentar(at: Packed, aquecidas: readonly Packed[], depois: Board): void {
     const caixa = this.view.caixaDe(at);
     anunciar(this.palco, caixa === undefined ? [] : [caixa], "+1 linha", "perda grande");
     this.view.rebentarBomba(at);
+    this.view.aquecerPecas(depois, aquecidas);
     vibrarExplosao();
   }
 

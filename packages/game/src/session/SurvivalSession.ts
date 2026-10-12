@@ -95,6 +95,7 @@
 import type { Board, Cell, Level, Packed, Rng } from "@dicetoseven/engine";
 import {
   JOKER,
+  colOf,
   deriveSeed,
   isEmpty,
   jokerAt,
@@ -103,6 +104,7 @@ import {
   pick,
   pushRow,
   randInt,
+  rowOf,
   tallestColumn,
   totalSum,
   weightedIndex,
@@ -289,6 +291,13 @@ export interface SurvivalConfig {
    * `pecaParaEnterrar`.
    */
   readonly profundidadeEnterrada: number;
+
+  /**
+   * Rebentar também **aquece** as peças à volta da bomba: cada uma sobe um
+   * ponto. Ver `aquecer`. Desligável, como as bombas, para os testes de outras
+   * regras não dependerem dela.
+   */
+  readonly aqueceVizinhas: boolean;
 }
 
 export const DEFAULT_SURVIVAL: SurvivalConfig = {
@@ -316,6 +325,7 @@ export const DEFAULT_SURVIVAL: SurvivalConfig = {
   bombaEnterradaDesde: 6,
   probabilidadeEnterrada: 0.5,
   profundidadeEnterrada: 3,
+  aqueceVizinhas: true,
 };
 
 /**
@@ -585,6 +595,77 @@ export function pecaParaEnterrar(
   return pick(rng, presas.length > 0 ? presas : livres);
 }
 
+/* ─── A explosão aquece ───────────────────────────────────────────────────── */
+
+/**
+ * As peças à volta de `p`: os quatro lados e as quatro diagonais, as que
+ * existirem.
+ *
+ * É a vizinhança **do ecrã**, e não a das jogadas. Para jogar só contam os
+ * lados (spec §2.3); uma explosão vê-se em redor, e uma diagonal que ficasse
+ * de fora lia-se como defeito. A condição de altura é a mesma: ao lado de uma
+ * coluna mais baixa não há peça nenhuma.
+ */
+export function vizinhasDe(b: Board, p: Packed): Packed[] {
+  const c = colOf(p);
+  const r = rowOf(p);
+  const out: Packed[] = [];
+
+  for (let dc = -1; dc <= 1; dc++) {
+    for (let dr = -1; dr <= 1; dr++) {
+      if (dc === 0 && dr === 0) continue;
+
+      const cc = c + dc;
+      const rr = r + dr;
+      if (cc < 0 || rr < 0 || rr >= (b[cc]?.length ?? 0)) continue;
+      out.push(packed(cc, rr));
+    }
+  }
+
+  return out;
+}
+
+/**
+ * A explosão aquece as peças à volta da bomba: **cada uma sobe um ponto**, e o
+ * 6 fica 6. O joker não muda, e a peça da bomba também não.
+ *
+ * Devolve o tabuleiro novo e as peças que mudaram — o 6 não conta, porque não
+ * mudou e não há nada para o ecrã mostrar nele.
+ *
+ * ── Porque sobe, e não muda ao calhas ──
+ *
+ * Mediu-se em 2 000 explosões a meio de corrida. Ao calhas, com os pesos das
+ * linhas, o tabuleiro ficava **melhor** em 48% das vezes, e a peça presa de uma
+ * bomba enterrada ficava livre em 84%: um castigo que alivia, e que premiava
+ * falhar o desenterrar. Subir um ponto piora o tabuleiro em 99% das vezes —
+ * os 1 são a cola do jogo e desaparecem — e é previsível: quem vê o pavio a
+ * acabar pode tirar primeiro os 1 que estão encostados à bomba.
+ *
+ * Muda faces e não acrescenta peças, portanto a linha a mais continua a cair:
+ * no Survival perde-se pela altura, e só ela a faz crescer.
+ */
+export function aquecer(
+  b: Board,
+  p: Packed,
+): { readonly board: Board; readonly aquecidas: readonly Packed[] } {
+  const aquecidas = vizinhasDe(b, p).filter((q) => {
+    const v = b[colOf(q)]?.[rowOf(q)];
+    return v !== undefined && v !== JOKER && v < 6;
+  });
+
+  if (aquecidas.length === 0) return { board: b, aquecidas };
+
+  const board = b.map((coluna, c) =>
+    aquecidas.some((q) => colOf(q) === c)
+      ? coluna.map((v, r) =>
+          aquecidas.includes(packed(c, r)) ? ((v + 1) as Cell) : v,
+        )
+      : coluna,
+  );
+
+  return { board, aquecidas };
+}
+
 /* ─── Leituras ────────────────────────────────────────────────────────────── */
 
 /**
@@ -827,9 +908,11 @@ export function avancarRelogio(
   readonly caiu: boolean;
   /** A linha caiu porque a bomba rebentou, e a bomba estava aqui. */
   readonly rebentou: Packed | undefined;
+  /** As peças que a explosão aqueceu. Ver `aquecer`. */
+  readonly aquecidas: readonly Packed[];
 } {
   if (s.morto || s.limpo) {
-    return { state: s, caiu: false, rebentou: undefined };
+    return { state: s, caiu: false, rebentou: undefined, aquecidas: [] };
   }
 
   /*
@@ -845,26 +928,40 @@ export function avancarRelogio(
    * linha por chamada, como sempre: a marcada cai no tique seguinte.
    *
    * A peça da bomba fica no tabuleiro. Ver `bomba.ts`.
+   *
+   * **E as peças à volta aquecem**, antes de a linha cair: primeiro a
+   * explosão, depois a linha. A linha que cai por cima não é aquecida.
    */
-  if (pavioAcabou(s.bomba, agoraMs)) {
-    const rebentou = s.bomba?.at;
-    const comLinha = injectRow({ ...s, bomba: undefined }, false, config, agoraMs);
+  if (pavioAcabou(s.bomba, agoraMs) && s.bomba !== undefined) {
+    const rebentou = s.bomba.at;
+    const { board, aquecidas } = config.aqueceVizinhas
+      ? aquecer(s.game.board, rebentou)
+      : { board: s.game.board, aquecidas: [] };
+
+    const comLinha = injectRow(
+      { ...s, bomba: undefined, game: { ...s.game, board } },
+      false,
+      config,
+      agoraMs,
+    );
 
     return {
       state: { ...comLinha, proximaLinhaMs: s.proximaLinhaMs },
       caiu: true,
       rebentou,
+      aquecidas,
     };
   }
 
   if (agoraMs < s.proximaLinhaMs) {
-    return { state: s, caiu: false, rebentou: undefined };
+    return { state: s, caiu: false, rebentou: undefined, aquecidas: [] };
   }
 
   return {
     state: injectRow(s, false, config, agoraMs),
     caiu: true,
     rebentou: undefined,
+    aquecidas: [],
   };
 }
 

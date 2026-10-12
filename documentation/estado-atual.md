@@ -758,6 +758,27 @@ A peça fica quando rebenta, também aqui. Não há solução a proteger, mas ti
 uma peça num modo que se perde por excesso delas seria um alívio, e um castigo
 que alivia não é castigo.
 
+**E a explosão aquece as peças à volta**: as oito vizinhas que existirem (lados
+e diagonais) sobem um ponto — o 1 passa a 2, o 6 fica 6, o joker não muda. Muda
+à vista, com um clarão, no instante da explosão e antes de a linha extra cair.
+
+Começou como a ideia de baralhar as vizinhas ao calhas. Medido em 2 000
+explosões a meio de corrida:
+
+| As vizinhas… | tabuleiro pior | tabuleiro melhor | a peça presa da bomba solta-se |
+|---|---|---|---|
+| mudam ao calhas, com os pesos das linhas | 50% | **48%** | **84%** |
+| mudam ao calhas, faces uniformes | 80% | 18% | 63% |
+| mudam ao calhas, puxadas para faces altas | 93% | 6% | 38% |
+| **sobem um ponto** | **99%** | 1% | 28% |
+
+Ao calhas era cara ou coroa, e soltava a peça presa de uma bomba enterrada em
+84% das vezes — premiava falhar o desenterrar. Subir um ponto piora quase sempre
+(os 1 são a cola do jogo) e é previsível: quem vê o pavio a acabar pode tirar
+primeiro os 1 encostados à bomba. Não acrescenta peças, por isso a linha a mais
+continua a cair: no Survival perde-se pela altura. Desliga-se com
+`aqueceVizinhas: false`.
+
 Valores de partida, em `DEFAULT_SURVIVAL`: `linhasEntreBombas: 3`,
 `pavioBombaMs: 10_000` — mais longo do que os 6 s do Contra-Relógio, porque a
 peça chega no topo da pilha e o tabuleiro tem o dobro das peças.

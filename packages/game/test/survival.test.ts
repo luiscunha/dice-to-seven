@@ -28,6 +28,7 @@ import type { Board, Group, Packed } from "@dicetoseven/engine";
 import { pecasJogaveis } from "../src/session/bomba";
 import {
   DEFAULT_SURVIVAL,
+  aquecer,
   avancarRelogio,
   bombaEnterradaNaFila,
   bombaNaFila,
@@ -45,6 +46,7 @@ import {
   survivalTap,
   trazBomba,
   trazJoker,
+  vizinhasDe,
 } from "../src/session/SurvivalSession";
 import type { SurvivalState } from "../src/session/SurvivalSession";
 
@@ -778,5 +780,78 @@ describe("a bomba enterrada", () => {
     r = survivalTap(r.state, packed(1, 0));
 
     expect(r.state.bomba).toEqual({ at: packed(0, 0), rebentaEm: 5_000, enterrada: true });
+  });
+});
+
+describe("a explosão aquece as peças à volta", () => {
+  it("**cada vizinha sobe um ponto**, lados e diagonais, e o 6 fica 6", () => {
+    // A bomba no 5 do meio.
+    const b: Board = [
+      [1, 2, 3],
+      [4, 5, 6],
+      [1, 1, 1],
+    ];
+
+    const { board, aquecidas } = aquecer(b, packed(1, 1));
+
+    expect(board).toEqual([
+      [2, 3, 4],
+      [5, 5, 6],
+      [2, 2, 2],
+    ]);
+    // O 6 não mudou, e por isso não se anima.
+    expect(aquecidas).toHaveLength(7);
+    expect(aquecidas).not.toContain(packed(1, 2));
+  });
+
+  it("só as que existem: ao lado de uma coluna mais baixa não há peça", () => {
+    const b: Board = [[1], [1, 1, 1], [1]];
+    expect(vizinhasDe(b, packed(1, 2))).toEqual([packed(1, 1)]);
+  });
+
+  it("o joker não aquece", () => {
+    const b: Board = [[0, 1], [2]];
+    const { board, aquecidas } = aquecer(b, packed(0, 1));
+    expect(board).toEqual([[0, 1], [3]]);
+    expect(aquecidas).toEqual([packed(1, 0)]);
+  });
+
+  it("**ao rebentar, aquece antes de a linha cair** — a linha nova fica como veio", () => {
+    const base = startSurvival(SEED);
+    const s: SurvivalState = {
+      ...base,
+      game: { ...base.game, board: [[1], [1], [1], [1], [1], [1]] },
+      bomba: { at: packed(2, 0), rebentaEm: 5_000 },
+      proximaLinhaMs: 30_000,
+    };
+    const linha = proximaLinha(s);
+
+    const r = avancarRelogio(s, 5_000);
+    const depois = r.state.game.board;
+
+    expect(r.aquecidas).toEqual([packed(1, 0), packed(3, 0)]);
+    expect(cellAt(depois, packed(1, 0))).toBe(2);
+    expect(cellAt(depois, packed(3, 0))).toBe(2);
+    // A bomba fica como estava, e a linha nova não é aquecida.
+    expect(cellAt(depois, packed(2, 0))).toBe(1);
+    expect(depois.map((col) => col[1])).toEqual(linha);
+  });
+
+  it("desligado na configuração, só cai a linha", () => {
+    const base = startSurvival(SEED);
+    const s: SurvivalState = {
+      ...base,
+      game: { ...base.game, board: [[1], [1], [1]] },
+      bomba: { at: packed(1, 0), rebentaEm: 5_000 },
+    };
+
+    const r = avancarRelogio(s, 5_000, { ...DEFAULT_SURVIVAL, aqueceVizinhas: false });
+    expect(r.aquecidas).toEqual([]);
+    // A linha entra à largura cheia: as três primeiras colunas são as de antes.
+    expect(r.state.game.board.slice(0, 3).map((col) => col[0])).toEqual([1, 1, 1]);
+  });
+
+  it("sem bomba a rebentar, nada aquece", () => {
+    expect(avancarRelogio(startSurvival(SEED), 30_000).aquecidas).toEqual([]);
   });
 });

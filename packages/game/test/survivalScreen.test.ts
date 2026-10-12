@@ -708,6 +708,33 @@ describe("a bomba no ecrã do Survival", () => {
     expect(host.querySelector(".tabuleiro .peca.bomba")).toBeNull();
   });
 
+  it("**rebentar aquece as peças à volta**", async () => {
+    const estado = comBomba(2_000);
+    const b = estado.game.board;
+    // A bomba está no canto (0, 0): à volta, (0, 1), (1, 0) e (1, 1).
+    const vizinhas = [packed(0, 1), packed(1, 0), packed(1, 1)];
+    const esperado = vizinhas.map((p) =>
+      String(Math.min(6, (b[p >> 6]?.[p & 63] ?? 0) + 1)),
+    );
+    const valorEm = (p: number): string | undefined =>
+      host.querySelector<HTMLElement>(`.tabuleiro .peca[data-pos="${String(p)}"]`)
+        ?.dataset["valor"];
+
+    ecra = abrir(estado);
+
+    // Antes da explosão, as faces de partida.
+    await vi.advanceTimersByTimeAsync(900);
+    expect(vizinhas.map(valorEm)).not.toEqual(esperado);
+
+    /*
+     * Depois dela, as novas — e continuam depois de a linha assentar. O clarão
+     * não se vê aqui: sem layout, a linha entra sem animação e o tabuleiro
+     * remonta-se logo. Testa-se no `BoardView`.
+     */
+    await vi.advanceTimersByTimeAsync(1_100);
+    expect(vizinhas.map(valorEm)).toEqual(esperado);
+  });
+
   /*
    * A razão de o pavio estar no tempo da corrida e não nas horas: sair da
    * aplicação a meio não pode deixar a bomba a arder sozinha.

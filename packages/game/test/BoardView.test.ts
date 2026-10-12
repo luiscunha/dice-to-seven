@@ -11,7 +11,7 @@
 
 import { beforeEach, describe, expect, it } from "vitest";
 
-import type { Board, Group, Packed } from "@dicetoseven/engine";
+import type { Board, Cell, Group, Packed } from "@dicetoseven/engine";
 import { applyMove, boardKey, packed } from "@dicetoseven/engine";
 
 import { BoardView } from "../src/ui/BoardView";
@@ -510,6 +510,27 @@ describe("a peça-bomba", () => {
     expect(el.classList.contains("rebentou")).toBe(true);
     expect(host.querySelector(".pavio")).toBeNull();
     expect(host.querySelector(".tabuleiro")?.classList.contains("abanao")).toBe(true);
+
+    view.destruir();
+  });
+
+  it("aquecer muda a face das peças ali mesmo, com um clarão", () => {
+    const view = criar();
+    view.montar(TABULEIRO);
+    const antes = peca(packed(0, 0));
+    const valor = Number(antes.dataset["valor"]);
+    const depois = TABULEIRO.map((col, c) =>
+      col.map((v, r) => (c === 0 && r === 0 ? ((v + 1) as Cell) : v)),
+    );
+
+    view.aquecerPecas(depois, [packed(0, 0)]);
+
+    const el = peca(packed(0, 0));
+    // A mesma peça, e não uma nova: muda à vista, no sítio.
+    expect(el).toBe(antes);
+    expect(el.dataset["valor"]).toBe(String(valor + 1));
+    expect(el.getAttribute("aria-label")).toBe(`face ${String(valor + 1)}`);
+    expect(el.classList.contains("aquecida")).toBe(true);
 
     view.destruir();
   });
