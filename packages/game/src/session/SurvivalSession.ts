@@ -275,13 +275,13 @@ export interface SurvivalConfig {
    * Ver `bombaEnterradaNaFila`.
    */
   readonly bombaEnterradaDesde: number;
-  /** Das bombas que podem chegar enterradas, a fração que chega. */
-  readonly probabilidadeEnterrada: number;
   /**
-   * O pavio da bomba enterrada. Mais longo do que o da linha: é preciso
-   * escavar até ela, e tirá-la custa as jogadas que a destapam.
+   * Das bombas que podem chegar enterradas, a fração que chega.
+   *
+   * O pavio é o mesmo `pavioBombaMs` da bomba da linha — decisão de produto: a
+   * bomba é uma só, e o tempo dela também.
    */
-  readonly pavioEnterradaMs: number;
+  readonly probabilidadeEnterrada: number;
   /**
    * Quantas peças, no máximo, pode ter por cima a peça onde ela se acende.
    *
@@ -315,24 +315,16 @@ export const DEFAULT_SURVIVAL: SurvivalConfig = {
   pavioBombaMs: 10_000,
   bombaEnterradaDesde: 6,
   probabilidadeEnterrada: 0.5,
-  pavioEnterradaMs: 15_000,
   profundidadeEnterrada: 3,
 };
 
 /**
  * A bomba do Survival: a mesma peça com pavio dos dois modos, e saber se nasceu
- * enterrada — que decide o tamanho do pavio. Ver `bombaEnterradaNaFila`.
+ * enterrada — que decide o clarão com que se acende. Ver `bombaEnterradaNaFila`.
  */
 export interface BombaSurvival extends Bomba {
   readonly enterrada?: true;
 }
-
-/** O pavio inteiro desta bomba, para o mostrador saber de quanto esvazia. */
-export const pavioTotalMs = (
-  bomba: BombaSurvival,
-  config: SurvivalConfig = DEFAULT_SURVIVAL,
-): number =>
-  bomba.enterrada === true ? config.pavioEnterradaMs : config.pavioBombaMs;
 
 export interface SurvivalState {
   readonly game: GameState;
@@ -777,7 +769,7 @@ export function injectRow(
    */
   const bomba: BombaSurvival | undefined =
     enterrada !== undefined
-      ? { at: enterrada, rebentaEm: agoraMs + config.pavioEnterradaMs, enterrada: true }
+      ? { at: enterrada, rebentaEm: agoraMs + config.pavioBombaMs, enterrada: true }
       : colBomba === undefined
         ? s.bomba
         : {

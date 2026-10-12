@@ -777,8 +777,9 @@ pilha**, por baixo da linha que acabou de cair:
 - **Uma peça presa**: sem grupo nesse momento, com 1 a 3 peças por cima, nunca o
   joker. Tirá-la a tempo pede um plano — que jogadas a destapam, e por que
   ordem. Só se não houver nenhuma presa a esse alcance se aceita uma que já sai.
-- **Pavio de 15 s** em vez de 10, porque é preciso escavar. O castigo é o mesmo:
-  uma linha a mais.
+- **O mesmo pavio de 10 s e o mesmo castigo**, uma linha a mais. Chegou a ter
+  15 s, por ser preciso escavar; ficou nos 10 por decisão de produto — a bomba é
+  uma só, e o tempo dela também.
 - **A fila anuncia-a**, com um «na pilha» e o pavio apagado ao lado das peças. Não
   pode dizer em que peça — até a linha cair o jogador mexe na pilha —, mas diz
   que vem. A promessa do modo, nada cai sem se ver, continua a valer.
@@ -794,8 +795,7 @@ guarda se a bomba é enterrada (as gravadas antes disto abrem com bombas da
 linha, que é o que eram).
 
 Valores em `DEFAULT_SURVIVAL`, por afinar a jogar: `bombaEnterradaDesde: 6`
-linhas caídas, `probabilidadeEnterrada: 0.5`, `pavioEnterradaMs: 15_000`,
-`profundidadeEnterrada: 3`.
+linhas caídas, `probabilidadeEnterrada: 0.5`, `profundidadeEnterrada: 3`.
 
 ### Depois da escada: tabuleiros sem garantia, e o salto
 

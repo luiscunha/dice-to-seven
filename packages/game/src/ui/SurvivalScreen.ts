@@ -51,7 +51,6 @@ import {
   folga,
   fracaoParaLinha,
   larguraAtual,
-  pavioTotalMs,
   proximaLinha,
   puxarLinha,
   restoParaLimpar,
@@ -753,7 +752,7 @@ topo.append(sair, this.elRelogio);
 
     this.view.marcarBomba(
       bomba.at,
-      resta / pavioTotalMs(bomba, this.config),
+      resta / this.config.pavioBombaMs,
       Math.ceil(resta / 1000),
     );
   }

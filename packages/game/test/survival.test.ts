@@ -38,7 +38,6 @@ import {
   larguraNoIndice,
   linhaDe,
   multiplicadorAoPuxar,
-  pavioTotalMs,
   proximaLinha,
   puxarLinha,
   restoParaLimpar,
@@ -704,7 +703,7 @@ describe("a bomba enterrada", () => {
 
   /*
    * O coração da mecânica. Numa peça da pilha — não na linha que caiu —, com
-   * poucas peças por cima, nunca no joker, e com o pavio dela.
+   * poucas peças por cima, nunca no joker, e com o mesmo pavio da outra.
    */
   it("**acende-se numa peça da pilha**, a poucas peças do topo", () => {
     for (let i = 0; i < 60; i++) {
@@ -714,7 +713,7 @@ describe("a bomba enterrada", () => {
       if (bomba === undefined) throw new Error("devia ter acendido uma bomba");
 
       expect(bomba.enterrada).toBe(true);
-      expect(bomba.rebentaEm).toBe(4_000 + sempre.pavioEnterradaMs);
+      expect(bomba.rebentaEm).toBe(4_000 + sempre.pavioBombaMs);
       expect(cellAt(s.game.board, bomba.at)).toBeDefined();
       expect(cellAt(depois.game.board, bomba.at)).not.toBe(0);
       expect(porCima(depois.game.board, bomba.at)).toBeGreaterThanOrEqual(1);
@@ -779,12 +778,5 @@ describe("a bomba enterrada", () => {
     r = survivalTap(r.state, packed(1, 0));
 
     expect(r.state.bomba).toEqual({ at: packed(0, 0), rebentaEm: 5_000, enterrada: true });
-  });
-
-  it("o pavio inteiro depende do tipo de bomba", () => {
-    expect(pavioTotalMs({ at: 0, rebentaEm: 0 })).toBe(DEFAULT_SURVIVAL.pavioBombaMs);
-    expect(pavioTotalMs({ at: 0, rebentaEm: 0, enterrada: true })).toBe(
-      DEFAULT_SURVIVAL.pavioEnterradaMs,
-    );
   });
 });

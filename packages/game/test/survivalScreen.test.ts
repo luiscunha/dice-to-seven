@@ -676,17 +676,16 @@ describe("a bomba no ecrã do Survival", () => {
     );
   });
 
-  it("**quando a linha cai, a enterrada acende-se com um clarão**, e com o pavio dela", async () => {
+  it("**quando a linha cai, a enterrada acende-se com um clarão**, e com o pavio de sempre", async () => {
     ecra = abrir(comEnterradaAVir(1_500));
 
     await vi.advanceTimersByTimeAsync(1_200);
 
     const acesa = host.querySelector<HTMLElement>(".tabuleiro .peca.bomba.acesa");
     expect(acesa).not.toBeNull();
-    // Esvazia do pavio de 15 s, e não do de 10 s: senão começava acima de 1.
-    const pavioRestante = Number(acesa?.style.getPropertyValue("--pavio"));
-    expect(pavioRestante).toBeGreaterThan(0.9);
-    expect(pavioRestante).toBeLessThanOrEqual(1);
+    // Acesa aos 1,5 s, vista aos 2,2 s: dos 10 s de pavio faltam 9,3.
+    expect(acesa?.querySelector(".pavio")?.textContent).toBe("10");
+    expect(Number(acesa?.style.getPropertyValue("--pavio"))).toBeCloseTo(0.93, 2);
     expect(host.querySelector(".fila .bomba-pilha")).toBeNull();
   });
 
