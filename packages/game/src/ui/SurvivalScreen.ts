@@ -45,11 +45,13 @@ import type {
 import {
   DEFAULT_SURVIVAL,
   avancarRelogio,
+  bombaEnterradaNaFila,
   bombaNaFila,
   faltaParaLinha,
   folga,
   fracaoParaLinha,
   larguraAtual,
+  pavioTotalMs,
   proximaLinha,
   puxarLinha,
   restoParaLimpar,
@@ -413,6 +415,8 @@ topo.append(sair, this.elRelogio);
     // A linha caiu por causa da bomba: diz-se antes de ela cair, na peça.
     if (r.rebentou !== undefined) this.rebentar(r.rebentou);
 
+    const bombaAntes = this.estado.bomba;
+
     try {
       this.estado = r.state;
       await this.view.injetarLinha(this.estado.game.board);
@@ -424,6 +428,7 @@ topo.append(sair, this.elRelogio);
     if (this.estado.morto) await this.transbordar();
 
     this.pintar();
+    this.acenderSeEnterrada(bombaAntes);
     this.verificarFim();
   }
 
@@ -560,6 +565,7 @@ topo.append(sair, this.elRelogio);
 
     this.arrancar();
     this.ocupado = true;
+    const bombaAntes = this.estado.bomba;
 
     try {
       this.estado = puxarLinha(this.estado, this.config, this.decorridoMs());
@@ -573,7 +579,21 @@ topo.append(sair, this.elRelogio);
     if (this.estado.morto) await this.transbordar();
 
     this.pintar();
+    this.acenderSeEnterrada(bombaAntes);
     this.verificarFim();
+  }
+
+  /**
+   * A linha que caiu acendeu uma bomba na pilha: a peça dá um clarão.
+   *
+   * A bomba da linha não precisa disto — viu-se na fila e cai à frente dos
+   * olhos. A enterrada aparece longe de onde o olhar está, a meio da pilha, e
+   * sem o clarão só se dava por ela quando o pavio já ia a meio.
+   */
+  private acenderSeEnterrada(antes: SurvivalState["bomba"]): void {
+    const bomba = this.estado.bomba;
+    if (this.terminado || bomba?.enterrada !== true || bomba === antes) return;
+    this.view.acenderBomba(bomba.at);
   }
 
   /**
@@ -733,7 +753,7 @@ topo.append(sair, this.elRelogio);
 
     this.view.marcarBomba(
       bomba.at,
-      resta / this.config.pavioBombaMs,
+      resta / pavioTotalMs(bomba, this.config),
       Math.ceil(resta / 1000),
     );
   }
@@ -782,8 +802,11 @@ topo.append(sair, this.elRelogio);
 
     if (segundos !== this.ultimoSegundo) {
       this.ultimoSegundo = segundos;
-      const bomba =
-        bombaNaFila(this.estado, this.config) === undefined ? "" : ", com bomba";
+      const bomba = bombaEnterradaNaFila(this.estado, this.config)
+        ? ", acende uma bomba na pilha"
+        : bombaNaFila(this.estado, this.config) === undefined
+          ? ""
+          : ", com bomba";
       this.elFila.setAttribute(
         "aria-label",
         `próxima linha em ${String(segundos)} segundos${bomba}`,
@@ -819,6 +842,7 @@ topo.append(sair, this.elRelogio);
         }
         return el;
       }),
+      ...(bombaEnterradaNaFila(this.estado, this.config) ? [avisoNaPilha()] : []),
     );
   }
 
@@ -841,6 +865,21 @@ topo.append(sair, this.elRelogio);
     this.btPuxar.dataset["urgente"] = preso ? "sim" : "nao";
     this.btPuxar.disabled = this.terminado;
   }
+}
+
+/**
+ * O aviso da bomba enterrada, ao lado da fila.
+ *
+ * A fila não pode dizer **em que peça** ela se vai acender — até a linha cair o
+ * jogador mexe na pilha, e a peça escolhe-se no tabuleiro que houver nesse
+ * instante. Diz que vem, e onde: na pilha. O pavio apagado é o mesmo da bomba
+ * da linha, para se ler como a mesma ameaça.
+ */
+function avisoNaPilha(): HTMLElement {
+  const aviso = elemento("span", "bomba-pilha");
+  aviso.setAttribute("aria-hidden", "true");
+  aviso.append(elemento("span", "pavio"), "na pilha");
+  return aviso;
 }
 
 /** `m:ss.d`. Décimos porque a marca é um tempo, e um tempo compara-se ao décimo. */

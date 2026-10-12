@@ -25,9 +25,11 @@ import {
 
 import type { Board, Group, Packed } from "@dicetoseven/engine";
 
+import { pecasJogaveis } from "../src/session/bomba";
 import {
   DEFAULT_SURVIVAL,
   avancarRelogio,
+  bombaEnterradaNaFila,
   bombaNaFila,
   cadencia,
   colunaDaBomba,
@@ -36,6 +38,7 @@ import {
   larguraNoIndice,
   linhaDe,
   multiplicadorAoPuxar,
+  pavioTotalMs,
   proximaLinha,
   puxarLinha,
   restoParaLimpar,
@@ -662,5 +665,126 @@ describe("a bomba", () => {
     expect(r.desarmou).toBe(false);
     expect(r.state.bomba?.at).toBe(packed(0, 0));
     expect(cellAt(r.state.game.board, packed(0, 0))).toBe(5);
+  });
+});
+
+describe("a bomba enterrada", () => {
+  /** Sempre enterrada, quando pode: para os testes não dependerem da sorte. */
+  const sempre = { ...DEFAULT_SURVIVAL, probabilidadeEnterrada: 1 };
+  const nunca = { ...DEFAULT_SURVIVAL, probabilidadeEnterrada: 0 };
+
+  /** Uma corrida com a bomba a vir na próxima linha, depois de `caidas` linhas. */
+  const aVir = (seed: number, caidas: number, board?: Board): SurvivalState => {
+    const base = startSurvival(seed);
+    return {
+      ...base,
+      game: board === undefined ? base.game : { ...base.game, board },
+      linhasInjetadas: DEFAULT_SURVIVAL.alturaInicial + caidas,
+      linhasDesdeBomba: DEFAULT_SURVIVAL.linhasEntreBombas,
+    };
+  };
+
+  /** Quantas peças tem por cima. */
+  const porCima = (b: Board, p: Packed): number =>
+    (b[Math.floor(p / 64)]?.length ?? 0) - 1 - (p % 64);
+
+  it("**a primeira bomba da corrida é sempre na linha**", () => {
+    const s = aVir(SEED, DEFAULT_SURVIVAL.bombaEnterradaDesde - 1);
+    expect(bombaEnterradaNaFila(s, sempre)).toBe(false);
+    expect(bombaNaFila(s, sempre)).toBeDefined();
+  });
+
+  it("a fila anuncia-a, e não a põe em nenhuma peça da linha", () => {
+    const s = aVir(SEED, DEFAULT_SURVIVAL.bombaEnterradaDesde);
+    expect(bombaEnterradaNaFila(s, sempre)).toBe(true);
+    expect(bombaNaFila(s, sempre)).toBeUndefined();
+    // A linha é a mesma, com bomba ou sem ela.
+    expect(proximaLinha(s, sempre)).toEqual(proximaLinha(s, nunca));
+  });
+
+  /*
+   * O coração da mecânica. Numa peça da pilha — não na linha que caiu —, com
+   * poucas peças por cima, nunca no joker, e com o pavio dela.
+   */
+  it("**acende-se numa peça da pilha**, a poucas peças do topo", () => {
+    for (let i = 0; i < 60; i++) {
+      const s = aVir(SEED + i, DEFAULT_SURVIVAL.bombaEnterradaDesde + (i % 5));
+      const depois = injectRow(s, false, sempre, 4_000);
+      const bomba = depois.bomba;
+      if (bomba === undefined) throw new Error("devia ter acendido uma bomba");
+
+      expect(bomba.enterrada).toBe(true);
+      expect(bomba.rebentaEm).toBe(4_000 + sempre.pavioEnterradaMs);
+      expect(cellAt(s.game.board, bomba.at)).toBeDefined();
+      expect(cellAt(depois.game.board, bomba.at)).not.toBe(0);
+      expect(porCima(depois.game.board, bomba.at)).toBeGreaterThanOrEqual(1);
+      expect(porCima(depois.game.board, bomba.at)).toBeLessThanOrEqual(sempre.profundidadeEnterrada);
+      expect(depois.linhasDesdeBomba).toBe(0);
+    }
+  });
+
+  /*
+   * Seis em baixo, 1s por cima: um 6 só sai com um 1, e os da base só têm 6s
+   * à volta. A bomba tem de escolher uma das que é preciso destapar.
+   */
+  it("**prefere uma peça presa** — sem grupo quando a linha cai", () => {
+    const seis: Board = Array.from({ length: 6 }, () => [6, 6] as const);
+
+    for (let i = 0; i < 30; i++) {
+      const depois = injectRow(aVir(SEED + i, 8, seis), false, sempre);
+      const at = depois.bomba?.at as Packed;
+      expect(pecasJogaveis(depois.game.board)).not.toContain(at);
+    }
+  });
+
+  it("é pura na seed: a mesma corrida acende a mesma peça", () => {
+    const s = aVir(SEED, 9);
+    expect(injectRow(s, false, sempre).bomba).toEqual(injectRow(s, false, sempre).bomba);
+  });
+
+  it("com a configuração por omissão, cerca de metade vêm enterradas", () => {
+    let enterradas = 0;
+    for (let i = 0; i < 400; i++) {
+      if (bombaEnterradaNaFila(aVir(SEED + i, 10))) enterradas++;
+    }
+    expect(enterradas).toBeGreaterThan(150);
+    expect(enterradas).toBeLessThan(250);
+  });
+
+  it("com probabilidade zero, nunca", () => {
+    const s = aVir(SEED, 10);
+    expect(bombaEnterradaNaFila(s, nunca)).toBe(false);
+    expect(injectRow(s, false, nunca).bomba?.enterrada).toBeUndefined();
+  });
+
+  it("sem peça que sirva na pilha — só o joker —, cai na linha", () => {
+    const depois = injectRow(aVir(SEED, 10, [[0]]), false, sempre);
+    const bomba = depois.bomba;
+    if (bomba === undefined) throw new Error("a bomba devia ter caído na linha");
+
+    expect(bomba.enterrada).toBeUndefined();
+    expect(porCima(depois.game.board, bomba.at)).toBe(0);
+    expect(depois.linhasDesdeBomba).toBe(0);
+  });
+
+  it("acompanha a peça na gravidade, e continua a ser enterrada", () => {
+    const base = startSurvival(SEED);
+    const s: SurvivalState = {
+      ...base,
+      game: { ...base.game, board: [[3, 5], [4]] },
+      bomba: { at: packed(0, 1), rebentaEm: 5_000, enterrada: true },
+    };
+
+    let r = survivalTap(s, packed(0, 0));
+    r = survivalTap(r.state, packed(1, 0));
+
+    expect(r.state.bomba).toEqual({ at: packed(0, 0), rebentaEm: 5_000, enterrada: true });
+  });
+
+  it("o pavio inteiro depende do tipo de bomba", () => {
+    expect(pavioTotalMs({ at: 0, rebentaEm: 0 })).toBe(DEFAULT_SURVIVAL.pavioBombaMs);
+    expect(pavioTotalMs({ at: 0, rebentaEm: 0, enterrada: true })).toBe(
+      DEFAULT_SURVIVAL.pavioEnterradaMs,
+    );
   });
 });

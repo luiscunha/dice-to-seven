@@ -92,7 +92,7 @@
  * a depender de quão depressa o jogador se mexe, e isso é o modo.
  */
 
-import type { Board, Cell, Level, Packed } from "@dicetoseven/engine";
+import type { Board, Cell, Level, Packed, Rng } from "@dicetoseven/engine";
 import {
   JOKER,
   deriveSeed,
@@ -109,7 +109,7 @@ import {
 } from "@dicetoseven/engine";
 
 import type { Bomba } from "./bomba";
-import { pavioAcabou, saiNaJogada, seguirBomba } from "./bomba";
+import { pavioAcabou, pecasJogaveis, saiNaJogada, seguirBomba } from "./bomba";
 import type { GameState, JokerValue } from "./GameSession";
 import { startGame, tap } from "./GameSession";
 import type { ScoringConfig } from "./scoring";
@@ -262,6 +262,33 @@ export interface SurvivalConfig {
    * da pilha, e o tabuleiro tem o dobro das peças onde procurar o parceiro.
    */
   readonly pavioBombaMs: number;
+
+  /**
+   * Linhas caídas a partir das quais uma bomba pode chegar **enterrada**.
+   *
+   * Antes disto, todas chegam na linha. A primeira bomba da corrida é sempre
+   * uma das que se veem cair: é ela que ensina o que é uma bomba, e uma peça a
+   * acender-se no meio da pilha sem aviso, antes de se saber o que isso quer
+   * dizer, lia-se como defeito. Com 6, a primeira bomba (à quarta linha) é
+   * sempre na linha, e a segunda em diante já pode não ser.
+   *
+   * Ver `bombaEnterradaNaFila`.
+   */
+  readonly bombaEnterradaDesde: number;
+  /** Das bombas que podem chegar enterradas, a fração que chega. */
+  readonly probabilidadeEnterrada: number;
+  /**
+   * O pavio da bomba enterrada. Mais longo do que o da linha: é preciso
+   * escavar até ela, e tirá-la custa as jogadas que a destapam.
+   */
+  readonly pavioEnterradaMs: number;
+  /**
+   * Quantas peças, no máximo, pode ter por cima a peça onde ela se acende.
+   *
+   * Mais fundo do que isto, desenterrá-la é sorte e não plano. Ver
+   * `pecaParaEnterrar`.
+   */
+  readonly profundidadeEnterrada: number;
 }
 
 export const DEFAULT_SURVIVAL: SurvivalConfig = {
@@ -286,7 +313,26 @@ export const DEFAULT_SURVIVAL: SurvivalConfig = {
   comBomba: true,
   linhasEntreBombas: 3,
   pavioBombaMs: 10_000,
+  bombaEnterradaDesde: 6,
+  probabilidadeEnterrada: 0.5,
+  pavioEnterradaMs: 15_000,
+  profundidadeEnterrada: 3,
 };
+
+/**
+ * A bomba do Survival: a mesma peça com pavio dos dois modos, e saber se nasceu
+ * enterrada — que decide o tamanho do pavio. Ver `bombaEnterradaNaFila`.
+ */
+export interface BombaSurvival extends Bomba {
+  readonly enterrada?: true;
+}
+
+/** O pavio inteiro desta bomba, para o mostrador saber de quanto esvazia. */
+export const pavioTotalMs = (
+  bomba: BombaSurvival,
+  config: SurvivalConfig = DEFAULT_SURVIVAL,
+): number =>
+  bomba.enterrada === true ? config.pavioEnterradaMs : config.pavioBombaMs;
 
 export interface SurvivalState {
   readonly game: GameState;
@@ -322,7 +368,7 @@ export interface SurvivalState {
   readonly seed: number;
 
   /** A bomba armada no tabuleiro, se houver. Uma de cada vez. */
-  readonly bomba: Bomba | undefined;
+  readonly bomba: BombaSurvival | undefined;
   /** Linhas entradas sem bomba desde a última que a trouxe. Ver `trazBomba`. */
   readonly linhasDesdeBomba: number;
 }
@@ -448,14 +494,104 @@ export function colunaDaBomba(
   return pick(rng, candidatas);
 }
 
-/** A coluna da bomba na linha da fila, ou `undefined` se ela não trouxer. */
+/**
+ * A coluna da bomba na linha da fila, ou `undefined` se ela não trouxer — ou se
+ * a bomba que vem for enterrada, que não vem na linha.
+ */
 export const bombaNaFila = (
   s: SurvivalState,
   config: SurvivalConfig = DEFAULT_SURVIVAL,
 ): number | undefined =>
-  trazBomba(s, config)
+  trazBomba(s, config) && !bombaEnterradaNaFila(s, config)
     ? colunaDaBomba(s.seed, s.linhasInjetadas, proximaLinha(s, config))
     : undefined;
+
+/* ─── A bomba enterrada ───────────────────────────────────────────────────── */
+
+/*
+ * ── Porque existe ──
+ *
+ * A bomba da linha aterra no topo da pilha, e aí quase sempre já se pode tirar.
+ * Para quem a vê, é uma prioridade e não um problema: tira-se primeiro e pronto.
+ * É o defeito que a contagem decrescente mostrou na campanha — medido com um
+ * jogador que lê a marca, uma marca numa peça que já sai não muda nada (ver
+ * `estado-atual.md`, "A contagem decrescente").
+ *
+ * A bomba enterrada acende-se numa peça **que já está na pilha**, por baixo da
+ * linha que caiu, e sem grupo nesse momento. Tirá-la a tempo pede um plano:
+ * que jogadas a destapam, e por que ordem. É a mesma ameaça e o mesmo castigo,
+ * com outra pergunta.
+ *
+ * A campanha não a podia ter: lá cada nível promete solução, e a contagem só
+ * cabia em 4 de 60 níveis. O Survival não promete nada, e as linhas entram por
+ * cima — há sempre peças enterradas.
+ */
+
+/** Sal de «esta bomba vem enterrada?». Ver `SAL_BOMBA`. */
+const SAL_ENTERRADA = 0x0e7e7;
+/** Sal de «em que peça se acende». À parte do anterior, pela mesma razão. */
+const SAL_PECA_ENTERRADA = 0x0e7e8;
+
+/**
+ * A bomba que a linha seguinte traz vem enterrada?
+ *
+ * **Pura na seed e no índice**, como a linha: é o que deixa a fila anunciá-la.
+ * A fila não pode dizer em que peça — o jogador vai mexer na pilha até lá —,
+ * mas diz que vem, e é isso que a promessa do modo exige: nada cai sem se ver.
+ */
+export function bombaEnterradaNaFila(
+  s: SurvivalState,
+  config: SurvivalConfig = DEFAULT_SURVIVAL,
+): boolean {
+  if (!trazBomba(s, config)) return false;
+
+  const caidas = s.linhasInjetadas - config.alturaInicial;
+  if (caidas < config.bombaEnterradaDesde) return false;
+
+  const rng = mulberry32(deriveSeed(s.seed ^ SAL_ENTERRADA, s.linhasInjetadas));
+  return rng() < config.probabilidadeEnterrada;
+}
+
+/**
+ * A peça da pilha onde a bomba enterrada se acende, ou `undefined`.
+ *
+ * `antes` é o tabuleiro sem a linha nova, `depois` com ela. As candidatas são as
+ * peças de `antes` — entrar por cima não lhes muda a coordenada — com entre 1 e
+ * `profundidadeEnterrada` peças por cima, e nunca o joker.
+ *
+ * Entre elas, as que **não entram em grupo nenhum** agora passam à frente: são
+ * as que é preciso destapar, e é aí que está o plano. Só se não houver nenhuma
+ * presa se aceita uma que já sai — ainda é uma bomba, e longe do topo.
+ *
+ * Só dá `undefined` se a pilha por baixo da linha não tiver uma peça que sirva,
+ * e isso só acontece com uma pilha de uma peça, que é o joker.
+ */
+export function pecaParaEnterrar(
+  antes: Board,
+  depois: Board,
+  rng: Rng,
+  config: SurvivalConfig = DEFAULT_SURVIVAL,
+): Packed | undefined {
+  const jogaveis = new Set(pecasJogaveis(depois));
+  const presas: Packed[] = [];
+  const livres: Packed[] = [];
+
+  antes.forEach((coluna, c) => {
+    const altura = depois[c]?.length ?? 0;
+
+    coluna.forEach((v, r) => {
+      const porCima = altura - 1 - r;
+      if (v === JOKER || porCima < 1 || porCima > config.profundidadeEnterrada) {
+        return;
+      }
+
+      const p = packed(c, r);
+      (jogaveis.has(p) ? livres : presas).push(p);
+    });
+  });
+
+  return pick(rng, presas.length > 0 ? presas : livres);
+}
 
 /* ─── Leituras ────────────────────────────────────────────────────────────── */
 
@@ -609,21 +745,46 @@ export function injectRow(
     : { multiplicador: s.multiplicador, jogadasComBonus: s.jogadasComBonus };
 
   const comJoker = trazJoker(s, config);
-  const colBomba = bombaNaFila(s, config);
-  const board = pushRow(s.game.board, proximaLinha(s, config));
+  const linha = proximaLinha(s, config);
+  const board = pushRow(s.game.board, linha);
 
   /*
-   * A peça armada é a da linha que acabou de entrar: o topo da sua coluna.
+   * A peça enterrada escolhe-se **depois** de a linha cair: é nesse tabuleiro
+   * que ela tem de estar por baixo e sem grupo.
+   */
+  const enterrada = bombaEnterradaNaFila(s, config)
+    ? pecaParaEnterrar(
+        s.game.board,
+        board,
+        mulberry32(deriveSeed(s.seed ^ SAL_PECA_ENTERRADA, s.linhasInjetadas)),
+        config,
+      )
+    : undefined;
+
+  /*
+   * Sem peça que sirva — uma pilha que é só o joker —, a bomba cai na linha,
+   * como as outras. É o único caso em que a fila disse «na pilha» e não foi.
+   */
+  const colBomba =
+    enterrada === undefined && trazBomba(s, config)
+      ? colunaDaBomba(s.seed, s.linhasInjetadas, linha)
+      : undefined;
+
+  /*
+   * A peça armada da linha é a que acabou de entrar: o topo da sua coluna.
    * Entrar por cima não mexe em mais nada, portanto uma bomba que já lá
    * estivesse continuaria na mesma coordenada — mas não está, por `trazBomba`.
    */
-  const bomba: Bomba | undefined =
-    colBomba === undefined
-      ? s.bomba
-      : {
-          at: packed(colBomba, (board[colBomba]?.length ?? 1) - 1),
-          rebentaEm: agoraMs + config.pavioBombaMs,
-        };
+  const bomba: BombaSurvival | undefined =
+    enterrada !== undefined
+      ? { at: enterrada, rebentaEm: agoraMs + config.pavioEnterradaMs, enterrada: true }
+      : colBomba === undefined
+        ? s.bomba
+        : {
+            at: packed(colBomba, (board[colBomba]?.length ?? 1) - 1),
+            rebentaEm: agoraMs + config.pavioBombaMs,
+          };
+  const armou = bomba !== s.bomba;
 
   const seguinte: SurvivalState = {
     ...comTabuleiro(s, board),
@@ -641,7 +802,7 @@ export function injectRow(
     proximaLinhaMs: s.proximaLinhaMs,
     bomba,
     // Conta as linhas que **podiam** ter trazido bomba e não trouxeram.
-    linhasDesdeBomba: colBomba === undefined ? s.linhasDesdeBomba + 1 : 0,
+    linhasDesdeBomba: armou ? 0 : s.linhasDesdeBomba + 1,
   };
 
   // A cadência lê-se **depois** de a linha entrar: é ela que conta para o degrau.

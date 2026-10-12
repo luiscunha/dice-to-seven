@@ -18,6 +18,7 @@ import type { CorridaGuardada } from "../src/session/corridaSurvival";
 import type { SurvivalState } from "../src/session/SurvivalSession";
 import {
   DEFAULT_SURVIVAL,
+  bombaEnterradaNaFila,
   bombaNaFila,
   startSurvival,
 } from "../src/session/SurvivalSession";
@@ -644,6 +645,49 @@ describe("a bomba no ecrã do Survival", () => {
 
     expect(host.querySelectorAll(".fila .peca.bomba")).toHaveLength(1);
     expect(naFila[coluna ?? -1]?.classList.contains("bomba")).toBe(true);
+  });
+
+  /**
+   * Uma corrida em que a próxima linha acende uma bomba enterrada, com a
+   * configuração do jogo. A sorte é da seed e do índice; procura-se um índice
+   * em que calhe.
+   */
+  const comEnterradaAVir = (proximaLinhaMs: number): SurvivalState => {
+    const base = startSurvival(SEED);
+    for (let caidas = DEFAULT_SURVIVAL.bombaEnterradaDesde; caidas < 60; caidas++) {
+      const s: SurvivalState = {
+        ...base,
+        linhasInjetadas: DEFAULT_SURVIVAL.alturaInicial + caidas,
+        linhasDesdeBomba: DEFAULT_SURVIVAL.linhasEntreBombas,
+        proximaLinhaMs,
+      };
+      if (bombaEnterradaNaFila(s)) return s;
+    }
+    throw new Error("nenhuma linha com bomba enterrada nesta seed");
+  };
+
+  it("**a fila anuncia a bomba enterrada ao lado**, e não em nenhuma peça", () => {
+    ecra = abrir(comEnterradaAVir(60_000));
+
+    expect(host.querySelector(".fila .bomba-pilha")?.textContent).toBe("na pilha");
+    expect(host.querySelectorAll(".fila .peca.bomba")).toHaveLength(0);
+    expect(host.querySelector(".fila")?.getAttribute("aria-label")).toContain(
+      "bomba na pilha",
+    );
+  });
+
+  it("**quando a linha cai, a enterrada acende-se com um clarão**, e com o pavio dela", async () => {
+    ecra = abrir(comEnterradaAVir(1_500));
+
+    await vi.advanceTimersByTimeAsync(1_200);
+
+    const acesa = host.querySelector<HTMLElement>(".tabuleiro .peca.bomba.acesa");
+    expect(acesa).not.toBeNull();
+    // Esvazia do pavio de 15 s, e não do de 10 s: senão começava acima de 1.
+    const pavioRestante = Number(acesa?.style.getPropertyValue("--pavio"));
+    expect(pavioRestante).toBeGreaterThan(0.9);
+    expect(pavioRestante).toBeLessThanOrEqual(1);
+    expect(host.querySelector(".fila .bomba-pilha")).toBeNull();
   });
 
   it("o pavio arde no tabuleiro, no tempo da corrida", () => {

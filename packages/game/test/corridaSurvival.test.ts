@@ -186,6 +186,29 @@ describe("a bomba sobrevive à pausa", () => {
     expect(lida?.estado.linhasDesdeBomba).toBe(0);
   });
 
+  it("uma bomba enterrada volta enterrada", () => {
+    const s = memoria();
+    const bomba = { at: 0, rebentaEm: 20_000, enterrada: true as const };
+
+    guardarCorrida(s, { estado: { ...emJogo(), bomba }, decorridoMs: 1_000 });
+
+    expect(lerCorrida(s)?.estado.bomba).toEqual(bomba);
+  });
+
+  it("uma marca de enterrada que não é `true` perde a bomba — a corrida não", () => {
+    const s = memoria();
+    const estado = { ...emJogo(), bomba: { at: 0, rebentaEm: 20_000, enterrada: "sim" } };
+
+    s.setItem(
+      CORRIDA_KEY,
+      JSON.stringify({ version: CORRIDA_VERSION, corrida: { estado, decorridoMs: 1_000 } }),
+    );
+    const lida = lerCorrida(s);
+
+    expect(lida).toBeDefined();
+    expect(lida?.estado.bomba).toBeUndefined();
+  });
+
   it("uma bomba que aponta para fora do tabuleiro perde-se — a corrida não", () => {
     const s = memoria();
     const estado: SurvivalState = {

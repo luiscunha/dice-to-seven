@@ -841,6 +841,16 @@ export class BoardView {
     efeito(this.grelha, "abanao");
   }
 
+  /**
+   * Uma bomba acendeu-se numa peça que já estava no tabuleiro: um clarão, para
+   * o olho a encontrar. Chama-se **depois** de `marcarBomba`, que é quem lhe
+   * põe o anel e o pavio.
+   */
+  acenderBomba(p: Packed): void {
+    const el = this.pecas.get(p);
+    if (el !== undefined) efeito(el, "acesa");
+  }
+
   /** A peça recusou o toque: abana, como quem diz que não. */
   recusarPeca(p: Packed): void {
     const el = this.pecas.get(p);

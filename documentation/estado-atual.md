@@ -762,6 +762,41 @@ Valores de partida, em `DEFAULT_SURVIVAL`: `linhasEntreBombas: 3`,
 `pavioBombaMs: 10_000` — mais longo do que os 6 s do Contra-Relógio, porque a
 peça chega no topo da pilha e o tabuleiro tem o dobro das peças.
 
+### A bomba enterrada
+
+A bomba da linha aterra no topo da pilha, onde quase sempre já se pode tirar:
+para quem a vê, é uma prioridade e não um problema. É o defeito que a contagem
+decrescente mostrou na campanha — uma marca numa peça que já sai não muda nada a
+quem a lê. A contagem não cabia lá, porque cada nível promete solução; o
+Survival não promete nada, e as linhas entram por cima, portanto há sempre peças
+enterradas.
+
+**Da segunda bomba em diante, metade acende-se numa peça que já está na
+pilha**, por baixo da linha que acabou de cair:
+
+- **Uma peça presa**: sem grupo nesse momento, com 1 a 3 peças por cima, nunca o
+  joker. Tirá-la a tempo pede um plano — que jogadas a destapam, e por que
+  ordem. Só se não houver nenhuma presa a esse alcance se aceita uma que já sai.
+- **Pavio de 15 s** em vez de 10, porque é preciso escavar. O castigo é o mesmo:
+  uma linha a mais.
+- **A fila anuncia-a**, com um «na pilha» e o pavio apagado ao lado das peças. Não
+  pode dizer em que peça — até a linha cair o jogador mexe na pilha —, mas diz
+  que vem. A promessa do modo, nada cai sem se ver, continua a valer.
+- **Acende-se com um clarão**: a peça incha e brilha duas vezes. A bomba da linha
+  cai à frente dos olhos; esta aparece a meio da pilha, longe de onde se olha.
+- A primeira bomba da corrida é sempre na linha. É ela que ensina o que é uma
+  bomba.
+
+Tudo puro na seed e no índice da linha, como o resto da fila, portanto
+«Repetir esta» repete também as bombas. A peça é escolhida no tabuleiro do
+instante em que a linha cai, com um gerador à parte, e uma corrida gravada
+guarda se a bomba é enterrada (as gravadas antes disto abrem com bombas da
+linha, que é o que eram).
+
+Valores em `DEFAULT_SURVIVAL`, por afinar a jogar: `bombaEnterradaDesde: 6`
+linhas caídas, `probabilidadeEnterrada: 0.5`, `pavioEnterradaMs: 15_000`,
+`profundidadeEnterrada: 3`.
+
 ### Depois da escada: tabuleiros sem garantia, e o salto
 
 A banda `tempo` para nas 20 peças porque a garantia de não bloquear acaba aí, e
