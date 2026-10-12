@@ -352,6 +352,10 @@ export function boardReward(
  * prioridade, não um enigma. Depois de armada, gastar o parceiro dela noutra
  * jogada é um erro do jogador — e é esse o erro que a bomba ensina a ver.
  *
+ * «Jogável» conta com o gelo, e **a bomba nunca vai numa peça gelada**: as
+ * duas regras na mesma peça — sai a par, e sai já — eram duas contas para
+ * fazer em seis segundos, numa peça só.
+ *
  * O `rng` é o da corrida: nada aqui chama `Math.random()`.
  */
 export function armarBomba(
@@ -365,7 +369,11 @@ export function armarBomba(
   if (s.boardsCleared < cfg.desdeTabuleiro) return s;
   if (rng() >= cfg.probabilidade) return s;
 
-  const alvo = pick(rng, pecasJogaveis(s.game.board));
+  const gelo = s.game.marcas.gelo;
+  const alvo = pick(
+    rng,
+    pecasJogaveis(s.game.board, s.game.marcas).filter((p) => !gelo.includes(p)),
+  );
   if (alvo === undefined) return s;
 
   return { ...s, bomba: { at: alvo, rebentaEm: now + cfg.pavioMs } };

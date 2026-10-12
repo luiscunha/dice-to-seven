@@ -501,6 +501,19 @@ export const BANDS: readonly BandSpec[] = [
       [36, 42],
     ],
     limite: [7, 7],
+    /*
+     * **Duas peças geladas**, a partir do primeiro tabuleiro desta banda — o
+     * sétimo da corrida, quando o tabuleiro deixa de ter garantia. É lá que o
+     * modo já pede mais do que velocidade, e o gelo é uma decisão que se vê
+     * antes de errar: o 2 encostado ao 5 gelado é um recurso que se guarda.
+     *
+     * Duas e não as três do `perito`: aqui a decisão tem de caber em segundos,
+     * e os tabuleiros têm metade das peças. Como em toda a parte, escolhem-se
+     * sobre a solução guardada (`marcasDoNivel`), portanto o nível continua a
+     * ter solução — e um tabuleiro que o gelo deixe sem jogadas salta-se, como
+     * qualquer outro desta banda.
+     */
+    gelo: 2,
     accept: { survival: [0.5, 1], fairnessDepth: 2 },
   },
 ];

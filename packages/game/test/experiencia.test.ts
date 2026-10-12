@@ -321,14 +321,14 @@ describe("o Contra-Relógio", () => {
   });
 
   /*
-   * O rodapé tinha uma coisa só — a soma corrente, «Toca nas peças para somar
-   * 7» — e era andaime a mais num modo contra o relógio: a conta está nas peças
-   * acesas. Sem ele o elemento ficava vazio a ocupar uma linha da grelha, e na
-   * composição deitada uma calha inteira. Sai o rodapé, e o palco fica com o
-   * espaço.
+   * O rodapé teve a soma corrente — «Toca nas peças para somar 7» —, andaime a
+   * mais num modo contra o relógio, e saiu com ela. Voltou com uma ação, e só
+   * com ela: o salto, no sítio do «Puxar linha» do Survival.
    */
-  it("não tem rodapé: a soma corrente saiu, e o palco ficou com o espaço", () => {
-    expect(host.querySelector(".ecra.tempo .rodape")).toBeNull();
+  it("o rodapé tem o salto e mais nada — a soma corrente não volta", () => {
+    const rodape = host.querySelector(".ecra.tempo .rodape");
+    expect(rodape?.querySelectorAll(".btn")).toHaveLength(1);
+    expect(rodape?.querySelector(".btn.saltar")).not.toBeNull();
     expect(host.querySelector(".ecra.tempo .soma")).toBeNull();
   });
 

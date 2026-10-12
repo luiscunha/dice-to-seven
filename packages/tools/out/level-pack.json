@@ -23892,6 +23892,9 @@
     192
    ]
   ],
+  "gelo": [
+   69
+  ],
   "band": "tempo-livre",
   "metrics": {
    "pieces": 22,
@@ -24062,6 +24065,10 @@
     65
    ]
   ],
+  "gelo": [
+   0,
+   66
+  ],
   "band": "tempo-livre",
   "metrics": {
    "pieces": 22,
@@ -24156,6 +24163,10 @@
     65
    ]
   ],
+  "gelo": [
+   131,
+   258
+  ],
   "band": "tempo-livre",
   "metrics": {
    "pieces": 24,
@@ -24237,6 +24248,10 @@
     1,
     64
    ]
+  ],
+  "gelo": [
+   65,
+   68
   ],
   "band": "tempo-livre",
   "metrics": {
@@ -24323,6 +24338,9 @@
     65,
     128
    ]
+  ],
+  "gelo": [
+   192
   ],
   "band": "tempo-livre",
   "metrics": {
@@ -24416,6 +24434,9 @@
     129
    ]
   ],
+  "gelo": [
+   67
+  ],
   "band": "tempo-livre",
   "metrics": {
    "pieces": 24,
@@ -24503,6 +24524,10 @@
     64,
     128
    ]
+  ],
+  "gelo": [
+   64,
+   129
   ],
   "band": "tempo-livre",
   "metrics": {
@@ -24750,6 +24775,9 @@
     64
    ]
   ],
+  "gelo": [
+   65
+  ],
   "band": "tempo-livre",
   "metrics": {
    "pieces": 22,
@@ -24929,6 +24957,10 @@
     0,
     64
    ]
+  ],
+  "gelo": [
+   198,
+   260
   ],
   "band": "tempo-livre",
   "metrics": {
@@ -25141,6 +25173,10 @@
     0,
     64
    ]
+  ],
+  "gelo": [
+   64,
+   197
   ],
   "band": "tempo-livre",
   "metrics": {
@@ -25436,6 +25472,10 @@
     192
    ]
   ],
+  "gelo": [
+   198,
+   323
+  ],
   "band": "tempo-livre",
   "metrics": {
    "pieces": 29,
@@ -25537,6 +25577,9 @@
     128,
     129
    ]
+  ],
+  "gelo": [
+   1
   ],
   "band": "tempo-livre",
   "metrics": {
@@ -25646,6 +25689,10 @@
     65
    ]
   ],
+  "gelo": [
+   133,
+   194
+  ],
   "band": "tempo-livre",
   "metrics": {
    "pieces": 29,
@@ -25741,6 +25788,9 @@
     2,
     64
    ]
+  ],
+  "gelo": [
+   2
   ],
   "band": "tempo-livre",
   "metrics": {
@@ -25839,6 +25889,10 @@
     2,
     64
    ]
+  ],
+  "gelo": [
+   1,
+   197
   ],
   "band": "tempo-livre",
   "metrics": {
@@ -25942,6 +25996,9 @@
     128
    ]
   ],
+  "gelo": [
+   258
+  ],
   "band": "tempo-livre",
   "metrics": {
    "pieces": 28,
@@ -26037,6 +26094,10 @@
     65,
     66
    ]
+  ],
+  "gelo": [
+   68,
+   260
   ],
   "band": "tempo-livre",
   "metrics": {
@@ -26158,6 +26219,10 @@
     128
    ]
   ],
+  "gelo": [
+   65,
+   128
+  ],
   "band": "tempo-livre",
   "metrics": {
    "pieces": 33,
@@ -26268,6 +26333,9 @@
     64
    ]
   ],
+  "gelo": [
+   129
+  ],
   "band": "tempo-livre",
   "metrics": {
    "pieces": 31,
@@ -26375,6 +26443,9 @@
     64,
     128
    ]
+  ],
+  "gelo": [
+   128
   ],
   "band": "tempo-livre",
   "metrics": {
@@ -26484,6 +26555,10 @@
     64
    ]
   ],
+  "gelo": [
+   0,
+   3
+  ],
   "band": "tempo-livre",
   "metrics": {
    "pieces": 30,
@@ -26589,6 +26664,9 @@
     64,
     128
    ]
+  ],
+  "gelo": [
+   0
   ],
   "band": "tempo-livre",
   "metrics": {
@@ -26706,6 +26784,10 @@
     65
    ]
   ],
+  "gelo": [
+   132,
+   193
+  ],
   "band": "tempo-livre",
   "metrics": {
    "pieces": 33,
@@ -26813,6 +26895,10 @@
     128,
     192
    ]
+  ],
+  "gelo": [
+   68,
+   195
   ],
   "band": "tempo-livre",
   "metrics": {
@@ -26926,6 +27012,10 @@
     2
    ]
   ],
+  "gelo": [
+   67,
+   129
+  ],
   "band": "tempo-livre",
   "metrics": {
    "pieces": 32,
@@ -27033,6 +27123,10 @@
     128,
     192
    ]
+  ],
+  "gelo": [
+   68,
+   322
   ],
   "band": "tempo-livre",
   "metrics": {
@@ -27146,6 +27240,9 @@
     192
    ]
   ],
+  "gelo": [
+   322
+  ],
   "band": "tempo-livre",
   "metrics": {
    "pieces": 32,
@@ -27253,6 +27350,9 @@
     1,
     64
    ]
+  ],
+  "gelo": [
+   261
   ],
   "band": "tempo-livre",
   "metrics": {
@@ -27377,6 +27477,10 @@
     128,
     129
    ]
+  ],
+  "gelo": [
+   192,
+   385
   ],
   "band": "tempo-livre",
   "metrics": {
@@ -27508,6 +27612,10 @@
     192
    ]
   ],
+  "gelo": [
+   134,
+   386
+  ],
   "band": "tempo-livre",
   "metrics": {
    "pieces": 38,
@@ -27636,6 +27744,10 @@
     256
    ]
   ],
+  "gelo": [
+   133,
+   260
+  ],
   "band": "tempo-livre",
   "metrics": {
    "pieces": 37,
@@ -27762,6 +27874,9 @@
     193
    ]
   ],
+  "gelo": [
+   195
+  ],
   "band": "tempo-livre",
   "metrics": {
    "pieces": 37,
@@ -27887,6 +28002,10 @@
     128,
     129
    ]
+  ],
+  "gelo": [
+   134,
+   192
   ],
   "band": "tempo-livre",
   "metrics": {
@@ -28015,6 +28134,10 @@
     64,
     128
    ]
+  ],
+  "gelo": [
+   68,
+   70
   ],
   "band": "tempo-livre",
   "metrics": {
@@ -28264,6 +28387,10 @@
     192
    ]
   ],
+  "gelo": [
+   3,
+   131
+  ],
   "band": "tempo-livre",
   "metrics": {
    "pieces": 36,
@@ -28393,6 +28520,10 @@
     64,
     128
    ]
+  ],
+  "gelo": [
+   1,
+   130
   ],
   "band": "tempo-livre",
   "metrics": {
@@ -28526,6 +28657,10 @@
     64
    ]
   ],
+  "gelo": [
+   196,
+   387
+  ],
   "band": "tempo-livre",
   "metrics": {
    "pieces": 38,
@@ -28657,6 +28792,10 @@
     0,
     64
    ]
+  ],
+  "gelo": [
+   129,
+   194
   ],
   "band": "tempo-livre",
   "metrics": {
@@ -28790,6 +28929,10 @@
     128
    ]
   ],
+  "gelo": [
+   261,
+   389
+  ],
   "band": "tempo-livre",
   "metrics": {
    "pieces": 39,
@@ -28915,6 +29058,10 @@
     64,
     65
    ]
+  ],
+  "gelo": [
+   259,
+   262
   ],
   "band": "tempo-livre",
   "metrics": {

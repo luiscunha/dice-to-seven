@@ -29,8 +29,8 @@
  * pausa — e um pavio medido nele pára com ele. Nada aqui lê as horas.
  */
 
-import type { Board, Group, Packed } from "@dicetoseven/engine";
-import { findAllGroups, remapearCelula } from "@dicetoseven/engine";
+import type { Board, Group, Marcas, Packed } from "@dicetoseven/engine";
+import { SEM_MARCAS, gruposMarcados, remapearCelula } from "@dicetoseven/engine";
 
 export interface Bomba {
   /** Onde está a peça armada. Viaja com o tabuleiro, como as marcas. */
@@ -75,9 +75,15 @@ export function seguirBomba<B extends Bomba>(
   return at === undefined ? undefined : { ...bomba, at };
 }
 
-/** As peças que entram em pelo menos um grupo válido, por ordem crescente. */
-export function pecasJogaveis(board: Board): Packed[] {
+/**
+ * As peças que entram em pelo menos uma jogada legal, por ordem crescente.
+ *
+ * Com as marcas: com gelo no tabuleiro, um grupo de três com uma peça gelada
+ * soma 7 e não é jogada nenhuma, e uma peça que só estivesse nele não se pode
+ * tirar já.
+ */
+export function pecasJogaveis(board: Board, marcas: Marcas = SEM_MARCAS): Packed[] {
   const pecas = new Set<Packed>();
-  for (const g of findAllGroups(board)) for (const p of g) pecas.add(p);
+  for (const g of gruposMarcados(board, marcas)) for (const p of g) pecas.add(p);
   return [...pecas].sort((a, b) => a - b);
 }
