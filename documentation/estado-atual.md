@@ -1075,6 +1075,45 @@ repõe as durações de antes.
 
 ---
 
+## O Desafio do Dia
+
+O jogo ficou exigente, e faltava-lhe uma razão para voltar amanhã. O plano §6.4
+previa um puzzle diário; o que entrou primeiro foram **os dois modos de corrida
+do dia**, porque não precisam de gerar nada — o Survival e o Contra-Relógio já
+eram determinísticos na seed.
+
+- **A seed sai da data**, no fuso de quem joga (`seedDoDia`, FNV-1a sobre
+  `dicetoseven|AAAA-MM-DD|modo`): no mesmo dia, toda a gente recebe as mesmas
+  linhas, os mesmos tabuleiros e as mesmas bombas. O Contra-Relógio passou a
+  aceitar uma `seed`; sem ela, continua a sair do relógio. O filtro de largura
+  dos níveis é uma constante, portanto o desafio sai igual em qualquer ecrã. Um
+  pack diferente — outra versão da aplicação — dá outro desafio no mesmo dia.
+- **Conta a primeira tentativa**, e marca-se ao **entrar**: uma corrida que
+  corria mal e se abandonava voltava a ser a primeira. Um Contra-Relógio
+  abandonado fica «Interrompido»; o Survival guarda-se a meio numa chave
+  própria (`dicetoseven.desafio.survival`, à parte da corrida normal) e
+  retoma-se. Depois da tentativa oficial, jogar é **treino** — os mesmos
+  tabuleiros, sem gravar.
+- **Regras iguais para todos**: o Contra-Relógio do Dia arranca sempre com 60 s,
+  seja qual for a definição. No Survival do Dia não há «Recomeçar» — trocar de
+  seed a meio era sair do desafio.
+- **Os recordes normais ficam de fora**: o desafio tem o seu registo
+  (`dicetoseven.desafio`, os últimos 400 dias), e a sequência de dias seguidos
+  com pelo menos um desafio feito. Hoje por jogar não parte a sequência.
+- **Partilhar sem servidor**: um texto curto com o número, o dia, os resultados
+  e a sequência, pela folha de partilha do sistema quando existe e copiado
+  quando não (o WebView do Android não a tem). Uma tabela de classificação
+  precisa de backend, e fica para depois.
+- **Na Home**, um cartão por cima dos modos: o número e o dia, a sequência, e
+  os dois desafios com o estado de cada um. Com ele, os mosaicos dos modos de
+  corrida descem de altura, para a Home caber em 812px.
+
+O desafio #1 é o de 12 de outubro de 2026 (`EPOCA_DESAFIO`). O puzzle diário da
+campanha, com os 30 níveis reservados, continua por fazer: dão um mês, e depois
+é preciso gerar mais.
+
+---
+
 ## Decisões de arquitetura que não se leem no código
 
 - **A campanha não tem pontuação, tem um recorde de tempo.** A pontuação era

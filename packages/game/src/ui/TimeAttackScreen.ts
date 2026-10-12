@@ -51,6 +51,8 @@ import { anunciar } from "./anuncio";
 import { BoardView } from "./BoardView";
 import { botao, botaoRedondo, confirmar, elemento, reanimar } from "./dom";
 import { iconeCadeado, iconeReiniciar, iconeSaltar, iconeVoltar } from "./icones";
+import type { DesafioNoEcra } from "./partilha";
+import { botaoPartilhar } from "./partilha";
 
 /** De quanto em quanto o relógio se repinta. Décimos chegam, e custam pouco. */
 const PASSO_RELOGIO = 100;
@@ -88,6 +90,7 @@ export interface OpcoesTimeAttack {
   readonly aoTerminar: (info: {
     readonly pontos: number;
     readonly tabuleiros: number;
+    readonly saltados: number;
   }) => void;
   readonly aoSair: () => void;
   /**
@@ -110,6 +113,14 @@ export interface OpcoesTimeAttack {
    * sem esperar por três tabuleiros limpos e por um sorteio a favor.
    */
   readonly afinacao?: Partial<Omit<TimeAttackConfig, "initialMs">>;
+  /**
+   * A seed da corrida. Sem ela, sai do relógio — duas corridas seguidas não
+   * dão a mesma sequência. Com ela, a escada, os tabuleiros de cada degrau e as
+   * bombas são sempre os mesmos: é o Desafio do Dia.
+   */
+  readonly seed?: number;
+  /** A corrida é o Desafio do Dia. Ver `DesafioNoEcra`. */
+  readonly desafio?: DesafioNoEcra;
 }
 
 /**
@@ -172,7 +183,7 @@ export class TimeAttackScreen {
      * A escada tem duas partes: seis degraus com garantia de não bloquear, e
      * depois os tabuleiros maiores, sem ela — ver `escadaDaCorrida`.
      */
-    this.rng = mulberry32(Date.now() >>> 0);
+    this.rng = mulberry32((opcoes.seed ?? Date.now()) >>> 0);
     this.escada = escadaDaCorrida(opcoes.niveis, opcoes.livres ?? [], this.rng);
 
     const primeiro = this.escada.ordem[0];
@@ -555,6 +566,7 @@ export class TimeAttackScreen {
     this.opcoes.aoTerminar({
       pontos: this.estado.score,
       tabuleiros: this.estado.boardsCleared,
+      saltados: this.estado.saltados,
     });
 
     this.pintarFim();
@@ -721,6 +733,8 @@ export class TimeAttackScreen {
     this.raiz.dataset["estado"] = "fim";
 
     const recorde = this.estado.score > this.opcoes.melhorPontuacao;
+    const desafio = this.opcoes.desafio;
+    const aoPartilhar = desafio?.aoPartilhar;
 
     const acoes = elemento("div", "acoes fim-acoes");
     acoes.appendChild(
@@ -729,19 +743,37 @@ export class TimeAttackScreen {
       }),
     );
 
+    /*
+     * No Desafio do Dia, jogar outra vez é **treinar**: os mesmos tabuleiros, e
+     * o resultado já não conta. O botão di-lo, e cede o lugar de principal ao
+     * de partilhar, que é o que se quer fazer com um resultado oficial.
+     */
     const aoRecomecar = this.opcoes.aoRecomecar;
     if (aoRecomecar !== undefined) {
-      const outra = botao("Jogar outra vez", "primario com-icone", aoRecomecar);
+      const outra = botao(
+        desafio === undefined ? "Jogar outra vez" : "Treinar outra vez",
+        aoPartilhar === undefined ? "primario com-icone" : "com-icone",
+        aoRecomecar,
+      );
       outra.prepend(iconeReiniciar());
       acoes.appendChild(outra);
     }
 
+    if (aoPartilhar !== undefined) acoes.appendChild(botaoPartilhar(aoPartilhar));
+
     /*
      * A pontuação é o número do modo, e ganha o tamanho que o tempo tem no fim
      * de um nível da campanha. Os tabuleiros ficam por baixo, como contexto.
+     *
+     * No desafio, o selo é o nome do desafio: o recorde pessoal não é a
+     * comparação que interessa num dia em que toda a gente jogou o mesmo.
      */
     this.elFim.replaceChildren(
-      elemento("div", "selo", recorde ? "Novo recorde" : "Acabou o tempo"),
+      elemento(
+        "div",
+        "selo",
+        desafio?.etiqueta ?? (recorde ? "Novo recorde" : "Acabou o tempo"),
+      ),
       elemento("div", "fim-tempo", `${String(this.estado.score)} pontos`),
       elemento("div", "detalhe", detalheDoFim(this.estado)),
       acoes,

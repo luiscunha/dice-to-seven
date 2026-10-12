@@ -27,7 +27,8 @@ import {
   vibrarVitoria,
 } from "../src/plataforma/nativo";
 import { PROFILE_KEY } from "../src/session/progress";
-import { CORRIDA_KEY } from "../src/session/corridaSurvival";
+import { CORRIDA_DESAFIO_KEY, CORRIDA_KEY } from "../src/session/corridaSurvival";
+import { DESAFIO_KEY } from "../src/session/desafio";
 import { SETTINGS_KEY } from "../src/session/settings";
 import type { Rota } from "../src/ui/rotas";
 import { rotaAcima, sentidoEntre } from "../src/ui/rotas";
@@ -63,7 +64,7 @@ describe("o armazenamento", () => {
      * jogador perdia esse progresso em silêncio.
      */
     expect([...CHAVES].sort()).toEqual(
-      [PROFILE_KEY, SETTINGS_KEY, CORRIDA_KEY].sort(),
+      [PROFILE_KEY, SETTINGS_KEY, CORRIDA_KEY, DESAFIO_KEY, CORRIDA_DESAFIO_KEY].sort(),
     );
   });
 });

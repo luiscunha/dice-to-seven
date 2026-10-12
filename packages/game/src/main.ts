@@ -37,19 +37,38 @@ import {
 } from "./session/settings";
 import type { CorridaGuardada } from "./session/corridaSurvival";
 import {
+  CORRIDA_DESAFIO_KEY,
   guardarCorrida,
   lerCorrida,
   limparCorrida,
 } from "./session/corridaSurvival";
+import type { Desafios, ModoDoDesafio } from "./session/desafio";
+import {
+  DESAFIO_TEMPO_INICIAL,
+  SEM_DESAFIOS,
+  comecar,
+  dataDe,
+  estadoDoModo,
+  guardarDesafios,
+  interromper,
+  lerDesafios,
+  numeroDoDia,
+  registar,
+  seedDoDia,
+  sequencia,
+} from "./session/desafio";
 import { mostraSomaDasFaces } from "./session/tutorial";
 import type { CapituloNaLista } from "./ui/CapitulosScreen";
 import { CapitulosScreen } from "./ui/CapitulosScreen";
 import { ComoJogarScreen } from "./ui/ComoJogarScreen";
 import { DefinicoesScreen } from "./ui/DefinicoesScreen";
 import { elemento } from "./ui/dom";
+import type { CartaoDoDesafio, EstadoNoCartao } from "./ui/HomeScreen";
 import { HomeScreen } from "./ui/HomeScreen";
 import { JokerTutorial } from "./ui/JokerTutorial";
 import { NiveisScreen } from "./ui/NiveisScreen";
+import type { DesafioNoEcra, DesfechoDaPartilha } from "./ui/partilha";
+import { dataCurta, partilhar, textoDoDesafio } from "./ui/partilha";
 import { abrirPerfil } from "./ui/PerfilDialog";
 import { PuzzleScreen } from "./ui/PuzzleScreen";
 import type { Rota } from "./ui/rotas";
@@ -129,6 +148,28 @@ let tutorialEmRevisao = false;
  * basta para o browser a montar de novo.
  */
 let corridaSurvival: CorridaGuardada | undefined;
+
+/*
+ * ── O Desafio do Dia ──
+ *
+ * Os resultados de cada dia, e a corrida do Survival do Dia que ficou a meio.
+ * A corrida do dia vive à parte da normal: as duas podem estar a meio ao mesmo
+ * tempo. Ver `session/desafio.ts`.
+ */
+let desafios: Desafios = SEM_DESAFIOS;
+let corridaDesafio: CorridaGuardada | undefined;
+
+const guardarOsDesafios = (): void => {
+  if (armazenamento !== undefined) guardarDesafios(armazenamento, desafios);
+};
+
+const guardarCorridaDesafio = (corrida: CorridaGuardada | undefined): void => {
+  corridaDesafio = corrida;
+  if (armazenamento === undefined) return;
+
+  if (corrida === undefined) limparCorrida(armazenamento, CORRIDA_DESAFIO_KEY);
+  else guardarCorrida(armazenamento, corrida, CORRIDA_DESAFIO_KEY);
+};
 
 const guardarSurvival = (corrida: CorridaGuardada | undefined): void => {
   corridaSurvival = corrida;
@@ -263,6 +304,7 @@ async function montar(rota: Rota): Promise<void> {
         nome: preferencias.nome,
         avatar: preferencias.avatar,
         aoEditarPerfil: editarPerfil,
+        desafio: cartaoDoDesafio(),
       });
       return;
 
@@ -331,6 +373,9 @@ async function montar(rota: Rota): Promise<void> {
 
     case "survival":
       return mostrarSurvival(rota.seed);
+
+    case "desafio":
+      return mostrarDesafio(rota.modo);
   }
 }
 
@@ -448,12 +493,14 @@ async function mostrarJogo(id: string, indice: number): Promise<void> {
   if (temJoker && !perfil.sawJokerTutorial) abrirTutorial(false);
 }
 
-async function mostrarTempo(): Promise<void> {
-  const banda = bandaPorId("tempo");
-  if (banda === undefined) {
-    ir({ ecra: "home" });
-    return;
-  }
+/**
+ * Os níveis do Contra-Relógio: a escada com garantia e os livres. `undefined`
+ * num índice sem a banda `tempo`.
+ */
+async function carregarTempo(): Promise<
+  { readonly niveis: readonly Level[]; readonly livres: readonly Level[] } | undefined
+> {
+  if (bandaPorId("tempo") === undefined) return undefined;
 
   /*
    * A mesma regra de largura da campanha. Hoje a banda do Contra-Relógio não tem
@@ -476,9 +523,18 @@ async function mostrarTempo(): Promise<void> {
           cabeNoEcra(n.board.length),
         );
 
+  return { niveis, livres };
+}
+
+async function mostrarTempo(): Promise<void> {
+  const tempo = await carregarTempo();
+  if (tempo === undefined) {
+    ir({ ecra: "home" });
+    return;
+  }
+
   atual = new TimeAttackScreen(app as HTMLElement, {
-    niveis,
-    livres,
+    ...tempo,
     melhorPontuacao: perfil.bestTimeAttackScore,
     tempoInicial: preferencias.tempoInicial,
     aoTerminar: ({ pontos, tabuleiros }) => {
@@ -553,6 +609,162 @@ function mostrarSurvival(seed: number | undefined): void {
       }
       ir({ ecra: "survival", seed: nova });
     },
+    aoSair: voltarA({ ecra: "home" }),
+  });
+}
+
+/* ─── O Desafio do Dia ─────────────────────────────────────────────────────── */
+
+/** Hoje, no fuso de quem joga. É o único sítio que lê a data. */
+const hoje = (): string => dataDe(new Date());
+
+const partilharDia = (data: string): Promise<DesfechoDaPartilha> =>
+  partilhar(textoDoDesafio(data, desafios.dias[data] ?? {}, sequencia(desafios, data)));
+
+/**
+ * Uma tentativa oficial que ficou «a jogar» sem ecrã nenhum a jogá-la é uma
+ * tentativa abandonada: a aplicação fechou, ou o browser recuou. Fica
+ * interrompida — o resto do dia é treino. O Survival escapa se a corrida dele
+ * estiver guardada: retoma-se, como a corrida normal.
+ */
+function arrumarDesafio(data: string): void {
+  const seed = seedDoDia(data, "survival");
+  const antes = desafios;
+
+  if (estadoDoModo(desafios, data, "tempo")?.estado === "a-jogar") {
+    desafios = interromper(desafios, data, "tempo");
+  }
+  if (
+    estadoDoModo(desafios, data, "survival")?.estado === "a-jogar" &&
+    corridaDesafio?.estado.seed !== seed
+  ) {
+    desafios = interromper(desafios, data, "survival");
+  }
+
+  if (desafios !== antes) guardarOsDesafios();
+}
+
+function estadoNoCartao(data: string, modo: ModoDoDesafio): EstadoNoCartao {
+  if (modo === "tempo") {
+    const e = estadoDoModo(desafios, data, "tempo");
+    if (e === undefined) return { tipo: "por-jogar" };
+    if (e.estado === "feito") {
+      const p = e.resultado.pontos;
+      return { tipo: "feito", texto: p === 1 ? "1 ponto" : `${String(p)} pontos` };
+    }
+    return { tipo: "interrompido" };
+  }
+
+  const e = estadoDoModo(desafios, data, "survival");
+  if (e === undefined) return { tipo: "por-jogar" };
+  if (e.estado === "feito") {
+    const r = e.resultado;
+    return { tipo: "feito", texto: r.limpou ? `limpo · ${relogio(r.tempoMs)}` : relogio(r.tempoMs) };
+  }
+  if (e.estado === "a-jogar" && corridaDesafio !== undefined) {
+    return { tipo: "a-meio", texto: relogio(corridaDesafio.decorridoMs) };
+  }
+  return { tipo: "interrompido" };
+}
+
+function cartaoDoDesafio(): CartaoDoDesafio {
+  const data = hoje();
+  arrumarDesafio(data);
+
+  const feito = (modo: ModoDoDesafio): boolean =>
+    estadoDoModo(desafios, data, modo)?.estado === "feito";
+
+  return {
+    numero: numeroDoDia(data),
+    data: dataCurta(data),
+    sequencia: sequencia(desafios, data),
+    tempo: estadoNoCartao(data, "tempo"),
+    survival: estadoNoCartao(data, "survival"),
+    aoJogarTempo: voltarA({ ecra: "desafio", modo: "tempo" }),
+    aoJogarSurvival: voltarA({ ecra: "desafio", modo: "survival" }),
+    ...(feito("tempo") || feito("survival")
+      ? { aoPartilhar: () => partilharDia(data) }
+      : {}),
+  };
+}
+
+/**
+ * Um desafio do dia: a mesma corrida para toda a gente, com a seed da data.
+ *
+ * **A primeira tentativa é a oficial**, e marca-se ao entrar. Daí em diante,
+ * no mesmo dia, é treino: os mesmos tabuleiros, sem gravar nada. O Survival
+ * oficial que ficou a meio retoma-se; um Contra-Relógio oficial abandonado já
+ * não volta — ver `arrumarDesafio`.
+ *
+ * Os recordes normais ficam de fora: o desafio tem as suas regras (o tempo de
+ * arranque fixo, por exemplo), e o seu próprio registo.
+ */
+async function mostrarDesafio(modo: ModoDoDesafio): Promise<void> {
+  const data = hoje();
+  arrumarDesafio(data);
+
+  const seed = seedDoDia(data, modo);
+  const antes = estadoDoModo(desafios, data, modo);
+  const retoma =
+    modo === "survival" &&
+    antes?.estado === "a-jogar" &&
+    corridaDesafio?.estado.seed === seed
+      ? corridaDesafio
+      : undefined;
+  const oficial = antes === undefined || retoma !== undefined;
+
+  if (antes === undefined) {
+    desafios = comecar(desafios, data, modo);
+    guardarOsDesafios();
+  }
+
+  const etiqueta = `Desafio #${String(numeroDoDia(data))}`;
+  const desafio: DesafioNoEcra = oficial
+    ? { etiqueta, aoPartilhar: () => partilharDia(data) }
+    : { etiqueta: `${etiqueta} · treino` };
+  const outraVez = (): void => {
+    void mostrar({ ecra: "desafio", modo });
+  };
+
+  if (modo === "tempo") {
+    const tempo = await carregarTempo();
+    if (tempo === undefined) {
+      ir({ ecra: "home" });
+      return;
+    }
+
+    atual = new TimeAttackScreen(app as HTMLElement, {
+      ...tempo,
+      seed,
+      desafio,
+      // O recorde pessoal não é a comparação do desafio — ver o selo do fim.
+      melhorPontuacao: Number.POSITIVE_INFINITY,
+      tempoInicial: DESAFIO_TEMPO_INICIAL,
+      aoTerminar: ({ pontos, tabuleiros, saltados }) => {
+        if (!oficial) return;
+        desafios = registar(desafios, data, "tempo", { pontos, tabuleiros, saltados });
+        guardarOsDesafios();
+      },
+      aoSair: voltarA({ ecra: "home" }),
+      aoRecomecar: outraVez,
+    });
+    return;
+  }
+
+  atual = new SurvivalScreen(app as HTMLElement, {
+    seed,
+    ...(retoma === undefined ? {} : { retomar: retoma }),
+    // Só a corrida oficial se guarda para retomar; o treino perde-se ao sair.
+    aoGuardar: oficial ? guardarCorridaDesafio : () => undefined,
+    melhorTempo: Number.POSITIVE_INFINITY,
+    desafio,
+    aoTerminar: ({ limpou, tempoMs, linhas }) => {
+      if (!oficial) return;
+      guardarCorridaDesafio(undefined);
+      desafios = registar(desafios, data, "survival", { tempoMs, limpou, linhas });
+      guardarOsDesafios();
+    },
+    aoRecomecar: outraVez,
     aoSair: voltarA({ ecra: "home" }),
   });
 }
@@ -660,6 +872,8 @@ async function arrancar(): Promise<void> {
     perfil = load(armazenamento);
     preferencias = loadSettings(armazenamento);
     corridaSurvival = lerCorrida(armazenamento);
+    desafios = lerDesafios(armazenamento);
+    corridaDesafio = lerCorrida(armazenamento, CORRIDA_DESAFIO_KEY);
   }
 
   aplicarTema(document.documentElement, preferencias.tema);

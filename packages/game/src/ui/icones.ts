@@ -116,6 +116,20 @@ export const iconeCadeado = (): SVGElement =>
     "M8.5 11V8a3.5 3.5 0 0 1 7 0v3",
   ]);
 
+/**
+ * Partilhar: a seta a sair da caixa — o desenho que os dois sistemas de
+ * telemóvel já ensinaram.
+ */
+export const iconePartilhar = (): SVGElement =>
+  icone("icone-partilhar", ["M12 4v11", "M8 8l4-4 4 4", "M6.5 11.5H6a1.5 1.5 0 0 0-1.5 1.5v6A1.5 1.5 0 0 0 6 20.5h12a1.5 1.5 0 0 0 1.5-1.5v-6a1.5 1.5 0 0 0-1.5-1.5h-.5"]);
+
+/**
+ * O calendário: o Desafio do Dia. Uma folha com as duas argolas e o dia
+ * marcado a meio.
+ */
+export const iconeCalendario = (): SVGElement =>
+  icone("icone-calendario", ["M6 5.5h12a1.5 1.5 0 0 1 1.5 1.5v11.5A1.5 1.5 0 0 1 18 20H6a1.5 1.5 0 0 1-1.5-1.5V7A1.5 1.5 0 0 1 6 5.5z", "M4.5 10h15", "M8.5 3.5v4", "M15.5 3.5v4", "M11 14.5h2"]);
+
 /** Fechar uma caixa. */
 export const iconeFechar = (): SVGElement =>
   icone("icone-fechar", ["M6.5 6.5l11 11", "M17.5 6.5l-11 11"]);

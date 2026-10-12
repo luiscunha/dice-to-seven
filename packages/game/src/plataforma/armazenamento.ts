@@ -48,6 +48,8 @@ export const CHAVES = [
   "dicetoseven.profile",
   "dicetoseven.settings",
   "dicetoseven.survival",
+  "dicetoseven.desafio",
+  "dicetoseven.desafio.survival",
 ] as const;
 
 /**

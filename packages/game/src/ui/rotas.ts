@@ -12,6 +12,8 @@
  * nada feito para isso.
  */
 
+import type { ModoDoDesafio } from "../session/desafio";
+
 export type Rota =
   | { readonly ecra: "home" }
   | { readonly ecra: "bandas" }
@@ -27,6 +29,12 @@ export type Rota =
    * na engine. Sem seed no endereço, o modo sorteia uma.
    */
   | { readonly ecra: "survival"; readonly seed?: number }
+  /**
+   * O Desafio do Dia, por modo. **Sem a data no endereço**: o desafio é o de
+   * hoje, e um link de ontem que abrisse a corrida de ontem era uma porta para
+   * a jogar outra vez sabendo o que vem.
+   */
+  | { readonly ecra: "desafio"; readonly modo: ModoDoDesafio }
   | { readonly ecra: "definicoes" }
   /**
    * As regras têm endereço próprio, como tudo o resto — e aqui o endereço faz
@@ -53,6 +61,8 @@ export function paraHash(r: Rota): string {
       return r.seed === undefined
         ? "#/survival"
         : `#/survival/${String(r.seed)}`;
+    case "desafio":
+      return r.modo === "tempo" ? "#/desafio/contrarrelogio" : "#/desafio/survival";
     case "definicoes":
       return "#/definicoes";
     case "regras":
@@ -78,6 +88,14 @@ export function deHash(hash: string): Rota {
   if (primeira === "definicoes") return { ecra: "definicoes" };
   if (primeira === "como-jogar" || primeira === "regras") {
     return { ecra: "regras" };
+  }
+
+  if (primeira === "desafio") {
+    if (segunda === "survival") return { ecra: "desafio", modo: "survival" };
+    if (segunda === "contrarrelogio" || segunda === "tempo") {
+      return { ecra: "desafio", modo: "tempo" };
+    }
+    return ROTA_INICIAL;
   }
 
   if (primeira === "survival") {
@@ -189,6 +207,7 @@ function profundidade(r: Rota): number {
     case "bandas":
     case "tempo":
     case "survival":
+    case "desafio":
     case "definicoes":
     case "regras":
       return 1;

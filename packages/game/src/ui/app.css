@@ -1000,6 +1000,14 @@ body::before {
   padding: 20px;
 }
 
+/* «Desafio #3», por cima do título do fim, quando a corrida é o desafio. */
+.popup-etiqueta {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--accent);
+}
+
 .popup-titulo {
   margin: 0;
   /* Espaço para o `✕`, que é um alvo de toque inteiro no canto. */
@@ -1353,6 +1361,28 @@ body::before {
   grid-template-rows: auto auto minmax(0, 1fr) auto auto;
   gap: 14px;
   max-width: 460px;
+}
+
+/*
+ * Com o Desafio do Dia, uma faixa a mais entre o lema e os modos.
+ *
+ * A faixa dos modos deixa de poder encolher abaixo do que tem dentro
+ * (`minmax(auto, …)` e não `minmax(0, …)`): com o cartão do dia, num ecrã
+ * baixo, o conteúdo não cabia e os cartões sobrepunham-se. Assim, a página
+ * desliza.
+ */
+.ecra.home[data-desafio="sim"] {
+  grid-template-rows: auto auto auto minmax(auto, 1fr) auto auto;
+  gap: 12px;
+}
+
+/*
+ * E os mosaicos dos modos de corrida descem de altura: o cartão do dia já os
+ * oferece a meio do ecrã, e os mosaicos ficam como a porta para a corrida
+ * livre. A 812px de altura passam de 195px a 122px.
+ */
+.ecra.home[data-desafio="sim"] .home-modo.compacto {
+  min-height: clamp(104px, 15vh, 160px);
 }
 
 /*
@@ -1832,6 +1862,146 @@ body::before {
   line-height: 1.35;
   color: inherit;
   opacity: 0.78;
+}
+
+/* ─── Home: o Desafio do Dia ──────────────────────────────────────────────── */
+
+/*
+ * A superfície neutra das regras, e não a cor de um modo: o cartão é dos dois
+ * desafios, e cada metade leva a cor do seu. Por cima dos modos, porque é a
+ * única coisa da Home que muda todos os dias.
+ */
+.home-desafio {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: calc(var(--raio) + 6px);
+  background: var(--surface);
+  box-shadow: var(--sombra-cartao);
+}
+
+.home-desafio-cabeca {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.home-desafio-icone {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--surface-alt);
+  color: var(--accent);
+}
+
+.home-desafio-icone .icone {
+  width: 18px;
+  height: 18px;
+}
+
+.home-desafio-titulo {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.home-desafio-data {
+  font-size: 13px;
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* A sequência encosta à direita: é o número que se quer ver crescer. */
+.home-desafio-sequencia {
+  margin-left: auto;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--surface-alt);
+  font-size: 13px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.home-desafio-modos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+/* Cada desafio é uma face do seu modo, como os cartões de baixo, mais baixa. */
+.home-desafio-modo {
+  display: grid;
+  gap: 4px;
+  min-height: var(--alvo);
+  padding: 10px 12px;
+  font: inherit;
+  text-align: left;
+  border: 0;
+  border-radius: var(--raio);
+  background: var(--cor);
+  color: var(--tinta-modo);
+  box-shadow: inset 0 0 0 1px var(--aro);
+  cursor: pointer;
+}
+
+.home-desafio-modo[data-modo="tempo"] {
+  --cor: var(--modo-tempo);
+  --tinta-modo: var(--modo-tempo-tinta);
+  --placa: var(--modo-tempo-placa);
+}
+
+.home-desafio-modo[data-modo="survival"] {
+  --cor: var(--modo-survival);
+  --tinta-modo: var(--modo-survival-tinta);
+  --placa: var(--modo-survival-placa);
+}
+
+.home-desafio-modo-nome {
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.home-desafio-modo-estado {
+  justify-self: start;
+  max-width: 100%;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--placa);
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/*
+ * Por jogar, ou a meio, é o que pede ação: a etiqueta cheia, como a da corrida
+ * à espera no mosaico do Survival. Feito, é um resultado, e fica discreto.
+ */
+.home-desafio-modo[data-estado="por-jogar"] .home-desafio-modo-estado,
+.home-desafio-modo[data-estado="a-meio"] .home-desafio-modo-estado {
+  background: var(--tinta-modo);
+  color: var(--cor);
+}
+
+.home-desafio-modo[data-estado="interrompido"] .home-desafio-modo-estado {
+  opacity: 0.75;
+}
+
+.home-desafio-partilhar {
+  justify-content: center;
 }
 
 /* ─── Home: o cartão das regras ───────────────────────────────────────────── */

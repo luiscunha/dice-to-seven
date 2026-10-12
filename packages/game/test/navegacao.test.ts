@@ -49,6 +49,8 @@ describe("rotas", () => {
     { ecra: "jogo", banda: "meio-joker", nivel: 12 },
     { ecra: "tempo" },
     { ecra: "survival", seed: 20260822 },
+    { ecra: "desafio", modo: "tempo" },
+    { ecra: "desafio", modo: "survival" },
     { ecra: "definicoes" },
     { ecra: "regras" },
   ];
@@ -111,6 +113,15 @@ describe("rotas", () => {
     // Uma seed absurda não trava nada — sorteia-se outra.
     expect(deHash("#/survival/abc")).toEqual({ ecra: "survival" });
     expect(deHash("#/survival/-3")).toEqual({ ecra: "survival" });
+  });
+
+  it("o Desafio do Dia tem endereço por modo, e sem data", () => {
+    expect(paraHash({ ecra: "desafio", modo: "tempo" })).toBe("#/desafio/contrarrelogio");
+    expect(paraHash({ ecra: "desafio", modo: "survival" })).toBe("#/desafio/survival");
+
+    // Um modo que não existe — ou uma data de outro dia — é a Home.
+    expect(deHash("#/desafio")).toEqual({ ecra: "home" });
+    expect(deHash("#/desafio/2026-10-11")).toEqual({ ecra: "home" });
   });
 
   it("a forma antiga continua a levar ao sítio certo", () => {

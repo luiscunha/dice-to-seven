@@ -42,6 +42,12 @@ export const CORRIDA_KEY = "dicetoseven.survival";
  */
 export const CORRIDA_VERSION = 4;
 
+/**
+ * A corrida do Survival do Dia, à parte da normal. As duas podem estar a meio
+ * ao mesmo tempo, e retomar uma não pode apagar a outra.
+ */
+export const CORRIDA_DESAFIO_KEY = "dicetoseven.desafio.survival";
+
 export interface CorridaGuardada {
   readonly estado: SurvivalState;
   readonly decorridoMs: number;
@@ -55,18 +61,22 @@ interface Envelope {
 export function guardarCorrida(
   storage: ProfileStorage,
   corrida: CorridaGuardada,
+  chave: string = CORRIDA_KEY,
 ): void {
   const envelope: Envelope = { version: CORRIDA_VERSION, corrida };
   try {
-    storage.setItem(CORRIDA_KEY, JSON.stringify(envelope));
+    storage.setItem(chave, JSON.stringify(envelope));
   } catch {
     // Disco cheio ou armazenamento negado: a corrida perde-se, o jogo não.
   }
 }
 
-export function limparCorrida(storage: ProfileStorage): void {
+export function limparCorrida(
+  storage: ProfileStorage,
+  chave: string = CORRIDA_KEY,
+): void {
   try {
-    storage.setItem(CORRIDA_KEY, "");
+    storage.setItem(chave, "");
   } catch {
     // Ver acima.
   }
@@ -144,8 +154,9 @@ function bombaValida(bomba: unknown, board: Board): bomba is BombaSurvival {
  */
 export function lerCorrida(
   storage: ProfileStorage,
+  chave: string = CORRIDA_KEY,
 ): CorridaGuardada | undefined {
-  const raw = storage.getItem(CORRIDA_KEY);
+  const raw = storage.getItem(chave);
   if (raw === null || raw === "") return undefined;
 
   let parsed: unknown;
