@@ -14,8 +14,7 @@
 import type { Board, Packed } from "@dicetoseven/engine";
 import { SEM_MARCAS, cellAt, checkInvariants } from "@dicetoseven/engine";
 
-import type { Bomba } from "./bomba";
-import type { SurvivalState } from "./SurvivalSession";
+import type { BombaSurvival, SurvivalState } from "./SurvivalSession";
 import type { ProfileStorage } from "./progress";
 
 export const CORRIDA_KEY = "dicetoseven.survival";
@@ -121,12 +120,16 @@ function normalizar(corrida: CorridaGuardada): CorridaGuardada {
  * Uma que não aponte — de um armazenamento mexido à mão — perde-se, e a corrida
  * não. Rebentar sobre uma coordenada fora do tabuleiro não fazia mal nenhum à
  * engine, mas desenhava um pavio em lado nenhum.
+ *
+ * Uma bomba de antes das enterradas chega sem `enterrada`, e é exatamente isso
+ * que ela era: uma bomba da linha.
  */
-function bombaValida(bomba: unknown, board: Board): bomba is Bomba {
+function bombaValida(bomba: unknown, board: Board): bomba is BombaSurvival {
   if (typeof bomba !== "object" || bomba === null) return false;
 
-  const { at, rebentaEm } = bomba as Partial<Bomba>;
+  const { at, rebentaEm, enterrada } = bomba as Partial<BombaSurvival>;
   if (!Number.isInteger(at) || !Number.isFinite(rebentaEm)) return false;
+  if (enterrada !== undefined && enterrada !== true) return false;
 
   return cellAt(board, at as Packed) !== undefined;
 }

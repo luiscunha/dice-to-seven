@@ -2792,6 +2792,51 @@ body::before {
 }
 
 /*
+ * A bomba enterrada acende-se: a peça incha e brilha a vermelho, duas vezes. A
+ * bomba da linha não o tem — essa viu-se na fila e caiu à frente dos olhos; esta
+ * acende-se a meio da pilha, longe de onde se está a olhar.
+ *
+ * `filter` e `scale`, e não `box-shadow`: o anel da bomba já é uma sombra, e
+ * animá-la obrigava a repetir em cada quadro as sombras interiores da peça.
+ */
+.peca.acesa {
+  animation: acender 520ms var(--suavizacao) 2;
+}
+
+@keyframes acender {
+  from {
+    scale: 1.22;
+    filter: brightness(1.6)
+      drop-shadow(0 0 calc(var(--lado-real) * 0.3) var(--fogo));
+  }
+  to {
+    scale: 1;
+    filter: none;
+  }
+}
+
+/*
+ * As peças que a explosão aqueceu: mudam de face com um clarão vermelho, e
+ * incham um pouco. Curto — tem de acabar antes de a linha extra acabar de
+ * cair, que é quando o tabuleiro se remonta.
+ */
+.peca.aquecida {
+  animation: aquecer 480ms var(--suavizacao);
+}
+
+@keyframes aquecer {
+  from {
+    scale: 1.14;
+    filter: brightness(1.45)
+      drop-shadow(0 0 calc(var(--lado-real) * 0.22) var(--fogo));
+  }
+  to {
+    scale: 1;
+    filter: none;
+  }
+}
+
+/*
  * Sem movimento: ficam as cores, que dizem o mesmo sem mexer em nada. O clarão
  * da peça, o vermelho do relógio e o anel da bomba bastam para se ler o que
  * aconteceu.
@@ -2805,6 +2850,14 @@ body::before {
 
   .peca.rebentou {
     animation: clarao 380ms linear;
+  }
+
+  .peca.acesa {
+    animation: clarao 520ms linear 2;
+  }
+
+  .peca.aquecida {
+    animation: clarao 480ms linear;
   }
 
   @keyframes clarao {
@@ -3543,6 +3596,33 @@ body::before {
   --lado-pavio: 11px;
   top: -5px;
   animation: none;
+}
+
+/*
+ * A bomba enterrada anuncia-se ao lado da fila, e não numa peça dela: não vem
+ * na linha, acende-se numa peça que já lá está. Fica fora do fluxo para as
+ * peças da fila continuarem centradas, e usa o mesmo pavio apagado para se ler
+ * como a mesma ameaça.
+ */
+.fila .bomba-pilha {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  translate: 0 -50%;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--fogo);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.fila .bomba-pilha .pavio {
+  --lado-pavio: 12px;
+  position: static;
+  translate: none;
 }
 
 /*

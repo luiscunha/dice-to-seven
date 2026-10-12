@@ -841,6 +841,38 @@ export class BoardView {
     efeito(this.grelha, "abanao");
   }
 
+  /**
+   * Uma bomba acendeu-se numa peça que já estava no tabuleiro: um clarão, para
+   * o olho a encontrar. Chama-se **depois** de `marcarBomba`, que é quem lhe
+   * põe o anel e o pavio.
+   */
+  acenderBomba(p: Packed): void {
+    const el = this.pecas.get(p);
+    if (el !== undefined) efeito(el, "acesa");
+  }
+
+  /**
+   * A explosão aqueceu as peças à volta: cada uma muda de face ali mesmo, com
+   * um clarão.
+   *
+   * Muda-as **antes** de a linha cair, e não na montagem a seguir: a explosão e
+   * o que ela fez têm de se ver juntos, senão o jogador liga as faces novas à
+   * linha que caiu. A montagem depois da linha refaz as peças com os mesmos
+   * valores, e o clarão já acabou por essa altura.
+   */
+  aquecerPecas(depois: Board, pecas: readonly Packed[]): void {
+    for (const p of pecas) {
+      const el = this.pecas.get(p);
+      const valor = depois[colOf(p)]?.[rowOf(p)];
+      if (el === undefined || valor === undefined) continue;
+
+      el.dataset["valor"] = String(valor);
+      el.setAttribute("aria-label", `face ${String(valor)}`);
+      desenharFace(el, valor, this.modo);
+      efeito(el, "aquecida");
+    }
+  }
+
   /** A peça recusou o toque: abana, como quem diz que não. */
   recusarPeca(p: Packed): void {
     const el = this.pecas.get(p);

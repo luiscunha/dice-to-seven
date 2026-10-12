@@ -61,13 +61,14 @@ export const saiNaJogada = (bomba: Bomba | undefined, jogada: Group): boolean =>
  * bomba que ficasse a apontar para a coordenada antiga passava a ameaçar a
  * peça que lá caiu, e o jogador desarmava a peça errada.
  *
- * Devolve `undefined` se a peça saiu na jogada: desarmada.
+ * Devolve `undefined` se a peça saiu na jogada: desarmada. O resto da bomba
+ * viaja intacto, incluindo o que cada modo lhe acrescente.
  */
-export function seguirBomba(
-  bomba: Bomba | undefined,
+export function seguirBomba<B extends Bomba>(
+  bomba: B | undefined,
   board: Board,
   jogada: Group,
-): Bomba | undefined {
+): B | undefined {
   if (bomba === undefined) return undefined;
 
   const at = remapearCelula(board, jogada)(bomba.at);

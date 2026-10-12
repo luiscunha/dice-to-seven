@@ -907,9 +907,65 @@ A peça fica quando rebenta, também aqui. Não há solução a proteger, mas ti
 uma peça num modo que se perde por excesso delas seria um alívio, e um castigo
 que alivia não é castigo.
 
+**E a explosão aquece as peças à volta**: as oito vizinhas que existirem (lados
+e diagonais) sobem um ponto — o 1 passa a 2, o 6 fica 6, o joker não muda. Muda
+à vista, com um clarão, no instante da explosão e antes de a linha extra cair.
+
+Começou como a ideia de baralhar as vizinhas ao calhas. Medido em 2 000
+explosões a meio de corrida:
+
+| As vizinhas… | tabuleiro pior | tabuleiro melhor | a peça presa da bomba solta-se |
+|---|---|---|---|
+| mudam ao calhas, com os pesos das linhas | 50% | **48%** | **84%** |
+| mudam ao calhas, faces uniformes | 80% | 18% | 63% |
+| mudam ao calhas, puxadas para faces altas | 93% | 6% | 38% |
+| **sobem um ponto** | **99%** | 1% | 28% |
+
+Ao calhas era cara ou coroa, e soltava a peça presa de uma bomba enterrada em
+84% das vezes — premiava falhar o desenterrar. Subir um ponto piora quase sempre
+(os 1 são a cola do jogo) e é previsível: quem vê o pavio a acabar pode tirar
+primeiro os 1 encostados à bomba. Não acrescenta peças, por isso a linha a mais
+continua a cair: no Survival perde-se pela altura. Desliga-se com
+`aqueceVizinhas: false`.
+
 Valores de partida, em `DEFAULT_SURVIVAL`: `linhasEntreBombas: 3`,
 `pavioBombaMs: 10_000` — mais longo do que os 6 s do Contra-Relógio, porque a
 peça chega no topo da pilha e o tabuleiro tem o dobro das peças.
+
+### A bomba enterrada
+
+A bomba da linha aterra no topo da pilha, onde quase sempre já se pode tirar:
+para quem a vê, é uma prioridade e não um problema. É o defeito que a contagem
+decrescente mostrou na campanha — uma marca numa peça que já sai não muda nada a
+quem a lê. A contagem não cabia lá, porque cada nível promete solução; o
+Survival não promete nada, e as linhas entram por cima, portanto há sempre peças
+enterradas.
+
+**Da segunda bomba em diante, metade acende-se numa peça que já está na
+pilha**, por baixo da linha que acabou de cair:
+
+- **Uma peça presa**: sem grupo nesse momento, com 1 a 3 peças por cima, nunca o
+  joker. Tirá-la a tempo pede um plano — que jogadas a destapam, e por que
+  ordem. Só se não houver nenhuma presa a esse alcance se aceita uma que já sai.
+- **O mesmo pavio de 10 s e o mesmo castigo**, uma linha a mais. Chegou a ter
+  15 s, por ser preciso escavar; ficou nos 10 por decisão de produto — a bomba é
+  uma só, e o tempo dela também.
+- **A fila anuncia-a**, com um «na pilha» e o pavio apagado ao lado das peças. Não
+  pode dizer em que peça — até a linha cair o jogador mexe na pilha —, mas diz
+  que vem. A promessa do modo, nada cai sem se ver, continua a valer.
+- **Acende-se com um clarão**: a peça incha e brilha duas vezes. A bomba da linha
+  cai à frente dos olhos; esta aparece a meio da pilha, longe de onde se olha.
+- A primeira bomba da corrida é sempre na linha. É ela que ensina o que é uma
+  bomba.
+
+Tudo puro na seed e no índice da linha, como o resto da fila, portanto
+«Repetir esta» repete também as bombas. A peça é escolhida no tabuleiro do
+instante em que a linha cai, com um gerador à parte, e uma corrida gravada
+guarda se a bomba é enterrada (as gravadas antes disto abrem com bombas da
+linha, que é o que eram).
+
+Valores em `DEFAULT_SURVIVAL`, por afinar a jogar: `bombaEnterradaDesde: 6`
+linhas caídas, `probabilidadeEnterrada: 0.5`, `profundidadeEnterrada: 3`.
 
 ### Depois da escada: tabuleiros sem garantia, e o salto
 

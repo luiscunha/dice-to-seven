@@ -18,6 +18,7 @@ import type { CorridaGuardada } from "../src/session/corridaSurvival";
 import type { SurvivalState } from "../src/session/SurvivalSession";
 import {
   DEFAULT_SURVIVAL,
+  bombaEnterradaNaFila,
   bombaNaFila,
   startSurvival,
 } from "../src/session/SurvivalSession";
@@ -646,6 +647,48 @@ describe("a bomba no ecrã do Survival", () => {
     expect(naFila[coluna ?? -1]?.classList.contains("bomba")).toBe(true);
   });
 
+  /**
+   * Uma corrida em que a próxima linha acende uma bomba enterrada, com a
+   * configuração do jogo. A sorte é da seed e do índice; procura-se um índice
+   * em que calhe.
+   */
+  const comEnterradaAVir = (proximaLinhaMs: number): SurvivalState => {
+    const base = startSurvival(SEED);
+    for (let caidas = DEFAULT_SURVIVAL.bombaEnterradaDesde; caidas < 60; caidas++) {
+      const s: SurvivalState = {
+        ...base,
+        linhasInjetadas: DEFAULT_SURVIVAL.alturaInicial + caidas,
+        linhasDesdeBomba: DEFAULT_SURVIVAL.linhasEntreBombas,
+        proximaLinhaMs,
+      };
+      if (bombaEnterradaNaFila(s)) return s;
+    }
+    throw new Error("nenhuma linha com bomba enterrada nesta seed");
+  };
+
+  it("**a fila anuncia a bomba enterrada ao lado**, e não em nenhuma peça", () => {
+    ecra = abrir(comEnterradaAVir(60_000));
+
+    expect(host.querySelector(".fila .bomba-pilha")?.textContent).toBe("na pilha");
+    expect(host.querySelectorAll(".fila .peca.bomba")).toHaveLength(0);
+    expect(host.querySelector(".fila")?.getAttribute("aria-label")).toContain(
+      "bomba na pilha",
+    );
+  });
+
+  it("**quando a linha cai, a enterrada acende-se com um clarão**, e com o pavio de sempre", async () => {
+    ecra = abrir(comEnterradaAVir(1_500));
+
+    await vi.advanceTimersByTimeAsync(1_200);
+
+    const acesa = host.querySelector<HTMLElement>(".tabuleiro .peca.bomba.acesa");
+    expect(acesa).not.toBeNull();
+    // Acesa aos 1,5 s, vista aos 2,2 s: dos 10 s de pavio faltam 9,3.
+    expect(acesa?.querySelector(".pavio")?.textContent).toBe("10");
+    expect(Number(acesa?.style.getPropertyValue("--pavio"))).toBeCloseTo(0.93, 2);
+    expect(host.querySelector(".fila .bomba-pilha")).toBeNull();
+  });
+
   it("o pavio arde no tabuleiro, no tempo da corrida", () => {
     ecra = abrir(comBomba(11_000));
     expect(pavio()).toBe("10");
@@ -663,6 +706,33 @@ describe("a bomba no ecrã do Survival", () => {
     expect(pecas()).toBe(antes + DEFAULT_SURVIVAL.largura);
     expect(host.querySelector(".ganho.perda.grande")?.textContent).toBe("+1 linha");
     expect(host.querySelector(".tabuleiro .peca.bomba")).toBeNull();
+  });
+
+  it("**rebentar aquece as peças à volta**", async () => {
+    const estado = comBomba(2_000);
+    const b = estado.game.board;
+    // A bomba está no canto (0, 0): à volta, (0, 1), (1, 0) e (1, 1).
+    const vizinhas = [packed(0, 1), packed(1, 0), packed(1, 1)];
+    const esperado = vizinhas.map((p) =>
+      String(Math.min(6, (b[p >> 6]?.[p & 63] ?? 0) + 1)),
+    );
+    const valorEm = (p: number): string | undefined =>
+      host.querySelector<HTMLElement>(`.tabuleiro .peca[data-pos="${String(p)}"]`)
+        ?.dataset["valor"];
+
+    ecra = abrir(estado);
+
+    // Antes da explosão, as faces de partida.
+    await vi.advanceTimersByTimeAsync(900);
+    expect(vizinhas.map(valorEm)).not.toEqual(esperado);
+
+    /*
+     * Depois dela, as novas — e continuam depois de a linha assentar. O clarão
+     * não se vê aqui: sem layout, a linha entra sem animação e o tabuleiro
+     * remonta-se logo. Testa-se no `BoardView`.
+     */
+    await vi.advanceTimersByTimeAsync(1_100);
+    expect(vizinhas.map(valorEm)).toEqual(esperado);
   });
 
   /*
