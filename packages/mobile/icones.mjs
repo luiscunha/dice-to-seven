@@ -1,12 +1,19 @@
 /**
- * Os ícones do lançador Android, a partir da marca.
+ * Os ícones do Android e do iOS, e o ecrã de arranque do iOS, a partir da marca.
  *
  * Corre-se à mão quando a marca mudar — `node icones.mjs` daqui — e as páginas
- * que deixa fotografam-se com o Chrome em modo headless. Não entra no build:
- * ícones mudam uma vez por ano, e gerá-los a cada compilação seria pagar todos
- * os dias por isso.
+ * que deixa fotografam-se com o Chrome em modo headless, uma a uma, com o lado
+ * que vem em `lista.json`:
  *
- * Duas familias, e a diferenca nao e cosmetica:
+ *   chrome --headless=new --hide-scrollbars --force-device-scale-factor=1 \
+ *     --default-background-color=00000000 --window-size=LADO,LADO \
+ *     --screenshot=NOME.png file:///…/scratch-icones/NOME.html
+ *
+ * O Chrome escreve RGB quando a página é toda opaca e RGBA quando não é — e é
+ * isso que cada destino precisa. Não entra no build: ícones mudam uma vez por
+ * ano, e gerá-los a cada compilação seria pagar todos os dias por isso.
+ *
+ * No Android, duas familias, e a diferenca nao e cosmetica:
  *
  * - Legado (mipmap-DPI/ic_launcher.png): o icone inteiro, com fundo. E o que o
  *   Android 7 e anteriores mostram.
@@ -57,6 +64,37 @@ for (const [dpi, lado] of Object.entries(DENSIDADES)) {
     lado: ladoAdapt,
   });
 }
+
+/*
+ * iOS: um só ícone de 1024 — o sistema faz os outros tamanhos — e **opaco**: a
+ * App Store recusa um ícone com canal alfa. Leva também a variante escura, que
+ * o iOS 18+ mostra quando o ecrã principal está em modo escuro e os anteriores
+ * ignoram.
+ */
+const escuro = readFileSync("../game/public/marca/icone-app-escuro.svg", "utf8");
+trabalhos.push({ nome: "ios-AppIcon", html: pagina(svg, 1024), lado: 1024 });
+trabalhos.push({ nome: "ios-AppIcon-escuro", html: pagina(escuro, 1024), lado: 1024 });
+
+/*
+ * O arranque do iOS: o símbolo ao centro de um quadrado de 2732, no fundo de
+ * cada tema (`--ground` do theme.css), para o arranque passar ao jogo sem um
+ * clarão.
+ *
+ * O LaunchScreen.storyboard mostra-o em scaleAspectFill, portanto recorta-o:
+ * num iPhone ao alto só se vê a faixa do meio, menos de metade da largura. Os
+ * 400px dão um cubo com cerca de um quarto da largura do telefone, e um sexto
+ * da de um iPad — medido com `object-fit: cover` num ecrã de 393×852.
+ */
+const simbolo = readFileSync("../game/public/marca/icone.svg", "utf8");
+const ARRANQUE = 2732;
+const SIMBOLO = 400;
+const paginaArranque = (fundo) =>
+  `<!doctype html><meta charset="utf-8">` +
+  `<style>html,body{margin:0;padding:0;background:${fundo}}` +
+  `body{width:${ARRANQUE}px;height:${ARRANQUE}px;display:grid;place-items:center}` +
+  `svg{display:block;width:${SIMBOLO}px;height:${SIMBOLO}px}</style>${simbolo}`;
+trabalhos.push({ nome: "ios-Splash", html: paginaArranque(PAPEL), lado: ARRANQUE });
+trabalhos.push({ nome: "ios-Splash-escuro", html: paginaArranque("#0d1917"), lado: ARRANQUE });
 
 for (const t of trabalhos) writeFileSync(`${BASE}/${t.nome}.html`, t.html);
 
