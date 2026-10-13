@@ -1,0 +1,244 @@
+# Compila a aplicação iOS numa máquina macOS do GitHub, e envia-a para o
+# TestFlight quando alguém o pedir.
+#
+# Existe porque não há um Mac por perto. O `xcodebuild` só corre em macOS, e o
+# GitHub empresta um a cada execução — de graça, porque o repositório é público.
+#
+# **Dois modos**, e só um deles publica:
+#
+# - **Compilar.** Em cada PR que mexa na casca nativa, e à mão. Compila para
+#   dispositivo, em Release, sem assinar. Não precisa de conta Apple nem de
+#   segredos; responde só a "o projeto Xcode ainda compila?".
+# - **TestFlight.** Só à mão — botão "Run workflow" no separador Actions, com a
+#   caixa "testflight" marcada. Assina, arquiva e envia para o App Store
+#   Connect. Pela razão do `deploy.yml`: pôr uma versão à frente de quem testa é
+#   uma decisão, nunca um efeito secundário de um commit.
+#
+# Os segredos de que o modo TestFlight precisa, e como os criar sem Mac, estão
+# em `documentation/guia-ios-sem-mac.md`.
+
+name: iOS
+
+on:
+  workflow_dispatch:
+    inputs:
+      testflight:
+        description: "Assinar e enviar para o TestFlight"
+        type: boolean
+        default: false
+  pull_request:
+    paths:
+      - "packages/mobile/**"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/ios.yml"
+
+# Uma compilação de PR obsoleta cancela-se; um envio para o TestFlight não —
+# cancelado a meio, deixava no App Store Connect um build que ninguém pediu.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  ios:
+    runs-on: macos-26
+    timeout-minutes: 45
+
+    env:
+      # Fixado, e não o que a imagem trouxer por omissão: o Capacitor 8 exige
+      # Xcode 26, e a App Store só aceita builds feitos com o SDK do iOS 26 desde
+      # abril de 2026. Quando o GitHub retirar esta versão da imagem, o passo
+      # "Escolher o Xcode" falha com o nome dela — sobe-se aqui, à vista.
+      XCODE_VERSION: "26.6"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Antes de tudo o resto, para que um segredo em falta se descubra no
+      # primeiro segundo e não depois de dez minutos de compilação.
+      - name: Confirmar os segredos
+        if: inputs.testflight
+        env:
+          IOS_CERTIFICATE_P12: ${{ secrets.IOS_CERTIFICATE_P12 }}
+          IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+          IOS_PROVISIONING_PROFILE: ${{ secrets.IOS_PROVISIONING_PROFILE }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          falta=0
+          for nome in IOS_CERTIFICATE_P12 IOS_CERTIFICATE_PASSWORD IOS_PROVISIONING_PROFILE \
+                      ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_P8; do
+            if [ -z "${!nome}" ]; then
+              echo "::error::Falta o segredo $nome — ver documentation/guia-ios-sem-mac.md"
+              falta=1
+            fi
+          done
+          exit "$falta"
+
+      - name: Escolher o Xcode
+        run: |
+          sudo xcode-select -s "/Applications/Xcode_${XCODE_VERSION}.app"
+          xcodebuild -version
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Os mesmos dois passos do `deploy.yml`, e pela mesma razão: o que vai para
+      # o TestFlight vai para as mãos de alguém.
+      - name: Verificar antes de publicar
+        if: inputs.testflight
+        run: pnpm check
+
+      - name: Reverificar os níveis publicados
+        if: inputs.testflight
+        run: |
+          for banda in packages/game/public/levels/*.json; do
+            case "$banda" in */index.json) continue ;; esac
+            pnpm dice7 verify "$banda"
+          done
+
+      - name: Construir o jogo
+        run: pnpm build:game
+
+      # Copia o bundle para dentro do projeto Xcode e reescreve o `Package.swift`
+      # com os plugins que o `mobile` declara.
+      - name: Sincronizar o projeto iOS
+        working-directory: packages/mobile
+        run: pnpm exec cap sync ios
+
+      - name: Compilar, sem assinar
+        if: ${{ !inputs.testflight }}
+        working-directory: packages/mobile/ios/App
+        run: >
+          xcodebuild build
+          -project App.xcodeproj -scheme App -configuration Release
+          -destination generic/platform=iOS
+          CODE_SIGNING_ALLOWED=NO
+
+      # Um keychain descartável, com a senha inventada aqui mesmo: a máquina vai
+      # para o lixo no fim da execução, e o keychain com ela.
+      #
+      # A equipa e o UUID do perfil lêem-se do próprio perfil, em vez de serem
+      # mais dois segredos que podiam deixar de bater certo com ele.
+      - name: Instalar o certificado e o perfil
+        if: inputs.testflight
+        env:
+          IOS_CERTIFICATE_P12: ${{ secrets.IOS_CERTIFICATE_P12 }}
+          IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+          IOS_PROVISIONING_PROFILE: ${{ secrets.IOS_PROVISIONING_PROFILE }}
+        run: |
+          certificado="$RUNNER_TEMP/distribuicao.p12"
+          perfil="$RUNNER_TEMP/perfil.mobileprovision"
+          keychain="$RUNNER_TEMP/assinatura.keychain-db"
+          senha="$(openssl rand -base64 24)"
+
+          printf '%s' "$IOS_CERTIFICATE_P12" | base64 --decode > "$certificado"
+          printf '%s' "$IOS_PROVISIONING_PROFILE" | base64 --decode > "$perfil"
+
+          security create-keychain -p "$senha" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$senha" "$keychain"
+          security import "$certificado" -P "$IOS_CERTIFICATE_PASSWORD" \
+            -A -t cert -f pkcs12 -k "$keychain"
+          security set-key-partition-list -S apple-tool:,apple: -k "$senha" "$keychain"
+          security list-keychains -d user -s "$keychain"
+
+          security cms -D -i "$perfil" > "$RUNNER_TEMP/perfil.plist"
+          uuid=$(/usr/libexec/PlistBuddy -c "Print :UUID" "$RUNNER_TEMP/perfil.plist")
+          equipa=$(/usr/libexec/PlistBuddy -c "Print :TeamIdentifier:0" "$RUNNER_TEMP/perfil.plist")
+
+          # O Xcode 16 mudou a pasta dos perfis; vão para as duas.
+          for pasta in "$HOME/Library/MobileDevice/Provisioning Profiles" \
+                       "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"; do
+            mkdir -p "$pasta"
+            cp "$perfil" "$pasta/$uuid.mobileprovision"
+          done
+
+          echo "APP_PROVISIONING_PROFILE=$uuid" >> "$GITHUB_ENV"
+          echo "APPLE_TEAM_ID=$equipa" >> "$GITHUB_ENV"
+
+          # Se aqui disser "0 valid identities", o .p12 não tem a chave privada
+          # ou não corresponde ao certificado do perfil.
+          security find-identity -v -p codesigning "$keychain"
+
+      # O perfil **não** vai na linha de comando como PROVISIONING_PROFILE_SPECIFIER:
+      # aí aplicava-se a todos os alvos, incluindo os pacotes Swift dos plugins, e
+      # o `xcodebuild` recusava ("does not support provisioning profiles"). O alvo
+      # App lê-o de APP_PROVISIONING_PROFILE, no project.pbxproj; os pacotes não
+      # conhecem essa variável.
+      #
+      # O número de build é o número desta execução: o App Store Connect recusa
+      # dois envios com o mesmo, e este só sobe.
+      - name: Arquivar
+        if: inputs.testflight
+        working-directory: packages/mobile/ios/App
+        run: >
+          xcodebuild archive
+          -project App.xcodeproj -scheme App -configuration Release
+          -destination generic/platform=iOS
+          -archivePath "$RUNNER_TEMP/App.xcarchive"
+          CODE_SIGN_STYLE=Manual
+          CODE_SIGN_IDENTITY="Apple Distribution"
+          DEVELOPMENT_TEAM="$APPLE_TEAM_ID"
+          APP_PROVISIONING_PROFILE="$APP_PROVISIONING_PROFILE"
+          CURRENT_PROJECT_VERSION="$GITHUB_RUN_NUMBER"
+
+      # `destination: upload` faz o `-exportArchive` enviar diretamente para o App
+      # Store Connect, autenticado pela chave de API, em vez de deixar um .ipa.
+      # O identificador é o do `capacitor.config.ts`, que não muda nunca.
+      - name: Enviar para o TestFlight
+        if: inputs.testflight
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          chave="$RUNNER_TEMP/AuthKey_$ASC_KEY_ID.p8"
+          printf '%s' "$ASC_KEY_P8" | base64 --decode > "$chave"
+
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store-connect</string>
+            <key>destination</key>
+            <string>upload</string>
+            <key>teamID</key>
+            <string>$APPLE_TEAM_ID</string>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>signingCertificate</key>
+            <string>Apple Distribution</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>com.luiscunha.dicetoseven</key>
+              <string>$APP_PROVISIONING_PROFILE</string>
+            </dict>
+            <key>manageAppVersionAndBuildNumber</key>
+            <false/>
+          </dict>
+          </plist>
+          EOF
+
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -exportPath "$RUNNER_TEMP/exportado" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$chave" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+
+          echo "### Build $GITHUB_RUN_NUMBER enviado para o App Store Connect" >> "$GITHUB_STEP_SUMMARY"
+          echo "Aparece no TestFlight depois de a Apple o processar — costuma levar 5 a 30 minutos." >> "$GITHUB_STEP_SUMMARY"

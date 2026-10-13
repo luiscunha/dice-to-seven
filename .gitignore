@@ -59,6 +59,7 @@ packages/mobile/android/local.properties
 *.jks
 *.p12
 *.mobileprovision
+*.p8
 google-services.json
 GoogleService-Info.plist
 
