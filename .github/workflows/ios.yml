@@ -7,8 +7,8 @@
 # **Dois modos**, e só um deles publica:
 #
 # - **Compilar.** Em cada PR que mexa na casca nativa, e à mão. Compila para
-#   dispositivo, em Release, sem assinar. Não precisa de conta Apple nem de
-#   segredos; responde só a "o projeto Xcode ainda compila?".
+#   dispositivo, em Release, sem assinar, e deixa o .ipa nos artefactos da
+#   execução. Não precisa de conta Apple nem de segredos.
 # - **TestFlight.** Só à mão — botão "Run workflow" no separador Actions, com a
 #   caixa "testflight" marcada. Assina, arquiva e envia para o App Store
 #   Connect. Pela razão do `deploy.yml`: pôr uma versão à frente de quem testa é
@@ -115,14 +115,34 @@ jobs:
         working-directory: packages/mobile
         run: pnpm exec cap sync ios
 
+      # Arquiva em vez de só compilar, para sair daqui uma aplicação inteira: um
+      # .ipa é o App.app dentro de uma pasta Payload, em zip. Sem assinatura não
+      # abre num iPhone tal como está — o Sideloadly assina-o no Windows com uma
+      # conta Apple gratuita. Ver o guia.
       - name: Compilar, sem assinar
         if: ${{ !inputs.testflight }}
         working-directory: packages/mobile/ios/App
-        run: >
-          xcodebuild build
-          -project App.xcodeproj -scheme App -configuration Release
-          -destination generic/platform=iOS
-          CODE_SIGNING_ALLOWED=NO
+        run: |
+          xcodebuild archive \
+            -project App.xcodeproj -scheme App -configuration Release \
+            -destination generic/platform=iOS \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            CODE_SIGNING_ALLOWED=NO \
+            CURRENT_PROJECT_VERSION="$GITHUB_RUN_NUMBER"
+
+          mkdir -p "$RUNNER_TEMP/ipa/Payload"
+          cp -R "$RUNNER_TEMP/App.xcarchive/Products/Applications/App.app" "$RUNNER_TEMP/ipa/Payload/"
+          (cd "$RUNNER_TEMP/ipa" && zip -qry "DiceToSeven-$GITHUB_RUN_NUMBER.ipa" Payload)
+
+      # Catorze dias chegam para o instalar; o seguinte vem no próximo PR.
+      - name: Guardar o .ipa
+        if: ${{ !inputs.testflight }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: DiceToSeven-${{ github.run_number }}-sem-assinatura
+          path: ${{ runner.temp }}/ipa/*.ipa
+          if-no-files-found: error
+          retention-days: 14
 
       # Um keychain descartável, com a senha inventada aqui mesmo: a máquina vai
       # para o lixo no fim da execução, e o keychain com ela.
