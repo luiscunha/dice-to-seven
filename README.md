@@ -25,6 +25,7 @@ Node ≥ 20, pnpm 11. O `pnpm check` corre lint, typecheck e testes.
 | [`documentation/plano-implementacao.md`](documentation/plano-implementacao.md) | O plano vivo, fase a fase. |
 | [`documentation/spec-motor.md`](documentation/spec-motor.md) | Spec do motor (documento de origem). |
 | [`documentation/plano-modelo-jogo.md`](documentation/plano-modelo-jogo.md) | Modelo de jogo (documento de origem). |
+| [`documentation/guia-ios-sem-mac.md`](documentation/guia-ios-sem-mac.md) | Compilar para iOS e enviar para o TestFlight, sem Mac. |
 
 ## Estrutura
 
