@@ -1130,36 +1130,48 @@ outros modos de um dia de quando havia três ficam guardados sem contar.
     faces, «Desafio do dia», a sequência 🔥, e o desafio de hoje — o ícone na
     cor do modo, o nome, o número e a data — com o estado: «Jogar»,
     «Continuar», o resultado, ou «Interrompido».
-  - **O ecrã do desafio** (`#/desafio`, `DesafioScreen`) é **um trilho**,
-    como num jogo de tabuleiro. Esteve como um calendário do mês: mostrava
-    tudo e não dizia nada — trinta casas iguais, e hoje uma entre elas. O
-    trilho diz que se está a avançar:
-    - Em cima, **a faixa da série** («🔥 Série: 5 dias seguidos!») e o desafio
-      de hoje, com o número e a data.
-    - **O caminho sobe.** Os dias são casas redondas e grossas, com a sombra
-      dura por baixo, numa onda presa ao número do dia (uma casa não muda de
-      sítio quando muda o dia): **os dois dias seguintes** em cima, em
-      cinzento e fechados a cadeado — com hoje, são a rotação inteira; **hoje**
-      a meio, maior, com «Hoje» escrito e um aro aceso que respira; e **pelo
-      menos as duas últimas semanas** em baixo, a começar num dia 1 e nunca
-      antes do #1 — feitas com o visto na cor do modo, perdidas como casa
-      vazia. Por baixo de cada casa, a data e o modo; a onda tem 60 px de
-      amplitude, o que deixa o rótulo mais comprido caber num ecrã de 375.
-    - **Os meses para trás.** Onde o mês muda, uma placa no meio da estrada,
-      com o nome do mês que começa por baixo dela e as contas dele
-      («Novembro de 2026 · 29 de 30 feitos»); o mês de hoje não leva placa.
-      No fundo, **«Ver outubro de 2026»** traz o mês anterior inteiro
-      (`diasDoMes`), por baixo, sem mexer no que está à vista, e põe o foco na
-      primeira casa nova. Repete-se até ao mês do #1, onde o trilho acaba na
-      partida — «🏁 O primeiro desafio: 12 de outubro de 2026» —, ou até ao
-      primeiro mês que o armazenamento ainda guarda inteiro
-      (`primeiroMesDoTrilho`): mais para trás, um dia feito que já se apagou
-      aparecia como perdido. O registo passou a guardar três anos
+  - **O ecrã do desafio** (`#/desafio`, `DesafioScreen`) é **um caminho por
+    mês**, como num jogo de tabuleiro. Foi primeiro um calendário do mês —
+    mostrava tudo e não dizia nada, trinta casas iguais —, e depois um trilho
+    só, a crescer para trás sem fim, com placas onde o mês mudava e um botão
+    para trazer o anterior: não tinha onde acabar. Um mês tem princípio, fim e
+    uma conta, e é isso que o ecrã mostra:
+    - **A série fica no topo**, ao lado do título («🔥 14»): um mês tem mais de
+      trinta casas, e uma faixa no princípio da página ficava fora do ecrã ao
+      descer até hoje.
+    - **O nome do mês e a conta** («Novembro de 2026 · 27 de 30 feitos»), e
+      por baixo **o caminho, que sobe**: a bandeira do início em baixo (o dia
+      1, ou «O primeiro desafio · 12 out» no mês do #1), os dias a subir, e a
+      taça do fim em cima — acesa quando o mês acabou, em cinzento no mês de
+      agora, com os dias que faltam («Fim de dezembro · faltam 26 dias»). Os
+      dias são casas redondas e grossas, com a sombra dura por baixo, numa
+      onda presa ao número do dia: feitas com o visto na cor do modo, perdidas
+      como casa vazia, **hoje** maior, com «Hoje» escrito e um aro aceso que
+      respira, e o que vem em cinzento, fechado a cadeado. Por baixo de cada
+      casa, a data e o modo; a onda tem 60 px de amplitude, o que deixa o
+      rótulo mais comprido caber num ecrã de 375.
+    - **No mês de agora, o ecrã abre em hoje**, ao meio do ecrã e com o balão;
+      nos outros, abre no topo — na taça, com a conta do mês.
+    - **A linha dos meses, fixa no fundo do ecrã**, fora do rolo: os doze meses
+      do ano numa linha, como um caminho deitado. Os que passaram com o
+      visto, ou **com a estrela, na cor do fogo, se ficaram completos**; o de
+      agora com o aro e o ponto de «estás aqui»; os que vêm fechados a
+      cadeado; e os de antes do primeiro, só um ponto. Por baixo, o nome e a
+      conta («27/30»). A linha que os liga é da cor de destaque entre meses
+      que já houve, e cinzenta a seguir. **Tocar num mês mostra o caminho
+      dele**, e a moldura passa para ele; doze meses não cabem num ecrã de
+      375 com espaço para o dedo, e a faixa rola, com o mês à vista ao meio.
+      **As setas mudam de ano** quando há outro para ver — sem mudar o mês à
+      vista, que só muda ao tocar num mês. Os meses vão até ao do #1, ou até
+      ao primeiro que o armazenamento ainda guarda inteiro
+      (`primeiroMesDoTrilho`): mais para trás, um dia feito que já se
+      apagou aparecia como perdido. O registo guarda três anos
       (`DIAS_GUARDADOS`, 1100 dias — pouco mais de cem quilobytes).
     - **A estrada** é um SVG desenhado depois de as casas estarem no sítio,
-      pelos centros que o browser mede: curvas que saem e chegam na vertical,
-      na cor de destaque de hoje para trás e em cinzento de hoje para a
-      frente, com um tracejado claro por cima.
+      pelos centros que o browser mede, da taça à bandeira: curvas que saem
+      e chegam na vertical, na cor de destaque do início até hoje (o mês
+      inteiro, se já acabou) e em cinzento de hoje até ao fim, com um
+      tracejado claro por cima.
     - **O balão** abre por cima da casa selecionada — hoje, ao entrar — e
       vive no fluxo da página: empurra as casas de baixo em vez de tapar a de
       amanhã. Diz quando é e em que pé está («Hoje · por jogar»), o que a série
@@ -1169,7 +1181,7 @@ outros modos de um dia de quando havia três ficam guardados sem contar.
       resultado, o que ficou por jogar, ou quando abre; a casa tocada não sai
       do sítio, porque o rolo desliza o mesmo que o balão a empurra.
     - **Só se joga o de hoje.** Um endereço com outro modo
-      (`#/desafio/survival` num dia de Puzzle) volta ao trilho. Sair de um
+      (`#/desafio/survival` num dia de Puzzle) volta a este ecrã. Sair de um
       desafio volta a este ecrã, e daqui à Home.
 - **O resto da Home ficou como era**: os modos com o rótulo «Modos de jogo» e os
   mosaicos de pé, e as regras numa faixa — a conta 3 + 4 = 7 em peças, «Como

@@ -1908,8 +1908,7 @@ body::before {
   }
 }
 
-.home-desafio::before,
-.desafio-faixa::before {
+.home-desafio::before {
   content: "";
   position: absolute;
   inset: 0 0 auto;
@@ -2078,7 +2077,12 @@ body::before {
   color: var(--accent);
 }
 
-/* ─── O ecrã do Desafio do Dia: o trilho ──────────────────────────────────── */
+/* ─── O ecrã do Desafio do Dia: um caminho por mês ────────────────────────── */
+
+/* Com a linha dos meses no fundo, o ecrã tem três linhas: topo, rolo e rodapé. */
+.ecra.desafio:has(> .rolo) {
+  grid-template-rows: auto 1fr auto;
+}
 
 .desafio-corpo {
   display: grid;
@@ -2086,32 +2090,28 @@ body::before {
   padding-bottom: 8px;
 }
 
-/* A faixa da série, com as seis faces por cima — como o cartão da Home. */
-.desafio-faixa {
-  position: relative;
-  display: grid;
-  gap: 2px;
-  padding: 16px 16px 12px;
-  text-align: center;
-  border: 1px solid var(--line);
-  border-radius: calc(var(--raio) + 8px);
-  background: var(--surface);
-  box-shadow: var(--sombra-cartao);
-  overflow: hidden;
+/* O nome do mês à vista, e a conta dele. */
+.desafio-mes-cabeca {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 4px;
 }
 
-.desafio-faixa-serie {
+.desafio-mes-nome {
   margin: 0;
-  font-size: 17px;
+  font-size: 20px;
   font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
-.desafio-faixa-hoje {
-  margin: 0;
+.desafio-mes-conta {
   font-size: 14px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--ink-muted);
+  white-space: nowrap;
 }
 
 /*
@@ -2444,63 +2444,242 @@ body::before {
 }
 
 /*
- * ── Os meses ──
+ * ── O início e o fim ──
  *
- * Onde o mês muda, uma placa no meio da estrada — a estrada passa por baixo
- * dela. O nome do mês que começa ali para baixo, e as contas dele.
+ * A bandeira em baixo e a taça em cima: o mês é um caminho com princípio e
+ * fim. Redondas como as casas, mas lisas — não se tocam. A taça só se acende
+ * quando o mês acaba; até lá, espera em cinzento.
  */
-.trilho-mes {
+.trilho-marco {
   display: grid;
   justify-items: center;
-  padding: 4px 0;
+  gap: 8px;
 }
 
-.trilho-mes-placa {
+.trilho-marco-no {
   display: grid;
-  justify-items: center;
-  gap: 1px;
-  padding: 8px 18px;
-  border: 1px solid var(--line);
-  border-radius: calc(var(--raio) + 4px);
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
   background: var(--surface);
-  box-shadow: var(--sombra-cartao);
+  font-size: 26px;
+  line-height: 1;
+  box-shadow:
+    0 4px 0 rgb(0 0 0 / 0.16),
+    inset 0 0 0 3px var(--accent);
 }
 
-.trilho-mes-nome {
-  font-size: 12.5px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+.trilho-marco[data-aceso="false"] .trilho-marco-no {
+  box-shadow:
+    0 4px 0 rgb(0 0 0 / 0.08),
+    inset 0 0 0 2px var(--line);
+  filter: grayscale(1);
+  opacity: 0.65;
+}
+
+.trilho-marco .trilho-rotulo {
+  font-weight: 700;
   color: var(--ink);
 }
 
-.trilho-mes-conta {
-  font-size: 12.5px;
-  font-weight: 600;
+/*
+ * ── A linha dos meses ──
+ *
+ * No fundo do ecrã, fora do rolo: está sempre à vista. Os doze meses do ano,
+ * como as casas de um caminho deitado — o visto nos que passaram (a estrela
+ * nos completos), o de agora com o aro, e os que vêm fechados. A moldura é o
+ * mês à vista. A linha que os liga é da cor de destaque entre meses que já
+ * houve, e cinzenta daí para a frente.
+ */
+.desafio-meses {
+  display: grid;
+  gap: 2px;
+  margin: 0 -16px -16px;
+  padding: 6px 8px calc(env(safe-area-inset-bottom, 0px) + 8px);
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: 0 -4px 14px rgb(18 63 58 / 0.06);
+}
+
+.desafio-meses-cabeca {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 18px;
+}
+
+.desafio-meses-cabeca .btn.redondo {
+  width: 28px;
+  height: 28px;
+}
+
+.desafio-meses-cabeca .btn.redondo .icone {
+  width: 16px;
+  height: 16px;
+}
+
+.desafio-meses-ano {
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
   font-variant-numeric: tabular-nums;
   color: var(--ink-muted);
 }
 
-/* O fim do trilho: o botão do mês anterior, e a partida no primeiro desafio. */
-.trilho-fim {
-  display: grid;
-  justify-items: center;
-  gap: 10px;
+/* Doze meses não cabem num ecrã de 375 com espaço para o dedo: a faixa rola. */
+.desafio-meses-faixa {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
 }
 
-.trilho-fim:empty {
+.desafio-meses-faixa::-webkit-scrollbar {
   display: none;
 }
 
-.trilho-mais {
-  justify-content: center;
-  min-width: 220px;
+.desafio-meses-lista {
+  display: flex;
+  width: max-content;
+  margin: 0;
+  padding: 0 4px;
+  list-style: none;
 }
 
-.trilho-partida {
+.desafio-meses-item {
+  position: relative;
+  flex: none;
+  width: 56px;
+}
+
+/* O troço de linha de cada mês para o anterior, à altura do centro dos nós. */
+.desafio-meses-item + .desafio-meses-item::before {
+  content: "";
+  position: absolute;
+  top: 21px;
+  right: 50%;
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line);
+}
+
+.desafio-meses-item:is([data-estado="passado"], [data-estado="atual"])
+  + .desafio-meses-item:is([data-estado="passado"], [data-estado="atual"])::before {
+  background: var(--accent);
+}
+
+.desafio-meses-botao {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  width: 100%;
+  padding: 6px 0 5px;
+  font: inherit;
+  color: var(--ink);
+  background: transparent;
+  border: 2px solid transparent;
+  border-radius: 14px;
+  cursor: pointer;
+}
+
+.desafio-meses-botao:disabled {
+  cursor: default;
+}
+
+.desafio-meses-botao[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--surface);
+  box-shadow: var(--sombra-cartao);
+}
+
+/*
+ * O nó. Todos ocupam a mesma caixa de 30px — os pequenos com margem —, para o
+ * centro de todos ficar à mesma altura e a linha passar por ele.
+ */
+.desafio-meses-no {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  margin: 2px 0;
+  border-radius: 50%;
+  background: var(--surface-alt);
+  color: var(--ink-muted);
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: inset 0 0 0 2px var(--line);
+}
+
+.desafio-meses-no .icone {
+  width: 16px;
+  height: 16px;
+}
+
+.desafio-meses-item[data-estado="passado"] .desafio-meses-no {
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: none;
+}
+
+.desafio-meses-item[data-estado="passado"] .desafio-meses-no .icone-visto {
+  width: 18px;
+  height: 18px;
+  stroke-width: 3;
+}
+
+/* Um mês completo ganha a estrela, na cor do fogo da série. */
+.desafio-meses-item[data-completo="true"] .desafio-meses-no {
+  background: var(--fogo);
+  color: #fff;
+}
+
+/* O mês de agora: o aro da cor de destaque, com o ponto de «estás aqui». */
+.desafio-meses-item[data-estado="atual"] .desafio-meses-no {
+  width: 30px;
+  height: 30px;
   margin: 0;
-  font-size: 13px;
-  font-weight: 650;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 3px var(--accent);
+}
+
+.desafio-meses-item[data-estado="atual"] .desafio-meses-no::after {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+/* Antes do primeiro mês, não houve desafio: só um ponto. */
+.desafio-meses-item[data-estado="sem-desafio"] .desafio-meses-no {
+  width: 10px;
+  height: 10px;
+  margin: 10px 0;
+  background: var(--line);
+  box-shadow: none;
+}
+
+.desafio-meses-nome {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.desafio-meses-conta {
+  min-height: 14px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 14px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-muted);
+}
+
+.desafio-meses-item:is([data-estado="futuro"], [data-estado="sem-desafio"]) .desafio-meses-nome {
+  font-weight: 600;
   color: var(--ink-muted);
 }
 

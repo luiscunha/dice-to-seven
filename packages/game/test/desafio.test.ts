@@ -17,13 +17,11 @@ import {
   dataDe,
   diaAnterior,
   diasDoMes,
-  diasDoTrilho,
   escolherDoDia,
   estadoDoModo,
   guardarDesafios,
   interromper,
   lerDesafios,
-  mesAnterior,
   mesSeguinte,
   modoDoDia,
   numeroDoDia,
@@ -103,31 +101,8 @@ describe("um desafio por dia, à vez", () => {
   });
 });
 
-describe("o trilho", () => {
-  it("**pelo menos duas semanas para trás, a começar num dia 1**, hoje, e dois dias à frente", () => {
-    // Há duas semanas foi 6 de dezembro: o trilho começa a 1.
-    const dezembro = diasDoTrilho("2026-12-20");
-    expect(dezembro[0]).toBe("2026-12-01");
-    expect(dezembro.at(-1)).toBe("2026-12-22");
-    expect(dezembro).toHaveLength(22);
-
-    // Há duas semanas foi 21 de novembro: o trilho começa a 1 de novembro.
-    const comNovembro = diasDoTrilho("2026-12-05");
-    expect(comNovembro[0]).toBe("2026-11-01");
-    expect(comNovembro.at(-1)).toBe("2026-12-07");
-  });
-
-  it("os dois dias à frente fazem, com hoje, a rotação inteira", () => {
-    const modos = diasDoTrilho("2026-11-10").slice(-3).map(modoDoDia);
-    expect(new Set(modos).size).toBe(3);
-  });
-
-  it("começa no #1: antes dele não houve desafio", () => {
-    expect(diasDoTrilho("2026-10-12")).toEqual(["2026-10-12", "2026-10-13", "2026-10-14"]);
-    expect(diasDoTrilho("2026-11-10")[0]).toBe("2026-10-12");
-  });
-
-  it("os meses para trás: inteiros, e só os dias que tiveram desafio", () => {
+describe("os meses do caminho", () => {
+  it("cada mês inteiro, e só os dias que tiveram desafio", () => {
     expect(diasDoMes("2026-11")).toHaveLength(30);
     expect(diasDoMes("2026-11")[0]).toBe("2026-11-01");
     expect(diasDoMes("2028-02")).toHaveLength(29);
@@ -138,9 +113,8 @@ describe("o trilho", () => {
     expect(diasDoMes("2026-09")).toEqual([]);
   });
 
-  it("o mês anterior e o seguinte atravessam os anos", () => {
-    expect(mesAnterior("2026-10")).toBe("2026-09");
-    expect(mesAnterior("2027-01")).toBe("2026-12");
+  it("o mês seguinte atravessa os anos", () => {
+    expect(mesSeguinte("2026-10")).toBe("2026-11");
     expect(mesSeguinte("2026-12")).toBe("2027-01");
   });
 

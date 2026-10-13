@@ -156,7 +156,7 @@ export const modoDoDia = (data: string): ModoDoDesafio =>
 /** O dia `n` dias depois de `data` — ou antes, com `n` negativo. */
 export const somarDias = (data: string, n: number): string => deDias(emDias(data) + n);
 
-/* ─── O trilho: os dias à vista, e os meses para trás ────────────────────── */
+/* ─── Os meses do caminho ─────────────────────────────────────────────────── */
 
 /** O mês de uma data, `AAAA-MM`. Compara-se como texto, como as datas. */
 export const mesDe = (data: string): string => data.slice(0, 7);
@@ -167,7 +167,6 @@ const somarMeses = (mes: string, n: number): string => {
   return `${String(Math.floor(total / 12))}-${doisDigitos(resto(total, 12) + 1)}`;
 };
 
-export const mesAnterior = (mes: string): string => somarMeses(mes, -1);
 export const mesSeguinte = (mes: string): string => somarMeses(mes, 1);
 
 /** Os dias do mês que tiveram desafio — do #1 em diante —, do primeiro ao último. */
@@ -181,39 +180,8 @@ export function diasDoMes(mes: string): string[] {
   return dias;
 }
 
-/** Os dias que o trilho mostra, pelo menos, para trás de hoje: duas semanas. */
-export const DIAS_PASSADOS_NO_TRILHO = 14;
-
 /**
- * Os dias que o trilho mostra à frente de hoje: dois, que com hoje fazem a
- * rotação inteira — os três modos sempre à vista.
- */
-export const DIAS_FUTUROS_NO_TRILHO = 2;
-
-/**
- * Os dias do trilho ao abrir, do mais antigo ao mais recente: **pelo menos as
- * últimas duas semanas, a começar no dia 1 de um mês**, hoje, e os dois dias
- * seguintes. Começar num dia 1 é o que deixa o resto do histórico chegar mês a
- * mês, inteiro — ver `diasDoMes`. Antes do #1 não houve desafio, e o trilho
- * começa nele.
- */
-export function diasDoTrilho(hoje: string): string[] {
-  const dias: string[] = [];
-  const ultimo = somarDias(hoje, DIAS_FUTUROS_NO_TRILHO);
-
-  for (
-    let d = `${mesDe(somarDias(hoje, -DIAS_PASSADOS_NO_TRILHO))}-01`;
-    d <= ultimo;
-    d = somarDias(d, 1)
-  ) {
-    if (numeroDoDia(d) >= 1) dias.push(d);
-  }
-
-  return dias;
-}
-
-/**
- * O mês mais antigo que o trilho deixa ver: o do #1, ou o primeiro que ainda
+ * O mês mais antigo que o caminho deixa ver: o do #1, ou o primeiro que ainda
  * está inteiro no armazenamento (`DIAS_GUARDADOS`). Mais para trás, um dia
  * feito que já se apagou aparecia como perdido.
  */
