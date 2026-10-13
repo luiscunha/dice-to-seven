@@ -1140,8 +1140,9 @@ outros modos de um dia de quando havia três ficam guardados sem contar.
       trinta casas, e uma faixa no princípio da página ficava fora do ecrã ao
       descer até hoje.
     - **O nome do mês e a conta** («Novembro de 2026 · 27 de 30 feitos»), e
-      por baixo **o caminho, que sobe**: a bandeira do início em baixo (o dia
-      1, ou «O primeiro desafio · 12 out» no mês do #1), os dias a subir, e a
+      por baixo **o caminho, que sobe**: a bandeira do início em baixo —
+      «Início», ou «Início do desafio» no mês do #1, **sem data**: o primeiro
+      dia está logo por cima, na casa dele —, os dias a subir, e a
       taça do fim em cima — acesa quando o mês acabou, em cinzento no mês de
       agora, com os dias que faltam («Fim de dezembro · faltam 26 dias»). Os
       dias são casas redondas e grossas, com a sombra dura por baixo, numa

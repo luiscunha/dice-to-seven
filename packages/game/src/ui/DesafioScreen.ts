@@ -459,20 +459,14 @@ export class DesafioScreen {
     );
   }
 
-  /** O início do mês: a bandeira. No mês do #1, é o primeiro desafio de todos. */
+  /**
+   * O início do mês: a bandeira. **Sem data**: o primeiro dia está logo por
+   * cima, na casa dele, e repeti-lo aqui era dizer o mesmo duas vezes. No mês
+   * do #1, é o início do desafio de todo.
+   */
   private marcoDoInicio(): HTMLLIElement {
-    const primeiro = this.dias[0];
-    const doPrimeiro = primeiro?.numero === 1;
-    return this.marco(
-      "inicio",
-      "🏁",
-      primeiro === undefined
-        ? "Início"
-        : doPrimeiro
-          ? `O primeiro desafio · ${dataCurta(primeiro.data)}`
-          : `Início · ${dataCurta(primeiro.data)}`,
-      true,
-    );
+    const doPrimeiro = this.dias[0]?.numero === 1;
+    return this.marco("inicio", "🏁", doPrimeiro ? "Início do desafio" : "Início", true);
   }
 
   private marco(qual: "inicio" | "fim", simbolo: string, texto: string, aceso: boolean): HTMLLIElement {

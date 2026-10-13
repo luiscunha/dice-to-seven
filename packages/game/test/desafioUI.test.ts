@@ -330,7 +330,7 @@ describe("o ecrã do Desafio do Dia: um caminho por mês", () => {
     expect(c[0]).toBe("Fim de dezembro · faltam 26 dias");
     expect(c[1]).toBe("31 dez · Survival");
     expect(c.at(-2)).toBe("1 dez · Survival");
-    expect(c.at(-1)).toBe("Início · 1 dez");
+    expect(c.at(-1)).toBe("Início");
     expect(host.querySelectorAll(".trilho-dia")).toHaveLength(31);
 
     // A taça só se acende quando o mês acaba; a bandeira, essa, já foi.
@@ -444,7 +444,7 @@ describe("o ecrã do Desafio do Dia: um caminho por mês", () => {
     mes("nov")?.click();
     expect(host.querySelector(".desafio-mes-nome")?.textContent).toBe("Novembro de 2026");
     expect(caminho()[0]).toBe("Fim de novembro");
-    expect(caminho().at(-1)).toBe("Início · 1 nov");
+    expect(caminho().at(-1)).toBe("Início");
     expect(host.querySelector<HTMLElement>('[data-marco="fim"]')?.dataset["aceso"]).toBe("true");
     expect(host.querySelector(".trilho-balao")).toBeNull();
     expect(mes("nov")?.getAttribute("aria-pressed")).toBe("true");
@@ -452,7 +452,8 @@ describe("o ecrã do Desafio do Dia: um caminho por mês", () => {
 
     // O mês do #1 começa no primeiro desafio de todos.
     mes("out")?.click();
-    expect(caminho().at(-1)).toBe("O primeiro desafio · 12 out");
+    expect(caminho().at(-1)).toBe("Início do desafio");
+    expect(caminho().at(-2)).toBe("12 out · Puzzle");
     expect(host.querySelectorAll(".trilho-dia")).toHaveLength(20);
 
     // Voltar ao mês de agora volta a abrir o balão em hoje.

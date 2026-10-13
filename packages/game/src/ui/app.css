@@ -2553,10 +2553,16 @@ body::before {
   width: 56px;
 }
 
-/* O troço de linha de cada mês para o anterior, à altura do centro dos nós. */
+/*
+ * O troço de linha de cada mês para o anterior, à altura do centro dos nós —
+ * **por baixo de todos os nós**. Sem o `z-index`, o troço de um mês vinha
+ * depois do nó do anterior na página e pintava-se por cima dele: o visto de
+ * outubro cortado ao meio, e o cadeado de novembro a parecer aberto.
+ */
 .desafio-meses-item + .desafio-meses-item::before {
   content: "";
   position: absolute;
+  z-index: 0;
   top: 21px;
   right: 50%;
   width: 100%;
@@ -2572,6 +2578,7 @@ body::before {
 
 .desafio-meses-botao {
   position: relative;
+  z-index: 1;
   display: grid;
   justify-items: center;
   gap: 2px;
