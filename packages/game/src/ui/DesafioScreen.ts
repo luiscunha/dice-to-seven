@@ -1,26 +1,28 @@
 /**
- * O ecrã do Desafio do Dia: um trilho, como num jogo de tabuleiro.
+ * O ecrã do Desafio do Dia: um caminho por mês, e os meses numa linha.
  *
  * **Um desafio por dia, à vez** — Puzzle, Contra-Relógio, Survival. Foram três
  * por dia, e o desafio passou a ser uma lista de tarefas que tirava o lugar ao
  * resto do jogo. Com um só, o ecrã deixa de ser uma escolha e passa a ser um
- * caminho: os dias são casas, e **o caminho sobe** — o que vem está em cima,
- * fechado a cadeado; hoje está no meio, maior e aceso; o que ficou para trás
- * está em baixo, com o visto na cor do modo.
+ * caminho, como num jogo de tabuleiro.
  *
- * Esteve como um calendário do mês. Mostrava tudo, e não dizia nada: trinta
- * casas iguais, em que hoje era uma entre as outras. O trilho diz o que um
- * calendário não diz — **que se está a avançar**, e que a casa seguinte é a
- * de hoje.
+ * **Cada mês é um caminho, com início e fim.** O início em baixo — o dia 1, ou
+ * o #1 no mês em que o desafio começou —, os dias a subir, e o fim do mês em
+ * cima, com a taça. O que já passou tem o visto na cor do modo, ou fica vazio
+ * se ficou por jogar; hoje é a casa maior e acesa; o que vem está fechado a
+ * cadeado. Foi um trilho só, a crescer para trás sem fim, com placas onde o
+ * mês mudava: não tinha onde acabar, e um mês é uma unidade que se percebe —
+ * tem um princípio, um fim, e uma conta.
  *
- * **O balão** abre por cima da casa selecionada — hoje, ao entrar. É lá que se
- * joga: jogar, continuar, ou treinar e partilhar depois da tentativa que
- * conta. Tocar noutra casa leva-lhe o balão, com o resultado desse dia, o que
- * ficou por jogar, ou quando abre. **Só se joga o de hoje.**
+ * **Os meses ficam numa linha no fundo do ecrã**, sempre à vista: os doze do
+ * ano, com o visto nos que passaram (a estrela, se ficaram completos), o de
+ * agora em destaque, e os que vêm fechados. Tocar num mês mostra o caminho
+ * dele; as setas mudam de ano, quando há mais do que um.
  *
- * **Para trás, mês a mês.** Onde o mês muda, uma placa na estrada com o nome
- * e as contas desse mês; no fundo, um botão traz o mês anterior inteiro, e
- * outra vez, até ao #1 — onde o trilho acaba na partida.
+ * **O balão** abre por cima da casa selecionada — hoje, ao entrar no mês de
+ * hoje. É lá que se joga: jogar, continuar, ou treinar e partilhar depois da
+ * tentativa que conta. Tocar noutra casa leva-lhe o balão, com o resultado
+ * desse dia, o que ficou por jogar, ou quando abre. **Só se joga o de hoje.**
  *
  * **O caminho é desenhado por cima da página já montada**: as casas fazem uma
  * onda (`ONDA`), e o SVG liga os centros delas como os mede o browser. Medir
@@ -29,15 +31,17 @@
  */
 
 import type { ModoDoDesafio } from "../session/desafio";
-import { mesAnterior, mesDe } from "../session/desafio";
-import { botao, cabecalho, elemento } from "./dom";
+import { mesDe, numeroDoDia } from "../session/desafio";
+import { botao, botaoRedondo, cabecalho, elemento } from "./dom";
 import {
   iconeCadeado,
   iconeCronometro,
   iconePuzzles,
   iconeReiniciar,
+  iconeSeguir,
   iconeSurvival,
   iconeVisto,
+  iconeVoltar,
 } from "./icones";
 import type { DesfechoDaPartilha } from "./partilha";
 import {
@@ -45,6 +49,7 @@ import {
   botaoPartilhar,
   dataCurta,
   dataPorExtenso,
+  mesCurto,
   mesPorExtenso,
 } from "./partilha";
 
@@ -59,9 +64,9 @@ export type EstadoNoCartao =
   | { readonly tipo: "interrompido" };
 
 /**
- * Uma casa do trilho. Hoje tem os estados do cartão; um dia passado está feito
- * ou perdido — o que ficou a meio ontem já não se acaba —; e um dia que ainda
- * não chegou é futuro.
+ * Uma casa do caminho. Hoje tem os estados do cartão; um dia passado está
+ * feito ou perdido — o que ficou a meio ontem já não se acaba —; e um dia que
+ * ainda não chegou é futuro.
  */
 export type EstadoNoTrilho =
   | EstadoNoCartao
@@ -78,23 +83,18 @@ export interface DiaNoTrilho {
 }
 
 export interface TrilhoDoDesafio {
-  /** Hoje, `AAAA-MM-DD`: um dos dias do trilho, e o que abre selecionado. */
+  /** Hoje, `AAAA-MM-DD`. O ecrã abre no mês dele, com o balão na casa dele. */
   readonly hoje: string;
-  /** Os dias do trilho, do mais antigo ao mais recente. */
-  readonly dias: readonly DiaNoTrilho[];
   /** Dias seguidos com o desafio feito. */
   readonly sequencia: number;
   /** Joga o desafio de hoje: a tentativa que conta, ou treino depois dela. */
   readonly aoJogar: () => void;
   /** Só quando o desafio de hoje está feito. */
   readonly aoPartilhar?: () => Promise<DesfechoDaPartilha>;
-  /**
-   * Os dias de um mês anterior, `AAAA-MM`, para o trilho continuar para trás.
-   * Sem isto, o trilho fica nos dias que traz.
-   */
-  readonly carregarMes?: (mes: string) => readonly DiaNoTrilho[];
-  /** O mês mais antigo que se pode carregar — ver `primeiroMesDoTrilho`. */
-  readonly primeiroMes?: string;
+  /** Os dias de um mês, `AAAA-MM`, do primeiro ao último — do #1 em diante. */
+  readonly diasDoMes: (mes: string) => readonly DiaNoTrilho[];
+  /** O mês mais antigo que se pode ver — ver `primeiroMesDoTrilho`. */
+  readonly primeiroMes: string;
 }
 
 export interface OpcoesDesafio {
@@ -124,9 +124,15 @@ export function sinalDaSequencia(sequencia: number): HTMLElement {
 }
 
 /**
- * A onda do trilho: o desvio de cada casa ao centro, em píxeis, pelo número do
+ * Um mês na linha dos meses: antes do primeiro que se pode ver, sem desafio;
+ * depois, passado, o de agora, ou ainda por vir.
+ */
+export type EstadoDoMes = "sem-desafio" | "passado" | "atual" | "futuro";
+
+/**
+ * A onda do caminho: o desvio de cada casa ao centro, em píxeis, pelo número do
  * dia. Pelo número, e não pela posição na lista: uma casa fica sempre no mesmo
- * sítio do caminho, e o trilho não se mexe todo quando muda o dia.
+ * sítio do caminho, e o caminho não se mexe todo quando muda o dia.
  *
  * Sessenta píxeis no máximo: é o que deixa o rótulo mais comprido — «28 out ·
  * Contra-Relógio» — caber por baixo da casa mais desviada num ecrã de 375.
@@ -166,76 +172,71 @@ function estadoEmPalavras(e: EstadoNoTrilho): string {
 /** `2026-10-07` → `7`. */
 const diaDoMes = (data: string): string => String(Number(data.slice(8)));
 
+/** O nome do mês sozinho: `2026-10` → `outubro`. */
+const nomeDoMes = (mes: string): string => mesPorExtenso(mes).split(" de ")[0] ?? "";
+
 const NS = "http://www.w3.org/2000/svg";
+
+/** As contas de um mês: quantos se fizeram, dos que já houve. */
+interface Contas {
+  readonly feitos: number;
+  readonly jogaveis: number;
+}
 
 export class DesafioScreen {
   private readonly raiz: HTMLElement;
   private readonly rolo: HTMLElement;
   private readonly trilho: TrilhoDoDesafio;
-  /** Os dias no trilho, do mais antigo ao mais recente. Cresce para trás. */
-  private dias: DiaNoTrilho[];
-  private readonly elTrilho: HTMLElement;
-  private readonly svg: SVGSVGElement;
-  private readonly lista: HTMLElement;
-  /** O mês da última casa da lista — a mais antiga —, para saber onde vai a placa. */
-  private ultimoMes: string | undefined;
-  private readonly elFim: HTMLElement;
+  private readonly corpo: HTMLElement;
+  private readonly elMeses: HTMLElement;
   private readonly casas = new Map<string, HTMLLIElement>();
   private readonly nos = new Map<string, HTMLButtonElement>();
-  private balao: HTMLElement | undefined;
-  private selecionado: string;
   private readonly observador: ResizeObserver | undefined;
+
+  /** O mês do caminho à vista, `AAAA-MM`. */
+  private mes: string;
+  /** O ano da linha dos meses — pode não ser o do mês à vista. */
+  private ano: number;
+  /** Os dias do mês à vista, do primeiro ao último. */
+  private dias: readonly DiaNoTrilho[] = [];
+  private elTrilho: HTMLElement | undefined;
+  private svg: SVGSVGElement | undefined;
+  /** De cima para baixo: a taça do fim, as casas, a bandeira do início. */
+  private pontos: HTMLElement[] = [];
+  private balao: HTMLElement | undefined;
+  private selecionado: string | undefined;
 
   constructor(host: HTMLElement, opcoes: OpcoesDesafio) {
     const t = opcoes.trilho;
     this.trilho = t;
-    this.dias = [...t.dias];
-    this.selecionado = t.hoje;
+    this.mes = mesDe(t.hoje);
+    this.ano = Number(this.mes.slice(0, 4));
     this.raiz = elemento("div", "ecra desafio");
 
+    /* ── o topo: a seta, o título, e a série — sempre à vista ── */
     const { el: topo } = cabecalho("Desafio do dia", opcoes.aoVoltar);
+    if (t.sequencia > 0) {
+      const meta = elemento("div", "meta");
+      meta.appendChild(sinalDaSequencia(t.sequencia));
+      topo.appendChild(meta);
+    }
 
-    /* ── o caminho ── */
-    this.elTrilho = elemento("div", "trilho");
-    this.svg = document.createElementNS(NS, "svg");
-    this.svg.setAttribute("class", "trilho-caminho");
-    this.svg.setAttribute("aria-hidden", "true");
-
-    this.lista = elemento("ol", "trilho-dias");
-    this.lista.setAttribute("aria-label", "Os desafios, de amanhã para trás");
-    this.acrescentar([...this.dias].reverse());
-
-    this.elTrilho.append(this.svg, this.lista);
-
-    this.elFim = elemento("div", "trilho-fim");
-    this.pintarFim();
-
-    const corpo = elemento("div", "desafio-corpo");
-    corpo.append(
-      this.faixa(t),
-      this.elTrilho,
-      this.elFim,
-      this.legenda(),
-      elemento(
-        "p",
-        "desafio-nota",
-        "Um desafio por dia, à vez: Puzzle, Contra-Relógio e Survival. Conta a primeira tentativa; depois é treino. Muda à meia-noite.",
-      ),
-    );
-
+    this.corpo = elemento("div", "desafio-corpo");
     this.rolo = elemento("div", "rolo");
-    this.rolo.appendChild(corpo);
+    this.rolo.appendChild(this.corpo);
 
-    this.raiz.append(topo, this.rolo);
+    this.elMeses = elemento("footer", "desafio-meses");
+    this.elMeses.setAttribute("aria-label", "Os meses");
+
+    this.raiz.append(topo, this.rolo, this.elMeses);
     host.replaceChildren(this.raiz);
 
-    this.abrirBalao();
-    this.desenharCaminho();
+    this.mostrarMes(this.mes);
 
     /*
-     * O caminho volta a desenhar-se quando o trilho muda de tamanho: a letra
-     * que chega depois, um ecrã que roda. Não existe nos testes (jsdom), onde
-     * também não há medidas para desenhar.
+     * O caminho volta a desenhar-se quando muda de tamanho: a letra que chega
+     * depois, um ecrã que roda. Não existe nos testes (jsdom), onde também não
+     * há medidas para desenhar.
      */
     this.observador =
       typeof ResizeObserver === "function"
@@ -243,7 +244,7 @@ export class DesafioScreen {
             this.desenharCaminho();
           })
         : undefined;
-    this.observador?.observe(this.elTrilho);
+    this.observador?.observe(this.corpo);
   }
 
   destruir(): void {
@@ -251,127 +252,236 @@ export class DesafioScreen {
     this.raiz.remove();
   }
 
-  /* ─── A faixa da série ──────────────────────────────────────────────────── */
+  /* ─── Os meses ──────────────────────────────────────────────────────────── */
 
-  /** A série em cima, e o desafio de hoje: o número e a data. */
-  private faixa(t: TrilhoDoDesafio): HTMLElement {
-    const el = elemento("section", "desafio-faixa");
-    const hoje = t.dias.find((d) => d.data === t.hoje);
+  private estadoDoMes(mes: string): EstadoDoMes {
+    const agora = mesDe(this.trilho.hoje);
+    if (mes > agora) return "futuro";
+    if (mes === agora) return "atual";
+    if (mes < this.trilho.primeiroMes) return "sem-desafio";
+    return "passado";
+  }
 
-    const serie =
-      t.sequencia === 0
-        ? "🔥 Joga hoje e começa uma série"
-        : t.sequencia === 1
-          ? "🔥 Série: 1 dia"
-          : `🔥 Série: ${String(t.sequencia)} dias seguidos!`;
+  private contas(dias: readonly DiaNoTrilho[]): Contas {
+    const jogaveis = dias.filter((d) => d.estado.tipo !== "futuro");
+    return {
+      feitos: jogaveis.filter((d) => d.estado.tipo === "feito").length,
+      jogaveis: jogaveis.length,
+    };
+  }
 
-    el.append(
-      elemento("p", "desafio-faixa-serie", serie),
+  /**
+   * Mostra o caminho de um mês. No mês de hoje, o balão abre em hoje e o rolo
+   * leva-o ao meio do ecrã; nos outros, o rolo volta ao topo — ao fim do mês,
+   * com a conta dele.
+   */
+  private mostrarMes(mes: string): void {
+    this.mes = mes;
+    this.ano = Number(mes.slice(0, 4));
+    this.dias = this.trilho.diasDoMes(mes);
+    this.selecionado = this.dias.some((d) => d.data === this.trilho.hoje)
+      ? this.trilho.hoje
+      : undefined;
+
+    this.corpo.replaceChildren(
+      this.cabecaDoMes(),
+      this.caminho(),
+      this.legenda(),
       elemento(
         "p",
-        "desafio-faixa-hoje",
-        hoje === undefined
-          ? "Desafio de hoje"
-          : `#${String(hoje.numero)} · Desafio de hoje · ${dataCurta(hoje.data)}`,
+        "desafio-nota",
+        "Um desafio por dia, à vez: Puzzle, Contra-Relógio e Survival. Conta a primeira tentativa; depois é treino. Muda à meia-noite.",
+      ),
+    );
+    this.pintarMeses();
+    this.abrirBalao();
+    this.desenharCaminho();
+
+    const hoje = this.selecionado === undefined ? undefined : this.casas.get(this.selecionado);
+    if (hoje !== undefined && typeof hoje.scrollIntoView === "function") {
+      hoje.scrollIntoView({ block: "center" });
+    } else {
+      this.rolo.scrollTop = 0;
+    }
+  }
+
+  /** O nome do mês à vista, e a conta dele. */
+  private cabecaDoMes(): HTMLElement {
+    const el = elemento("div", "desafio-mes-cabeca");
+    const c = this.contas(this.dias);
+    const nome = mesPorExtenso(this.mes);
+
+    el.append(
+      elemento("h2", "desafio-mes-nome", nome.charAt(0).toUpperCase() + nome.slice(1)),
+      elemento(
+        "span",
+        "desafio-mes-conta",
+        `${String(c.feitos)} de ${String(c.jogaveis)} feitos`,
       ),
     );
 
     return el;
   }
 
-  /* ─── Os meses ──────────────────────────────────────────────────────────── */
-
   /**
-   * Acrescenta casas ao fundo da lista, da mais recente para a mais antiga.
-   * Onde o mês muda entra uma placa com o nome do mês que começa por baixo dela
-   * e as contas dele. O mês de cima — o de hoje — não leva placa: está na faixa,
-   * e na data de cada casa.
+   * A linha dos meses, no fundo: os doze do ano, ligados por uma linha — na cor
+   * de destaque até ao mês de agora, em cinzento a seguir. As setas mudam de
+   * ano; só aparecem quando há outro ano para ver.
    */
-  private acrescentar(dias: readonly DiaNoTrilho[]): void {
-    for (const dia of dias) {
-      const mes = mesDe(dia.data);
-      if (this.ultimoMes !== undefined && mes !== this.ultimoMes) {
-        this.lista.appendChild(this.placa(mes, dias));
-      }
-      this.ultimoMes = mes;
-      this.lista.appendChild(this.casa(dia));
+  private pintarMeses(): void {
+    const primeiroAno = Number(this.trilho.primeiroMes.slice(0, 4));
+    const esteAno = Number(this.trilho.hoje.slice(0, 4));
+
+    const cabeca = elemento("div", "desafio-meses-cabeca");
+    if (esteAno > primeiroAno) {
+      const anterior = botaoRedondo(iconeVoltar(), "ano anterior", () => {
+        this.ano -= 1;
+        this.pintarMeses();
+      });
+      anterior.disabled = this.ano <= primeiroAno;
+      const seguinte = botaoRedondo(iconeSeguir(), "ano seguinte", () => {
+        this.ano += 1;
+        this.pintarMeses();
+      });
+      seguinte.disabled = this.ano >= esteAno;
+      cabeca.append(anterior, elemento("span", "desafio-meses-ano", String(this.ano)), seguinte);
+    } else {
+      cabeca.appendChild(elemento("span", "desafio-meses-ano", String(this.ano)));
+    }
+
+    const lista = elemento("ol", "desafio-meses-lista");
+    for (let m = 1; m <= 12; m++) {
+      lista.appendChild(this.itemDoMes(`${String(this.ano)}-${String(m).padStart(2, "0")}`));
+    }
+
+    const faixa = elemento("div", "desafio-meses-faixa");
+    faixa.appendChild(lista);
+    this.elMeses.replaceChildren(cabeca, faixa);
+
+    // O mês à vista — ou o de agora — ao meio da faixa, se ela rolar.
+    const alvo =
+      lista.querySelector<HTMLElement>('[aria-pressed="true"]') ??
+      lista.querySelector<HTMLElement>('[aria-current="date"]');
+    if (alvo !== null) {
+      const a = alvo.getBoundingClientRect();
+      const f = faixa.getBoundingClientRect();
+      faixa.scrollLeft += a.left - f.left - (f.width - a.width) / 2;
     }
   }
 
-  /** A placa do mês: o nome, e quantos desafios se fizeram dos que houve. */
-  private placa(mes: string, dias: readonly DiaNoTrilho[]): HTMLLIElement {
-    const doMes = dias.filter((d) => mesDe(d.data) === mes && d.estado.tipo !== "futuro");
-    const feitos = doMes.filter((d) => d.estado.tipo === "feito").length;
-    const nome = mesPorExtenso(mes);
-    const conta = `${String(feitos)} de ${String(doMes.length)} feitos`;
-
+  private itemDoMes(mes: string): HTMLLIElement {
+    const estado = this.estadoDoMes(mes);
     const li = document.createElement("li");
-    li.className = "trilho-mes";
-    li.setAttribute("aria-label", `${nome}: ${conta}`);
+    li.className = "desafio-meses-item";
+    li.dataset["estado"] = estado;
 
-    const placa = elemento("span", "trilho-mes-placa");
-    placa.append(
-      elemento("span", "trilho-mes-nome", nome),
-      elemento("span", "trilho-mes-conta", conta),
-    );
-    li.appendChild(placa);
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "desafio-meses-botao";
+    b.setAttribute("aria-pressed", String(mes === this.mes));
+    if (estado === "atual") b.setAttribute("aria-current", "date");
 
+    const no = elemento("span", "desafio-meses-no");
+    const nome = elemento("span", "desafio-meses-nome", mesCurto(mes));
+    const conta = elemento("span", "desafio-meses-conta");
+    let rotulo = `${mesPorExtenso(mes)}: `;
+
+    if (estado === "passado" || estado === "atual") {
+      const c = this.contas(this.trilho.diasDoMes(mes));
+      const completo = estado === "passado" && c.jogaveis > 0 && c.feitos === c.jogaveis;
+      li.dataset["completo"] = String(completo);
+      if (estado === "passado") no.appendChild(completo ? document.createTextNode("★") : iconeVisto());
+      conta.textContent = `${String(c.feitos)}/${String(c.jogaveis)}`;
+      rotulo += `${String(c.feitos)} de ${String(c.jogaveis)} feitos${completo ? ", completo" : ""}`;
+      b.addEventListener("click", () => {
+        if (mes !== this.mes) this.mostrarMes(mes);
+      });
+    } else if (estado === "futuro") {
+      no.appendChild(iconeCadeado());
+      b.disabled = true;
+      rotulo += "ainda não começou";
+    } else {
+      b.disabled = true;
+      rotulo += "sem desafio";
+    }
+
+    b.setAttribute("aria-label", rotulo);
+    b.append(no, nome, conta);
+    li.appendChild(b);
     return li;
   }
 
-  /**
-   * O fim do trilho: o botão que traz o mês anterior, enquanto houver; e, no
-   * primeiro desafio de todos, a partida.
-   */
-  private pintarFim(): void {
-    const t = this.trilho;
-    const maisAntigo = this.dias[0];
-    if (maisAntigo === undefined) return;
+  /* ─── O caminho do mês ──────────────────────────────────────────────────── */
 
-    const anterior = mesAnterior(mesDe(maisAntigo.data));
-    const podeMais =
-      t.carregarMes !== undefined && t.primeiroMes !== undefined && anterior >= t.primeiroMes;
+  /** A taça do fim em cima, as casas do último dia ao primeiro, e a bandeira do início. */
+  private caminho(): HTMLElement {
+    this.casas.clear();
+    this.nos.clear();
+    this.pontos = [];
 
-    const fim: HTMLElement[] = [];
-    if (podeMais) {
-      fim.push(
-        botao(`Ver ${mesPorExtenso(anterior)}`, "trilho-mais", () => {
-          this.verMes(anterior);
-        }),
-      );
-    }
-    if (maisAntigo.numero === 1) {
-      fim.push(
-        elemento(
-          "p",
-          "trilho-partida",
-          `🏁 O primeiro desafio: ${dataPorExtenso(maisAntigo.data)} de ${maisAntigo.data.slice(0, 4)}`,
-        ),
-      );
-    }
+    const elTrilho = elemento("div", "trilho");
+    const svg = document.createElementNS(NS, "svg");
+    svg.setAttribute("class", "trilho-caminho");
+    svg.setAttribute("aria-hidden", "true");
 
-    this.elFim.replaceChildren(...fim);
+    const lista = elemento("ol", "trilho-dias");
+    lista.setAttribute("aria-label", `Os desafios de ${mesPorExtenso(this.mes)}, do fim para o início`);
+
+    lista.appendChild(this.marcoDoFim());
+    for (const dia of [...this.dias].reverse()) lista.appendChild(this.casa(dia));
+    lista.appendChild(this.marcoDoInicio());
+
+    elTrilho.append(svg, lista);
+    this.elTrilho = elTrilho;
+    this.svg = svg;
+    return elTrilho;
   }
 
   /**
-   * Traz um mês anterior para o fundo do trilho. O que já está à vista não se
-   * mexe — o mês entra por baixo —, e o foco vai para a primeira casa nova,
-   * para quem navega por teclado continuar onde o mês começa.
+   * O fim do mês: a taça. Acesa quando o mês acabou; à espera, em cinzento,
+   * no mês de agora — com os dias que faltam.
    */
-  private verMes(mes: string): void {
-    const novos = this.trilho.carregarMes?.(mes) ?? [];
-    if (novos.length === 0) return;
+  private marcoDoFim(): HTMLLIElement {
+    const acabou = this.estadoDoMes(this.mes) === "passado";
+    const ultimo = this.dias[this.dias.length - 1];
+    const faltam =
+      ultimo === undefined
+        ? 0
+        : numeroDoDia(ultimo.data) - numeroDoDia(this.trilho.hoje);
 
-    this.dias = [...novos, ...this.dias];
-    this.acrescentar([...novos].reverse());
-    this.pintarFim();
-    this.desenharCaminho();
-
-    const ultimo = novos[novos.length - 1];
-    if (ultimo !== undefined) this.nos.get(ultimo.data)?.focus({ preventScroll: true });
+    return this.marco(
+      "fim",
+      "🏆",
+      acabou || faltam <= 0
+        ? `Fim de ${nomeDoMes(this.mes)}`
+        : `Fim de ${nomeDoMes(this.mes)} · ${faltam === 1 ? "falta 1 dia" : `faltam ${String(faltam)} dias`}`,
+      acabou,
+    );
   }
 
-  /* ─── As casas ──────────────────────────────────────────────────────────── */
+  /**
+   * O início do mês: a bandeira. **Sem data**: o primeiro dia está logo por
+   * cima, na casa dele, e repeti-lo aqui era dizer o mesmo duas vezes. No mês
+   * do #1, é o início do desafio de todo.
+   */
+  private marcoDoInicio(): HTMLLIElement {
+    const doPrimeiro = this.dias[0]?.numero === 1;
+    return this.marco("inicio", "🏁", doPrimeiro ? "Início do desafio" : "Início", true);
+  }
+
+  private marco(qual: "inicio" | "fim", simbolo: string, texto: string, aceso: boolean): HTMLLIElement {
+    const li = document.createElement("li");
+    li.className = "trilho-marco";
+    li.dataset["marco"] = qual;
+    li.dataset["aceso"] = String(aceso);
+
+    const no = elemento("span", "trilho-marco-no", simbolo);
+    no.setAttribute("aria-hidden", "true");
+    li.append(no, elemento("span", "trilho-rotulo", texto));
+
+    this.pontos.push(no);
+    return li;
+  }
 
   private casa(dia: DiaNoTrilho): HTMLLIElement {
     const hoje = dia.data === this.trilho.hoje;
@@ -413,6 +523,7 @@ export class DesafioScreen {
 
     this.casas.set(dia.data, li);
     this.nos.set(dia.data, no);
+    this.pontos.push(no);
     return li;
   }
 
@@ -441,13 +552,14 @@ export class DesafioScreen {
 
   private abrirBalao(): void {
     this.balao?.remove();
+    this.balao = undefined;
 
     for (const [data, no] of this.nos) {
       no.setAttribute("aria-expanded", String(data === this.selecionado));
     }
 
     const dia = this.dias.find((d) => d.data === this.selecionado);
-    const casa = this.casas.get(this.selecionado);
+    const casa = this.selecionado === undefined ? undefined : this.casas.get(this.selecionado);
     if (dia === undefined || casa === undefined) return;
 
     this.balao = this.conteudoDoBalao(dia);
@@ -462,7 +574,7 @@ export class DesafioScreen {
   private conteudoDoBalao(dia: DiaNoTrilho): HTMLElement {
     const t = this.trilho;
     const deHoje = dia.data === t.hoje;
-    const numeroDeHoje = t.dias.find((d) => d.data === t.hoje)?.numero ?? dia.numero;
+    const numeroDeHoje = numeroDoDia(t.hoje);
     const e = dia.estado;
 
     const el = elemento("div", "trilho-balao");
@@ -563,29 +675,29 @@ export class DesafioScreen {
     return el;
   }
 
-  /* ─── O caminho ─────────────────────────────────────────────────────────── */
+  /* ─── A estrada ─────────────────────────────────────────────────────────── */
 
   /**
-   * Liga os centros das casas, de cima para baixo, com curvas que saem e
-   * chegam na vertical. Duas estradas: **a que já se andou**, de hoje para
-   * trás, na cor de destaque; e **a que falta**, de hoje para cima, em cinzento.
-   * Cada uma é um traço largo com um tracejado claro por cima — a estrada de
-   * um jogo de tabuleiro.
+   * Liga os centros, da taça à bandeira, com curvas que saem e chegam na
+   * vertical. Duas estradas: **a que já se andou**, do início até hoje — ou o
+   * mês inteiro, se já acabou —, na cor de destaque; e **a que falta**, de hoje
+   * até ao fim, em cinzento. Cada uma é um traço largo com um tracejado claro
+   * por cima — a estrada de um jogo de tabuleiro.
    */
   private desenharCaminho(): void {
-    const caixa = this.elTrilho.getBoundingClientRect();
+    const elTrilho = this.elTrilho;
+    const svg = this.svg;
+    if (elTrilho === undefined || svg === undefined) return;
+
+    const caixa = elTrilho.getBoundingClientRect();
     if (caixa.width === 0 || caixa.height === 0) return;
 
-    // De cima para baixo: o dia mais distante primeiro.
-    const ordem = [...this.dias].reverse();
-    const pontos = ordem.map((d) => {
-      const r = this.nos.get(d.data)?.getBoundingClientRect();
-      return r === undefined
-        ? { x: 0, y: 0 }
-        : {
-            x: Math.round(r.left + r.width / 2 - caixa.left),
-            y: Math.round(r.top + r.height / 2 - caixa.top),
-          };
+    const pontos = this.pontos.map((el) => {
+      const r = el.getBoundingClientRect();
+      return {
+        x: Math.round(r.left + r.width / 2 - caixa.left),
+        y: Math.round(r.top + r.height / 2 - caixa.top),
+      };
     });
 
     const curva = (pts: readonly { x: number; y: number }[]): string =>
@@ -598,13 +710,18 @@ export class DesafioScreen {
         })
         .join(" ");
 
-    const iHoje = ordem.findIndex((d) => d.data === this.trilho.hoje);
-    const futuro = pontos.slice(0, iHoje + 1);
-    const andado = pontos.slice(iHoje);
+    // Onde a estrada muda de cor: em hoje, ou no fim, se o mês já acabou. O
+    // primeiro ponto é a taça, e as casas vêm a seguir, do último dia ao primeiro.
+    const iHoje = [...this.dias].reverse().findIndex((d) => d.data === this.trilho.hoje);
+    const corte =
+      iHoje >= 0 ? iHoje + 1 : this.estadoDoMes(this.mes) === "passado" ? 0 : pontos.length - 1;
 
-    this.svg.setAttribute("viewBox", `0 0 ${String(caixa.width)} ${String(caixa.height)}`);
-    this.svg.setAttribute("width", String(caixa.width));
-    this.svg.setAttribute("height", String(caixa.height));
+    const porAndar = pontos.slice(0, corte + 1);
+    const andado = pontos.slice(corte);
+
+    svg.setAttribute("viewBox", `0 0 ${String(caixa.width)} ${String(caixa.height)}`);
+    svg.setAttribute("width", String(caixa.width));
+    svg.setAttribute("height", String(caixa.height));
 
     const estrada = (pts: readonly { x: number; y: number }[], classe: string): SVGElement[] => {
       if (pts.length < 2) return [];
@@ -617,12 +734,12 @@ export class DesafioScreen {
       });
     };
 
-    this.svg.replaceChildren(...estrada(futuro, "por-andar"), ...estrada(andado, "andado"));
+    svg.replaceChildren(...estrada(porAndar, "por-andar"), ...estrada(andado, "andado"));
   }
 
   /* ─── A legenda ─────────────────────────────────────────────────────────── */
 
-  /** Os três modos, com o ícone e a cor que têm no trilho. */
+  /** Os três modos, com o ícone e a cor que têm no caminho. */
   private legenda(): HTMLElement {
     const el = elemento("div", "desafio-legenda");
     el.setAttribute("aria-hidden", "true");

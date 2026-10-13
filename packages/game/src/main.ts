@@ -49,7 +49,6 @@ import {
   comecar,
   dataDe,
   diasDoMes,
-  diasDoTrilho,
   escolherDoDia,
   estadoDoModo,
   guardarDesafios,
@@ -769,12 +768,11 @@ function trilhoDoDesafio(): TrilhoDoDesafio {
 
   return {
     hoje: data,
-    dias: diasDoTrilho(data).map(casa),
     sequencia: sequencia(desafios, data),
     aoJogar: voltarA({ ecra: "desafio", modo: modoDoDia(data) }),
     ...(feito ? { aoPartilhar: () => partilharDia(data) } : {}),
-    // O histórico, mês a mês, para trás.
-    carregarMes: (mes) => diasDoMes(mes).map(casa),
+    // Um mês de cada vez: o de hoje ao entrar, e os outros pela linha dos meses.
+    diasDoMes: (mes) => diasDoMes(mes).map(casa),
     primeiroMes: primeiroMesDoTrilho(data),
   };
 }

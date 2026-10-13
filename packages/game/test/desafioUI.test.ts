@@ -4,8 +4,8 @@
  * O Desafio do Dia, no ecrã.
  *
  * O núcleo está em `desafio.test.ts`. Aqui protege-se o que o jogador vê e
- * toca: o cartão da Home em cada estado, o trilho dos dias, o texto que se
- * partilha, e os ecrãs de cada modo quando são o desafio — a mesma seed dá os
+ * toca: o cartão da Home em cada estado, o caminho de cada mês e a linha dos
+ * meses, o texto que se partilha, e os ecrãs de cada modo quando são o desafio — a mesma seed dá os
  * mesmos tabuleiros, o fim oferece partilhar e treinar, e o Survival do dia não
  * deixa trocar de seed a meio.
  */
@@ -19,8 +19,8 @@ import type { Profile } from "../src/session/progress";
 import type { SurvivalState } from "../src/session/SurvivalSession";
 import { DEFAULT_SURVIVAL, startSurvival } from "../src/session/SurvivalSession";
 import { DEFAULT_TIME_ATTACK } from "../src/session/TimeAttackSession";
-import { diasDoMes, diasDoTrilho, modoDoDia, numeroDoDia } from "../src/session/desafio";
-import type { EstadoNoCartao, EstadoNoTrilho, TrilhoDoDesafio } from "../src/ui/DesafioScreen";
+import { diasDoMes, modoDoDia, numeroDoDia } from "../src/session/desafio";
+import type { EstadoNoCartao, TrilhoDoDesafio } from "../src/ui/DesafioScreen";
 import { DesafioScreen } from "../src/ui/DesafioScreen";
 import type { ResumoDoDesafio } from "../src/ui/HomeScreen";
 import { HomeScreen } from "../src/ui/HomeScreen";
@@ -28,6 +28,7 @@ import {
   botaoPartilhar,
   dataCurta,
   dataPorExtenso,
+  mesCurto,
   mesPorExtenso,
   partilhar,
   textoDoDesafio,
@@ -99,6 +100,7 @@ describe("o texto que se partilha", () => {
     expect(dataCurta("2026-12-31")).toBe("31 dez");
     expect(dataPorExtenso("2026-03-07")).toBe("7 de março");
     expect(mesPorExtenso("2026-09")).toBe("setembro de 2026");
+    expect(mesCurto("2026-09")).toBe("set");
   });
 });
 
@@ -258,45 +260,53 @@ describe("o cartão do Desafio do Dia, na Home", () => {
 
 /* ─── O ecrã do Desafio do Dia ────────────────────────────────────────────── */
 
-describe("o ecrã do Desafio do Dia: o trilho", () => {
-  /** O #9, uma terça: um Survival. */
-  const HOJE = "2026-10-20";
+describe("o ecrã do Desafio do Dia: um caminho por mês", () => {
+  /** O #55, um sábado de dezembro: um Puzzle. */
+  const HOJE = "2026-12-05";
 
-  /** Uma semana boa: tudo feito menos o #3, e hoje como se pedir. */
-  const estadoDe = (data: string, hoje: EstadoNoCartao): EstadoNoTrilho =>
-    data > HOJE
-      ? { tipo: "futuro" }
-      : data === HOJE
-        ? hoje
-        : data === "2026-10-14"
-          ? { tipo: "perdido" }
-          : { tipo: "feito", texto: `resultado de ${data.slice(8)}` };
-
+  /**
+   * Um histórico: tudo feito menos os dias 7 de cada mês — outubro, que começa
+   * no #1 a 12, fica completo. Hoje como se pedir, e o resto por vir.
+   */
   const abrir = (
     t: Partial<TrilhoDoDesafio> = {},
-    hoje: EstadoNoCartao = { tipo: "por-jogar" },
+    deHoje: EstadoNoCartao = { tipo: "por-jogar" },
+    hoje = HOJE,
     aoVoltar = (): void => undefined,
   ): DesafioScreen =>
     new DesafioScreen(host, {
       aoVoltar,
       trilho: {
-        hoje: HOJE,
-        dias: diasDoTrilho(HOJE).map((data) => ({
-          data,
-          numero: numeroDoDia(data),
-          modo: modoDoDia(data),
-          estado: estadoDe(data, hoje),
-        })),
+        hoje,
         sequencia: 5,
         aoJogar: () => undefined,
+        diasDoMes: (mes) =>
+          diasDoMes(mes).map((data) => ({
+            data,
+            numero: numeroDoDia(data),
+            modo: modoDoDia(data),
+            estado:
+              data > hoje
+                ? { tipo: "futuro" }
+                : data === hoje
+                  ? deHoje
+                  : data.endsWith("-07")
+                    ? { tipo: "perdido" }
+                    : { tipo: "feito", texto: "ok" },
+          })),
+        primeiroMes: "2026-10",
         ...t,
       },
     });
 
-  /** A casa do dia `dia` de outubro. */
+  /** O caminho de cima para baixo: os marcos e as casas, pelo rótulo. */
+  const caminho = (): string[] =>
+    [...host.querySelectorAll(".trilho-dias > li .trilho-rotulo")].map((r) => r.textContent ?? "");
+
+  /** A casa do dia `dia` do mês à vista. */
   const casa = (dia: number): HTMLElement | undefined =>
     [...host.querySelectorAll<HTMLElement>(".trilho-dia")].find((li) =>
-      li.querySelector(".trilho-rotulo")?.textContent?.startsWith(`${String(dia)} out`),
+      li.querySelector(".trilho-rotulo")?.textContent?.startsWith(`${String(dia)} `),
     );
 
   const balao = (classe: string): string | null | undefined =>
@@ -305,47 +315,31 @@ describe("o ecrã do Desafio do Dia: o trilho", () => {
   const botoes = (): (string | null)[] =>
     [...host.querySelectorAll(".trilho-balao .btn")].map((b) => b.textContent);
 
-  it("**o trilho sobe**: o que vem em cima, hoje a meio, o que passou em baixo", () => {
+  const mes = (nome: string): HTMLButtonElement | undefined =>
+    [...host.querySelectorAll<HTMLButtonElement>(".desafio-meses-botao")].find(
+      (b) => b.querySelector(".desafio-meses-nome")?.textContent === nome,
+    );
+
+  it("**o mês de hoje é um caminho com início e fim**: a taça em cima, a bandeira em baixo", () => {
     const ecra = abrir();
 
-    const rotulos = [...host.querySelectorAll(".trilho-rotulo")].map((r) => r.textContent);
-    expect(rotulos.slice(0, 4)).toEqual([
-      "22 out · Contra-Relógio",
-      "21 out · Puzzle",
-      "20 out · Survival",
-      "19 out · Contra-Relógio",
-    ]);
-    // Começa no #1: antes dele não houve desafio.
-    expect(rotulos.at(-1)).toBe("12 out · Puzzle");
+    expect(host.querySelector(".desafio-mes-nome")?.textContent).toBe("Dezembro de 2026");
+    expect(host.querySelector(".desafio-mes-conta")?.textContent).toBe("4 de 5 feitos");
 
-    // O que vem está fechado; o que foi feito tem o visto; o perdido, o modo.
-    expect(casa(21)?.querySelector(".trilho-cadeado")).not.toBeNull();
-    expect(casa(19)?.querySelector(".icone-visto")).not.toBeNull();
-    expect(casa(14)?.dataset["estado"]).toBe("perdido");
-    expect(casa(14)?.querySelector(".icone-visto")).toBeNull();
+    const c = caminho();
+    expect(c[0]).toBe("Fim de dezembro · faltam 26 dias");
+    expect(c[1]).toBe("31 dez · Survival");
+    expect(c.at(-2)).toBe("1 dez · Survival");
+    expect(c.at(-1)).toBe("Início");
+    expect(host.querySelectorAll(".trilho-dia")).toHaveLength(31);
 
-    expect(casa(20)?.hasAttribute("data-hoje")).toBe(true);
-    expect(casa(20)?.querySelector(".trilho-no-hoje")?.textContent).toBe("Hoje");
-    ecra.destruir();
-  });
+    // A taça só se acende quando o mês acaba; a bandeira, essa, já foi.
+    expect(host.querySelector<HTMLElement>('[data-marco="fim"]')?.dataset["aceso"]).toBe("false");
+    expect(host.querySelector<HTMLElement>('[data-marco="inicio"]')?.dataset["aceso"]).toBe("true");
 
-  it("a faixa diz a série e o desafio de hoje", () => {
-    const serie = (): string | null | undefined =>
-      host.querySelector(".desafio-faixa-serie")?.textContent;
-
-    let ecra = abrir();
-    expect(serie()).toBe("🔥 Série: 5 dias seguidos!");
-    expect(host.querySelector(".desafio-faixa-hoje")?.textContent).toBe(
-      "#9 · Desafio de hoje · 20 out",
-    );
-    ecra.destruir();
-
-    ecra = abrir({ sequencia: 1 });
-    expect(serie()).toBe("🔥 Série: 1 dia");
-    ecra.destruir();
-
-    ecra = abrir({ sequencia: 0 });
-    expect(serie()).toBe("🔥 Joga hoje e começa uma série");
+    expect(casa(6)?.querySelector(".trilho-cadeado")).not.toBeNull();
+    expect(casa(4)?.querySelector(".icone-visto")).not.toBeNull();
+    expect(casa(5)?.hasAttribute("data-hoje")).toBe(true);
     ecra.destruir();
   });
 
@@ -353,11 +347,10 @@ describe("o ecrã do Desafio do Dia: o trilho", () => {
     const aoJogar = vi.fn();
     const ecra = abrir({ aoJogar });
 
-    expect(casa(20)?.querySelector(".trilho-balao")).not.toBeNull();
+    expect(casa(5)?.querySelector(".trilho-balao")).not.toBeNull();
     expect(balao("trilho-balao-quando")).toBe("Hoje · por jogar");
     expect(balao("trilho-balao-premio")).toBe("🔥 +1");
-    expect(balao("desafio-modo-nome")).toBe("Survival");
-    expect(casa(20)?.querySelector(".trilho-no")?.getAttribute("aria-expanded")).toBe("true");
+    expect(balao("desafio-modo-nome")).toBe("Puzzle");
 
     expect(botoes()).toEqual(["Jogar"]);
     host.querySelector<HTMLElement>(".trilho-balao .btn")?.click();
@@ -371,48 +364,33 @@ describe("o ecrã do Desafio do Dia: o trilho", () => {
       casa(dia)?.querySelector<HTMLElement>(".trilho-no")?.click();
     };
 
-    tocar(17);
-    expect(casa(17)?.querySelector(".trilho-balao")).not.toBeNull();
-    expect(balao("trilho-balao-quando")).toBe("Há 3 dias · #6");
-    expect(balao("desafio-resultado")).toBe("✓ resultado de 17");
-    expect(balao("trilho-balao-premio")).toBeUndefined();
+    tocar(3);
+    expect(casa(3)?.querySelector(".trilho-balao")).not.toBeNull();
+    expect(balao("trilho-balao-quando")).toBe("Há 2 dias · #53");
+    expect(balao("desafio-resultado")).toBe("✓ ok");
     expect(botoes()).toEqual([]);
 
-    tocar(14);
-    expect(balao("desafio-resultado")).toBe("Ficou por jogar.");
-
-    tocar(21);
-    expect(balao("trilho-balao-quando")).toBe("Amanhã · #10");
+    tocar(6);
+    expect(balao("trilho-balao-quando")).toBe("Amanhã · #56");
     expect(balao("desafio-resultado")).toBe("Abre à meia-noite.");
 
-    tocar(22);
-    expect(balao("desafio-resultado")).toBe("Abre no dia 22.");
-    expect(botoes()).toEqual([]);
+    tocar(20);
+    expect(balao("desafio-resultado")).toBe("Abre no dia 20.");
 
-    // Um balão de cada vez.
     expect(host.querySelectorAll(".trilho-balao")).toHaveLength(1);
     expect(host.querySelectorAll('.trilho-no[aria-expanded="true"]')).toHaveLength(1);
     ecra.destruir();
   });
 
-  it("feito hoje: o resultado, treinar e partilhar — e já não há prémio", () => {
-    const aoJogar = vi.fn();
-    const ecra = abrir(
-      { aoJogar, aoPartilhar: () => Promise.resolve("copiado") },
-      { tipo: "feito", texto: "3:42.1" },
-    );
-
+  it("feito hoje: o resultado, treinar e partilhar; a meio continua-se; interrompido, treina-se", () => {
+    let ecra = abrir({ aoPartilhar: () => Promise.resolve("copiado") }, { tipo: "feito", texto: "3:42.1" });
     expect(balao("trilho-balao-quando")).toBe("Hoje · feito");
     expect(balao("trilho-balao-premio")).toBeUndefined();
     expect(balao("desafio-resultado")).toBe("✓ 3:42.1");
     expect(botoes()).toEqual(["Treinar", "Partilhar"]);
-    host.querySelector<HTMLElement>(".trilho-balao .btn")?.click();
-    expect(aoJogar).toHaveBeenCalledOnce();
     ecra.destruir();
-  });
 
-  it("a meio continua-se; interrompido, o resto do dia é treino", () => {
-    let ecra = abrir({}, { tipo: "a-meio", texto: "1:20.0" });
+    ecra = abrir({}, { tipo: "a-meio", texto: "1:20.0" });
     expect(balao("trilho-balao-quando")).toBe("Hoje · a meio · 1:20.0");
     expect(botoes()).toEqual(["Continuar"]);
     ecra.destruir();
@@ -422,119 +400,97 @@ describe("o ecrã do Desafio do Dia: o trilho", () => {
     ecra.destruir();
   });
 
-  it("no #1, o trilho acaba na partida — e não há mais nada para trás", () => {
-    const ecra = abrir({ carregarMes: () => [], primeiroMes: "2026-10" });
-    expect(host.querySelector(".trilho-mais")).toBeNull();
-    expect(host.querySelector(".trilho-partida")?.textContent).toBe(
-      "🏁 O primeiro desafio: 12 de outubro de 2026",
-    );
-    ecra.destruir();
-  });
-
-  it("a seta volta, e a legenda tem os três modos", () => {
+  it("a série fica no topo, sempre à vista — e a seta volta", () => {
     const aoVoltar = vi.fn();
-    const ecra = abrir({}, { tipo: "por-jogar" }, aoVoltar);
-
-    const legenda = [...host.querySelectorAll<HTMLElement>(".desafio-legenda-item")];
-    expect(legenda.map((l) => l.dataset["modo"])).toEqual(["puzzle", "tempo", "survival"]);
-
+    let ecra = abrir({}, { tipo: "por-jogar" }, HOJE, aoVoltar);
+    expect(host.querySelector(".topo .desafio-sequencia")?.textContent).toBe("🔥 5");
     host.querySelector<HTMLElement>(".topo .btn")?.click();
     expect(aoVoltar).toHaveBeenCalledOnce();
     ecra.destruir();
-  });
-});
 
-describe("o trilho, para trás: os meses anteriores", () => {
-  /** O #55: o trilho abre a 1 de novembro, e outubro fica por carregar. */
-  const HOJE = "2026-12-05";
-
-  /** Tudo feito, menos os dias 7 de cada mês. */
-  const casa = (data: string) => ({
-    data,
-    numero: numeroDoDia(data),
-    modo: modoDoDia(data),
-    estado:
-      data > HOJE
-        ? ({ tipo: "futuro" } as const)
-        : data === HOJE
-          ? ({ tipo: "por-jogar" } as const)
-          : data.endsWith("-07")
-            ? ({ tipo: "perdido" } as const)
-            : ({ tipo: "feito", texto: "ok" } as const),
-  });
-
-  const abrir = (t: Partial<TrilhoDoDesafio> = {}): DesafioScreen =>
-    new DesafioScreen(host, {
-      aoVoltar: () => undefined,
-      trilho: {
-        hoje: HOJE,
-        dias: diasDoTrilho(HOJE).map(casa),
-        sequencia: 0,
-        aoJogar: () => undefined,
-        carregarMes: (mes) => diasDoMes(mes).map(casa),
-        primeiroMes: "2026-10",
-        ...t,
-      },
-    });
-
-  /** A lista, de cima para baixo: as casas pela data curta, as placas entre parênteses. */
-  const lista = (): string[] =>
-    [...host.querySelectorAll<HTMLElement>(".trilho-dias > li")].map((li) =>
-      li.classList.contains("trilho-mes")
-        ? `[${li.querySelector(".trilho-mes-nome")?.textContent ?? ""} · ${li.querySelector(".trilho-mes-conta")?.textContent ?? ""}]`
-        : (li.querySelector(".trilho-rotulo")?.textContent ?? "").split(" · ")[0] ?? "",
-    );
-
-  it("**onde o mês muda, uma placa** com o nome e as contas — o mês de hoje não leva", () => {
-    const ecra = abrir();
-    const l = lista();
-
-    expect(l.slice(0, 3)).toEqual(["7 dez", "6 dez", "5 dez"]);
-    const i = l.indexOf("[novembro de 2026 · 29 de 30 feitos]");
-    expect(i).toBeGreaterThan(0);
-    expect(l[i - 1]).toBe("1 dez");
-    expect(l[i + 1]).toBe("30 nov");
-    expect(l.at(-1)).toBe("1 nov");
-    expect(host.querySelectorAll(".trilho-mes")).toHaveLength(1);
+    ecra = abrir({ sequencia: 0 });
+    expect(host.querySelector(".desafio-sequencia")).toBeNull();
     ecra.destruir();
   });
 
-  it("**o botão traz o mês anterior inteiro**, por baixo — até ao #1", () => {
+  it("**a linha dos meses**: os doze do ano, com o que passou, o de agora, e o que vem", () => {
     const ecra = abrir();
 
-    const mais = host.querySelector<HTMLElement>(".trilho-mais");
-    expect(mais?.textContent).toBe("Ver outubro de 2026");
-    expect(host.querySelector(".trilho-partida")).toBeNull();
-    mais?.click();
+    const itens = [...host.querySelectorAll<HTMLElement>(".desafio-meses-item")];
+    expect(itens).toHaveLength(12);
+    expect(host.querySelector(".desafio-meses-ano")?.textContent).toBe("2026");
 
-    const l = lista();
-    expect(l).toContain("[outubro de 2026 · 20 de 20 feitos]");
-    expect(l.at(-1)).toBe("12 out");
-    expect(l.slice(0, 3)).toEqual(["7 dez", "6 dez", "5 dez"]);
+    // Antes de outubro não houve desafio: os meses estão lá, e não se tocam.
+    expect(itens.slice(0, 9).every((i) => i.dataset["estado"] === "sem-desafio")).toBe(true);
+    expect(mes("set")?.disabled).toBe(true);
 
-    // Outubro é o mês do #1: não há mais para trás, e o trilho acaba na partida.
-    expect(host.querySelector(".trilho-mais")).toBeNull();
-    expect(host.querySelector(".trilho-partida")?.textContent).toBe(
-      "🏁 O primeiro desafio: 12 de outubro de 2026",
-    );
+    // Outubro ficou completo, e ganha a estrela; novembro perdeu o dia 7.
+    expect(itens[9]?.dataset["completo"]).toBe("true");
+    expect(mes("out")?.querySelector(".desafio-meses-no")?.textContent).toBe("★");
+    expect(mes("out")?.querySelector(".desafio-meses-conta")?.textContent).toBe("20/20");
+    expect(mes("nov")?.querySelector(".icone-visto")).not.toBeNull();
+    expect(mes("nov")?.querySelector(".desafio-meses-conta")?.textContent).toBe("29/30");
 
-    // O balão continua em hoje, e a casa nova de cima fica com o foco.
-    expect(host.querySelector('.trilho-dia[data-hoje] .trilho-balao')).not.toBeNull();
-    expect(document.activeElement?.getAttribute("aria-label")).toMatch(/^31 de outubro/);
+    // Dezembro é o de agora, e o que está à vista.
+    expect(mes("dez")?.getAttribute("aria-current")).toBe("date");
+    expect(mes("dez")?.getAttribute("aria-pressed")).toBe("true");
+    expect(mes("dez")?.querySelector(".desafio-meses-conta")?.textContent).toBe("4/5");
     ecra.destruir();
   });
 
-  it("sem quem carregue os meses, o trilho fica no que traz", () => {
-    const ecra = new DesafioScreen(host, {
-      aoVoltar: () => undefined,
-      trilho: {
-        hoje: HOJE,
-        dias: diasDoTrilho(HOJE).map(casa),
-        sequencia: 0,
-        aoJogar: () => undefined,
-      },
-    });
-    expect(host.querySelector(".trilho-mais")).toBeNull();
+  it("**tocar num mês mostra o caminho dele**: fechado, com a taça acesa, e sem balão", () => {
+    const ecra = abrir();
+
+    mes("nov")?.click();
+    expect(host.querySelector(".desafio-mes-nome")?.textContent).toBe("Novembro de 2026");
+    expect(caminho()[0]).toBe("Fim de novembro");
+    expect(caminho().at(-1)).toBe("Início");
+    expect(host.querySelector<HTMLElement>('[data-marco="fim"]')?.dataset["aceso"]).toBe("true");
+    expect(host.querySelector(".trilho-balao")).toBeNull();
+    expect(mes("nov")?.getAttribute("aria-pressed")).toBe("true");
+    expect(mes("dez")?.getAttribute("aria-pressed")).toBe("false");
+
+    // O mês do #1 começa no primeiro desafio de todos.
+    mes("out")?.click();
+    expect(caminho().at(-1)).toBe("Início do desafio");
+    expect(caminho().at(-2)).toBe("12 out · Puzzle");
+    expect(host.querySelectorAll(".trilho-dia")).toHaveLength(20);
+
+    // Voltar ao mês de agora volta a abrir o balão em hoje.
+    mes("dez")?.click();
+    expect(casa(5)?.querySelector(".trilho-balao")).not.toBeNull();
+    ecra.destruir();
+  });
+
+  it("os meses que vêm estão fechados", () => {
+    const ecra = abrir({}, { tipo: "por-jogar" }, "2026-10-20");
+    expect(mes("nov")?.disabled).toBe(true);
+    expect(mes("nov")?.querySelector(".icone-cadeado")).not.toBeNull();
+    expect(caminho()[0]).toBe("Fim de outubro · faltam 11 dias");
+    ecra.destruir();
+  });
+
+  it("**as setas mudam de ano**, quando há outro ano para ver", () => {
+    let ecra = abrir();
+    expect(host.querySelector(".desafio-meses-cabeca button")).toBeNull();
+    ecra.destruir();
+
+    ecra = abrir({}, { tipo: "por-jogar" }, "2027-02-10");
+    const seta = (nome: string): HTMLButtonElement | null =>
+      host.querySelector<HTMLButtonElement>(`.desafio-meses-cabeca button[aria-label="${nome}"]`);
+
+    expect(host.querySelector(".desafio-meses-ano")?.textContent).toBe("2027");
+    expect(seta("ano seguinte")?.disabled).toBe(true);
+
+    seta("ano anterior")?.click();
+    expect(host.querySelector(".desafio-meses-ano")?.textContent).toBe("2026");
+    expect(seta("ano anterior")?.disabled).toBe(true);
+    expect(mes("dez")?.closest<HTMLElement>(".desafio-meses-item")?.dataset["estado"]).toBe("passado");
+
+    // Mudar de ano não muda o mês à vista: só tocar num mês.
+    expect(host.querySelector(".desafio-mes-nome")?.textContent).toBe("Fevereiro de 2027");
+    mes("dez")?.click();
+    expect(host.querySelector(".desafio-mes-nome")?.textContent).toBe("Dezembro de 2026");
     ecra.destruir();
   });
 });
