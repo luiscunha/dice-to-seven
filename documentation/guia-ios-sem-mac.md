@@ -6,13 +6,63 @@ O `xcodebuild` só corre em macOS. Quem compila é o workflow
 cria do lado da Apple, a partir do Windows, para essa máquina poder assinar e
 enviar.
 
-| Modo | Quando corre | Precisa de |
-|---|---|---|
-| **Compilar** | Em cada PR que mexa em `packages/mobile/`, e à mão | Nada |
-| **TestFlight** | Só à mão, com a caixa "testflight" marcada | Conta Apple Developer e os seis segredos abaixo |
+| Modo | Quando corre | Precisa de | Deixa |
+|---|---|---|---|
+| **Compilar** | Em cada PR que mexa em `packages/mobile/`, e à mão | Nada | Um `.ipa` sem assinatura |
+| **TestFlight** | Só à mão, com a caixa "testflight" marcada | Conta Apple Developer e os seis segredos abaixo | Um build no TestFlight |
 
 O repositório é público, portanto os minutos em macOS não se pagam. Se algum dia
 deixar de ser, contam a dez vezes os de Linux.
+
+---
+
+## Sem conta paga: o `.ipa` e o Sideloadly
+
+Para sentir o jogo no telemóvel antes de pagar a conta. O modo Compilar deixa um
+`.ipa` sem assinatura, que o [Sideloadly](https://sideloadly.io) assina no
+Windows com uma conta Apple gratuita e instala por USB.
+
+### Obter o `.ipa`
+
+- Num PR que mexa em `packages/mobile/`, sai sozinho.
+- Fora disso: **Actions** → **iOS** → **Run workflow**, com a caixa
+  *testflight* **desmarcada**.
+
+Na página da execução, em **Artifacts**, descarrega
+`DiceToSeven-N-sem-assinatura`. Vem num `.zip`; o `.ipa` está lá dentro. O `N` é
+o número do build, e fica guardado 14 dias.
+
+### Preparar, uma vez
+
+1. **iTunes e iCloud da página da Apple**, não os da Microsoft Store. O
+   Sideloadly fala com o iPhone pelos controladores deles, e os da Store não
+   servem. Se já tens os da Store, desinstala-os primeiro.
+2. **O Sideloadly**, de <https://sideloadly.io>.
+3. Liga o iPhone por USB e aceita **Confiar neste computador**.
+
+### Instalar
+
+1. Arrasta o `.ipa` para o Sideloadly, escreve o Apple ID, e **Start**. Pede a
+   senha e o código de dois fatores da conta Apple.
+2. Na primeira vez, no iPhone:
+   - **Definições** → **Geral** → **VPN e gestão de dispositivos** → confia no
+     teu Apple ID.
+   - **Definições** → **Privacidade e segurança** → **Modo de programador** →
+     liga-o. O iPhone reinicia e pede confirmação. A opção só aparece depois da
+     primeira instalação.
+
+O Sideloadly é uma ferramenta de terceiros, e a senha da conta Apple passa por
+ela. Ele próprio recomenda usar uma conta Apple secundária.
+
+### Os limites da conta gratuita
+
+- **A aplicação deixa de abrir ao fim de 7 dias.** Reinstala-se por cima com o
+  mesmo Apple ID, e o progresso fica.
+- No máximo três aplicações instaladas assim de cada vez.
+- Sem TestFlight, e sem partilhar com mais ninguém: cada pessoa teria de fazer
+  isto com a sua conta.
+
+Para tudo isso, é a conta paga e o resto deste guia.
 
 ---
 
@@ -150,6 +200,8 @@ TestFlight e entra com a mesma conta Apple.
 | `does not support provisioning profiles` | O perfil foi passado na linha de comando como `PROVISIONING_PROFILE_SPECIFIER`. Ver o comentário do passo *Arquivar* |
 | `No suitable application records were found` | Falta o passo 5 |
 | `The bundle version must be higher` | O número de execução recomeçou (o workflow mudou de nome?). Sobe o `MARKETING_VERSION` |
+| Sideloadly: o campo do Apple ID fica cinzento, ou não vê o iPhone | O iTunes ou o iCloud são os da Microsoft Store |
+| Sideloadly: o Bundle ID não está disponível | O `com.luiscunha.dicetoseven` já está registado noutra equipa — a conta paga, depois do passo 2. Nas opções avançadas do Sideloadly, muda o Bundle ID |
 
 ## O que expira
 
