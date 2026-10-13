@@ -261,7 +261,7 @@ export class ComoJogarScreen {
   }
 
   private modos(): HTMLElement {
-    const el = this.seccao("Os três modos");
+    const el = this.seccao("Os modos");
 
     const lista = elemento("ul", "regras-modos");
     const entradas: readonly (readonly [string, string])[] = [
@@ -276,6 +276,10 @@ export class ComoJogarScreen {
       [
         "Survival",
         "De vez em quando cai uma linha nova por cima. Vês qual é antes de ela cair; acaba quando a pilha chega ao teto. Se ficares sem jogadas, a linha cai logo; se passares de 7, chega 3 segundos mais cedo. Algumas linhas trazem uma bomba: tira-a antes de o pavio acabar, ou cai mais uma linha e as peças à volta dela sobem um ponto. Mais à frente, há bombas que se acendem numa peça já na pilha: desenterra-a a tempo.",
+      ],
+      [
+        "Desafio do dia",
+        "Todos os dias, um desafio igual para toda a gente: um Puzzle, um Contra-Relógio ou um Survival, à vez. O trilho mostra o caminho — o que já fizeste e o que vem. Conta a primeira tentativa; depois é treino, com os mesmos tabuleiros. No fim, partilha o resultado — e não deixes partir a sequência de dias.",
       ],
     ];
 

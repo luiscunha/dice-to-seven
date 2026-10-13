@@ -330,6 +330,15 @@ body::before {
   pointer-events: none;
 }
 
+/*
+ * À espera do «Começar» do Contra-Relógio do Dia: o tabuleiro ainda não se vê.
+ * `visibility`, e não `display`: a peça já está medida, e a corrida arranca
+ * sem o tabuleiro mudar de sítio.
+ */
+.palco.a-espera .tabuleiro {
+  visibility: hidden;
+}
+
 .ecra[data-estado="fim"] .linha-selecao {
   visibility: hidden;
 }
@@ -1000,6 +1009,14 @@ body::before {
   padding: 20px;
 }
 
+/* «Desafio #3», por cima do título do fim, quando a corrida é o desafio. */
+.popup-etiqueta {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--accent);
+}
+
 .popup-titulo {
   margin: 0;
   /* Espaço para o `✕`, que é um alvo de toque inteiro no canto. */
@@ -1353,6 +1370,32 @@ body::before {
   grid-template-rows: auto auto minmax(0, 1fr) auto auto;
   gap: 14px;
   max-width: 460px;
+}
+
+/*
+ * Com o Desafio do Dia, uma faixa a mais entre o lema e os modos.
+ *
+ * A faixa dos modos deixa de poder encolher abaixo do que tem dentro
+ * (`minmax(auto, …)` e não `minmax(0, …)`): com o cartão do dia, num ecrã
+ * baixo, o conteúdo não cabia e os cartões sobrepunham-se. Assim, a página
+ * desliza.
+ */
+.ecra.home[data-desafio="sim"] {
+  grid-template-rows: auto auto auto minmax(auto, 1fr) auto auto;
+  gap: 12px;
+  /*
+   * Altura **mínima** do ecrã, e não altura fixa. Fixa, num telemóvel baixo a
+   * grelha encolhia as linhas para caber, e o bilhete do dia saía cortado a
+   * meio. Assim, onde cabe, a faixa dos modos estica e enche o ecrã; onde não
+   * cabe, a Home cresce e desliza.
+   */
+  height: auto;
+  min-height: 100%;
+}
+
+/* Para quem chega, os modos vêm antes do desafio: a faixa elástica é a deles. */
+.ecra.home[data-desafio="sim"][data-novato="sim"] {
+  grid-template-rows: auto auto minmax(auto, 1fr) auto auto auto;
 }
 
 /*
@@ -1834,69 +1877,760 @@ body::before {
   opacity: 0.78;
 }
 
-/* ─── Home: o cartão das regras ───────────────────────────────────────────── */
+/* ─── Home: o cartão do Desafio do Dia ────────────────────────────────────── */
 
 /*
- * A regra inteira está impressa no cartão, em peças: um 3, um 4 e o 7 que eles
- * fazem. É o jogo todo numa linha, e quem a percebe aqui já não precisa de
- * entrar — o melhor desfecho possível para um botão de ajuda.
- *
- * A superfície é neutra, com borda, e a cor vem só das peças, do número e do
- * título. A alternativa que se recusou foi um painel escuro com dados a brilhar:
- * a direção de arte não tem néon, e um cartão que grita ao lado dos modos
- * rouba-lhes o olho para a única coisa da Home que não é jogar.
+ * Um bilhete pequeno, que se toca inteiro e abre o ecrã do desafio. A faixa
+ * com as seis faces da rampa no topo é o que o distingue dos cartões dos modos
+ * sem lhe dar mais peso do que eles: é um cartão entre os outros.
  */
-.home-ajuda {
+.home-desafio {
+  position: relative;
   display: grid;
-  justify-items: center;
   gap: 8px;
-  padding: 14px 16px 16px;
+  width: 100%;
+  padding: 14px 14px 12px;
+  font: inherit;
+  text-align: left;
   border: 1px solid var(--line);
   border-radius: calc(var(--raio) + 6px);
   background: var(--surface);
-  /* A mesma profundidade dos cartões de modo: é um cartão como os outros. */
+  color: var(--ink);
   box-shadow: var(--sombra-cartao);
+  overflow: hidden;
+  cursor: pointer;
+  transition: box-shadow var(--t-ui) linear;
+}
+
+@media (hover: hover) {
+  .home-desafio:hover {
+    box-shadow: var(--sombra);
+  }
+}
+
+.home-desafio::before,
+.desafio-faixa::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--face-1) 0 16.66%,
+    var(--face-2) 0 33.33%,
+    var(--face-3) 0 50%,
+    var(--face-4) 0 66.66%,
+    var(--face-5) 0 83.33%,
+    var(--face-6) 0
+  );
+}
+
+.home-desafio-cabeca {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* O rótulo em versaletes, na cor de destaque: diz o que o cartão é. */
+.home-desafio-rotulo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.home-desafio-rotulo .icone {
+  width: 16px;
+  height: 16px;
+}
+
+/* O desafio de hoje: o ícone na cor do modo, o nome e o dia, e o estado. */
+.home-desafio-linha {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.home-desafio-linha > .icone-seguir {
+  color: var(--ink-muted);
+}
+
+.home-desafio .desafio-modo-icone {
+  width: 40px;
+  height: 40px;
+}
+
+.home-desafio-texto {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.home-desafio-nome {
+  overflow: hidden;
+  font-size: 17px;
+  font-weight: 650;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.home-desafio-data {
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+
+/* A sequência: o número que se quer ver crescer, aquecido pelo fogo do jogo. */
+.desafio-sequencia {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--fogo-veu);
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+/* ─── O modo do desafio: a cor e o ícone ──────────────────────────────────── */
+
+/* As cores dos modos, as mesmas dos cartões da Home, onde o desafio as usa. */
+:is(.home-desafio, .trilho-dia, .desafio-legenda-item)[data-modo="puzzle"] {
+  --cor: var(--modo-puzzles);
+  --tinta-modo: var(--modo-puzzles-tinta);
+}
+
+:is(.home-desafio, .trilho-dia, .desafio-legenda-item)[data-modo="tempo"] {
+  --cor: var(--modo-tempo);
+  --tinta-modo: var(--modo-tempo-tinta);
+}
+
+:is(.home-desafio, .trilho-dia, .desafio-legenda-item)[data-modo="survival"] {
+  --cor: var(--modo-survival);
+  --tinta-modo: var(--modo-survival-tinta);
+}
+
+/* O ícone na cor do modo: o elo com o modo livre do mesmo nome, na Home. */
+.desafio-modo-icone {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--raio);
+  background: var(--cor);
+  color: var(--tinta-modo);
+  box-shadow: inset 0 0 0 1px var(--aro);
+}
+
+.desafio-modo-icone .icone {
+  width: 24px;
+  height: 24px;
+}
+
+.desafio-modo-texto {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.desafio-modo-nome {
+  font-size: 17px;
+  font-weight: 650;
+}
+
+.desafio-modo-legenda {
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--ink-muted);
+}
+
+.desafio-modo-estado {
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--ink-muted);
+}
+
+/*
+ * Por jogar, ou a meio, é o que pede ação: um botão cheio na cor de destaque.
+ * Feito, é um resultado — na cor de destaque, sem fundo, com o visto.
+ */
+.home-desafio[data-estado="por-jogar"] .desafio-modo-estado,
+.home-desafio[data-estado="a-meio"] .desafio-modo-estado {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.home-desafio[data-estado="feito"] .desafio-modo-estado {
+  padding-inline: 2px;
+  color: var(--accent);
+}
+
+/* ─── O ecrã do Desafio do Dia: o trilho ──────────────────────────────────── */
+
+.desafio-corpo {
+  display: grid;
+  gap: 14px;
+  padding-bottom: 8px;
+}
+
+/* A faixa da série, com as seis faces por cima — como o cartão da Home. */
+.desafio-faixa {
+  position: relative;
+  display: grid;
+  gap: 2px;
+  padding: 16px 16px 12px;
   text-align: center;
+  border: 1px solid var(--line);
+  border-radius: calc(var(--raio) + 8px);
+  background: var(--surface);
+  box-shadow: var(--sombra-cartao);
+  overflow: hidden;
+}
+
+.desafio-faixa-serie {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.desafio-faixa-hoje {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-muted);
+}
+
+/*
+ * ── O caminho ──
+ *
+ * Um SVG por trás das casas, desenhado depois de elas estarem no sítio — ver
+ * `desenharCaminho`. A estrada é um traço largo com um tracejado claro por
+ * cima: na cor de destaque o que já se andou, em cinzento o que falta.
+ */
+.trilho {
+  position: relative;
+  padding: 6px 0 4px;
+}
+
+.trilho-caminho {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.trilho-estrada,
+.trilho-tracejado {
+  fill: none;
+  stroke-linecap: round;
+}
+
+.trilho-estrada {
+  stroke-width: 14;
+}
+
+.trilho-estrada.por-andar {
+  stroke: var(--line);
+}
+
+.trilho-estrada.andado {
+  stroke: var(--accent);
+  stroke-opacity: 0.5;
+}
+
+.trilho-tracejado {
+  stroke: var(--surface);
+  stroke-width: 3;
+  stroke-dasharray: 6 10;
+}
+
+/* As casas, de cima para baixo: o que vem, hoje, e o que ficou para trás. */
+.trilho-dias {
+  position: relative;
+  display: grid;
+  gap: 22px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.trilho-dia {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+}
+
+/*
+ * A onda: cada casa desvia-se do centro pelo seu `--x`. `translate`, e não
+ * `transform`, para o toque poder afundar a casa sem desfazer o desvio.
+ */
+.trilho-no,
+.trilho-rotulo {
+  translate: var(--x, 0) 0;
+}
+
+/*
+ * ── A casa ──
+ *
+ * Uma peça redonda e grossa, com a sombra dura por baixo — um botão de jogo de
+ * tabuleiro, que afunda ao toque. Na cor do modo, com o ícone dele; feita,
+ * leva o visto no lugar do ícone.
+ */
+.trilho-no {
+  position: relative;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  width: 64px;
+  height: 64px;
+  padding: 0;
+  font: inherit;
+  border: 0;
+  border-radius: 50%;
+  background: var(--cor);
+  color: var(--tinta-modo);
+  box-shadow:
+    0 5px 0 rgb(0 0 0 / 0.22),
+    inset 0 0 0 1px var(--aro);
+  cursor: pointer;
+  transition:
+    transform 80ms linear,
+    box-shadow 80ms linear;
+}
+
+.trilho-no:active {
+  transform: translateY(3px);
+  box-shadow:
+    0 2px 0 rgb(0 0 0 / 0.22),
+    inset 0 0 0 1px var(--aro);
+}
+
+.trilho-no .icone {
+  width: 28px;
+  height: 28px;
+}
+
+.trilho-no .icone-visto {
+  width: 32px;
+  height: 32px;
+  stroke-width: 2.6;
+}
+
+/* O que vem: cinzento, e fechado a cadeado. */
+.trilho-dia[data-estado="futuro"] .trilho-no {
+  background: var(--surface-alt);
+  color: var(--ink-muted);
+}
+
+.trilho-cadeado {
+  position: absolute;
+  right: -4px;
+  bottom: -2px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--ink-muted);
+  box-shadow: 0 0 0 2px var(--line);
+}
+
+.trilho-cadeado .icone {
+  width: 14px;
+  height: 14px;
+}
+
+/* O que ficou por jogar: a casa vazia, só o contorno. */
+.trilho-dia[data-estado="perdido"] .trilho-no {
+  background: var(--surface);
+  color: var(--ink-muted);
+  box-shadow:
+    0 5px 0 rgb(0 0 0 / 0.08),
+    inset 0 0 0 2px var(--line);
+}
+
+.trilho-dia[data-estado="perdido"] .trilho-no .icone {
+  opacity: 0.5;
+}
+
+/* Hoje: maior, com o nome escrito, e um aro aceso que respira. */
+.trilho-dia[data-hoje] .trilho-no {
+  gap: 3px;
+  width: 84px;
+  height: 84px;
+  box-shadow:
+    0 6px 0 rgb(0 0 0 / 0.25),
+    inset 0 0 0 1px var(--aro);
+}
+
+.trilho-dia[data-hoje] .trilho-no .icone {
+  width: 30px;
+  height: 30px;
+}
+
+.trilho-dia[data-hoje] .trilho-no::before {
+  content: "";
+  position: absolute;
+  inset: -9px;
+  border: 3px solid var(--accent);
+  border-radius: 50%;
+  opacity: 0.5;
+  animation: trilho-aceso 2.4s ease-in-out infinite;
+}
+
+@keyframes trilho-aceso {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+
+  50% {
+    transform: scale(1.07);
+    opacity: 0.18;
+  }
+}
+
+.trilho-no-hoje {
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* O rótulo tem o fundo da página: a estrada passa por baixo dele, e não por cima. */
+.trilho-rotulo {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--ground);
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--ink-muted);
+  white-space: nowrap;
+}
+
+.trilho-dia[data-hoje] .trilho-rotulo {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/*
+ * ── O balão ──
+ *
+ * Por cima da casa selecionada, no fluxo da página: empurra as casas de baixo
+ * em vez de tapar as de cima — a de amanhã, por cima da de hoje, é a que mais
+ * interessa ver. O bico aponta para a casa, onde quer que a onda a ponha.
+ */
+.trilho-balao {
+  position: relative;
+  display: grid;
+  gap: 10px;
+  width: min(340px, 100%);
+  margin-bottom: 8px;
+  padding: 0 12px 12px;
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: calc(var(--raio) + 6px);
+  background: var(--surface);
+  box-shadow: var(--sombra);
+  animation: entrar-popup 200ms var(--suavizacao) backwards;
+}
+
+.trilho-balao::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: calc(50% + var(--x, 0px));
+  width: 16px;
+  height: 16px;
+  background: var(--surface);
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.trilho-balao-cabeca {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 -12px;
+  padding: 8px 12px;
+  border-radius: calc(var(--raio) + 5px) calc(var(--raio) + 5px) 0 0;
+  background: var(--surface-alt);
+}
+
+.trilho-balao-quando {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.trilho-balao-premio {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.trilho-balao-corpo {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.trilho-jogar {
+  justify-content: center;
+  min-width: 96px;
+}
+
+.trilho-balao > .btn {
+  justify-content: center;
+}
+
+.desafio-resultado {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-muted);
+}
+
+/* Um resultado feito é o número do dia: maior, e na cor de destaque. */
+.trilho-balao[data-estado="feito"] .desafio-resultado {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.desafio-acoes {
+  flex-wrap: nowrap;
+}
+
+.desafio-acoes > .btn {
+  flex: 1 1 0;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trilho-dia[data-hoje] .trilho-no::before,
+  .trilho-balao {
+    animation: none;
+  }
+
+  .trilho-no {
+    transition: none;
+  }
+}
+
+/*
+ * ── Os meses ──
+ *
+ * Onde o mês muda, uma placa no meio da estrada — a estrada passa por baixo
+ * dela. O nome do mês que começa ali para baixo, e as contas dele.
+ */
+.trilho-mes {
+  display: grid;
+  justify-items: center;
+  padding: 4px 0;
+}
+
+.trilho-mes-placa {
+  display: grid;
+  justify-items: center;
+  gap: 1px;
+  padding: 8px 18px;
+  border: 1px solid var(--line);
+  border-radius: calc(var(--raio) + 4px);
+  background: var(--surface);
+  box-shadow: var(--sombra-cartao);
+}
+
+.trilho-mes-nome {
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.trilho-mes-conta {
+  font-size: 12.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-muted);
+}
+
+/* O fim do trilho: o botão do mês anterior, e a partida no primeiro desafio. */
+.trilho-fim {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+}
+
+.trilho-fim:empty {
+  display: none;
+}
+
+.trilho-mais {
+  justify-content: center;
+  min-width: 220px;
+}
+
+.trilho-partida {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--ink-muted);
+}
+
+/* A legenda: os três modos, com o ícone e a cor que têm no trilho. */
+.desafio-legenda {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: calc(var(--raio) + 6px);
+  background: var(--surface);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-muted);
+}
+
+.desafio-legenda-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.desafio-legenda-icone {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--cor);
+  color: var(--tinta-modo);
+}
+
+.desafio-legenda-icone .icone {
+  width: 14px;
+  height: 14px;
+}
+
+.desafio-nota {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  text-align: center;
+  color: var(--ink-muted);
+}
+
+/* ─── Home: as secções ────────────────────────────────────────────────────── */
+
+/* «Modos de jogo»: o mesmo rótulo do desafio, mais discreto — é o resto. */
+.home-seccao {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+/* ─── Home: as regras ─────────────────────────────────────────────────────── */
+
+/*
+ * Uma faixa e não um cartão: a conta em peças, «Como jogar?», e a seta. A
+ * regra inteira continua impressa — 3 + 4 = 7 —, e quem a percebe aqui já não
+ * precisa de entrar. A faixa inteira é o botão.
+ */
+.home-ajuda {
+  display: grid;
+}
+
+.home-ajuda-faixa {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 60px;
+  padding: 10px 14px;
+  font: inherit;
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: calc(var(--raio) + 6px);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--sombra-cartao);
+  cursor: pointer;
+}
+
+.home-ajuda-faixa > .icone-seguir {
+  color: var(--ink-muted);
 }
 
 .home-ajuda-conta {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin: 0 0 2px;
+  gap: 5px;
 }
 
 .home-ajuda-conta .peca {
-  --lado: 30px;
+  --lado: 24px;
 }
 
 .home-ajuda-sinal {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--ink-muted);
 }
 
 .home-ajuda-sete {
-  font-size: 26px;
-  font-weight: 700;
+  font-family: var(--fonte-marca);
+  font-size: 22px;
+  font-weight: 600;
   line-height: 1;
-  letter-spacing: -0.02em;
-  color: var(--accent);
-}
-
-.home-ajuda-titulo {
-  margin: 0;
-  font-size: 17px;
-  font-weight: 650;
-  letter-spacing: -0.01em;
   color: var(--accent);
 }
 
 .home-ajuda-texto {
-  margin: 0 0 4px;
-  max-width: 36ch;
-  font-size: 13px;
-  line-height: 1.45;
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+
+.home-ajuda-titulo {
+  font-size: 15px;
+  font-weight: 650;
+  color: var(--accent);
+}
+
+.home-ajuda-legenda {
+  font-size: 12.5px;
+  line-height: 1.35;
   color: var(--ink-muted);
 }
 

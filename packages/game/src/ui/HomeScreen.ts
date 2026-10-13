@@ -39,22 +39,47 @@
  *
  * **As definições ficam no canto de cima.** São a ação menos frequente da Home,
  * e o fundo de um telemóvel é a zona do polegar — o sítio mais caro do ecrã.
+ *
+ * **O Desafio do Dia é um cartão, e só um.** É a única coisa da Home que muda
+ * todos os dias, e a razão de alguém a abrir amanhã — mas é um cartão entre os
+ * outros, e não o ecrã. Diz o desafio de hoje, com o ícone e a cor do modo, e
+ * em que pé está; o trilho dos dias vive no ecrã do desafio.
  */
 
 import type { Cell } from "@dicetoseven/engine";
 
+import type { ModoDoDesafio } from "../session/desafio";
 import type { Profile } from "../session/progress";
 import type { ModoFace } from "./dice";
 import { pecaDeAmostra } from "./dice";
 import { botao, botaoRedondo, elemento } from "./dom";
 import {
+  iconeCalendario,
   iconeCronometro,
   iconeDefinicoes,
   iconePuzzles,
-  iconeRegras,
   iconeSeguir,
   iconeSurvival,
 } from "./icones";
+import type { EstadoNoCartao } from "./DesafioScreen";
+import { iconeDoModo, sinalDaSequencia } from "./DesafioScreen";
+import { NOME_DO_MODO } from "./partilha";
+
+/**
+ * O cartão do Desafio do Dia na Home: só o de hoje. O trilho dos dias vive
+ * no ecrã do desafio (`DesafioScreen`).
+ */
+export interface ResumoDoDesafio {
+  readonly numero: number;
+  /** Já curta: «12 out». */
+  readonly data: string;
+  /** Dias seguidos com o desafio feito. */
+  readonly sequencia: number;
+  /** O modo de hoje: um por dia, à vez. */
+  readonly modo: ModoDoDesafio;
+  readonly estado: EstadoNoCartao;
+  readonly aoAbrir: () => void;
+}
 
 export interface OpcoesHome {
   readonly aoEscolherNiveis: () => void;
@@ -83,6 +108,8 @@ export interface OpcoesHome {
    */
   readonly corridaAMeio?: string;
   readonly modoFace?: ModoFace;
+  /** O Desafio do Dia. Sem isto, o cartão não aparece. */
+  readonly desafio?: ResumoDoDesafio;
 }
 
 export class HomeScreen {
@@ -110,13 +137,31 @@ export class HomeScreen {
       " A execução é o verdadeiro desafio.",
     );
 
+    /*
+     * ── Quem chega pela primeira vez vai para os Puzzles ──
+     *
+     * O desafio do dia fica por cima dos modos para quem já joga: é a razão de
+     * voltar amanhã. Para quem ainda não fez um único nível, a ordem inverte-se
+     * — a campanha é a porta de entrada, e um Contra-Relógio do dia como
+     * primeira coisa do jogo era a porta errada.
+     */
+    const novato = Object.keys(opcoes.perfil.levels).length === 0;
+    const desafio = opcoes.desafio === undefined ? [] : [this.desafio(opcoes.desafio)];
+
+    // Com o desafio, os modos ganham um nome: são duas secções, e não uma lista.
+    if (opcoes.desafio !== undefined) {
+      modos.prepend(elemento("h2", "home-seccao", "Modos de jogo"));
+    }
+
     this.raiz.append(
       this.barra(opcoes),
       lema,
-      modos,
+      ...(novato ? [modos, ...desafio] : [...desafio, modos]),
       this.ajuda(opcoes),
       this.rodape(opcoes),
     );
+    this.raiz.dataset["desafio"] = opcoes.desafio === undefined ? "nao" : "sim";
+    this.raiz.dataset["novato"] = novato ? "sim" : "nao";
 
     host.replaceChildren(this.raiz);
   }
@@ -419,49 +464,97 @@ export class HomeScreen {
     return { estado: undefined };
   }
 
+  /* ─── O Desafio do Dia ──────────────────────────────────────────────────── */
+
+  /**
+   * O cartão do dia: um bilhete pequeno, que se toca inteiro e abre o ecrã do
+   * desafio. A faixa com as seis faces, o rótulo e a sequência; por baixo, o
+   * desafio de hoje — o ícone na cor do modo, o nome, o número e a data — e o
+   * estado, que é o que diz se há alguma coisa a fazer.
+   */
+  private desafio(d: ResumoDoDesafio): HTMLButtonElement {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "home-desafio";
+    b.dataset["modo"] = d.modo;
+    b.dataset["estado"] = d.estado.tipo;
+    b.addEventListener("click", d.aoAbrir);
+
+    const rotulo = elemento("span", "home-desafio-rotulo");
+    rotulo.append(iconeCalendario(), "Desafio do dia");
+
+    const cabeca = elemento("span", "home-desafio-cabeca");
+    cabeca.appendChild(rotulo);
+    if (d.sequencia > 0) cabeca.appendChild(sinalDaSequencia(d.sequencia));
+
+    const icone = elemento("span", "desafio-modo-icone");
+    icone.appendChild(iconeDoModo(d.modo));
+
+    const nome = NOME_DO_MODO[d.modo];
+    const texto = elemento("span", "home-desafio-texto");
+    texto.append(
+      elemento("span", "home-desafio-nome", nome),
+      elemento("span", "home-desafio-data", `#${String(d.numero)} · ${d.data}`),
+    );
+
+    // Na Home, o estado é curto: o tempo da corrida a meio vê-se lá dentro.
+    const e = d.estado;
+    const estado =
+      e.tipo === "por-jogar"
+        ? "Jogar"
+        : e.tipo === "a-meio"
+          ? "Continuar"
+          : e.tipo === "feito"
+            ? `✓ ${e.texto}`
+            : "Interrompido";
+
+    const linha = elemento("span", "home-desafio-linha");
+    linha.append(icone, texto, elemento("span", "desafio-modo-estado", estado), iconeSeguir());
+
+    b.append(cabeca, linha);
+    b.setAttribute(
+      "aria-label",
+      `Desafio do dia, número ${String(d.numero)}, ${d.data}: ${nome}, ${estado}. Abrir.`,
+    );
+
+    return b;
+  }
+
   /* ─── As regras ─────────────────────────────────────────────────────────── */
 
   /**
-   * O cartão das regras, no fundo.
+   * As regras, numa faixa: a conta em peças, «Como jogar?», e a seta.
    *
-   * **A regra inteira está impressa no cartão**, em peças: um 3, um 4 e o 7 que
-   * eles fazem. É o jogo todo numa linha, e quem a percebe aqui já não precisa
-   * de entrar — que é o melhor desfecho possível para um botão de ajuda.
-   *
-   * O cartão é a superfície neutra, com borda, e a cor vem só das peças e do
-   * número. A alternativa que se recusou foi um painel escuro com dados a
-   * brilhar: a direção de arte não tem néon, e um cartão que grita ao lado dos
-   * modos rouba-lhes o olho para a única coisa da Home que não é jogar.
+   * **A regra inteira continua impressa**, em peças: um 3, um 4 e o 7 que eles
+   * fazem. É o jogo todo numa linha, e quem a percebe aqui já não precisa de
+   * entrar. Foi um cartão alto, com o título, um parágrafo e um botão; numa
+   * Home que passou a ter o desafio do dia, ocupava o espaço de um modo para a
+   * única coisa do ecrã que não é jogar. A faixa inteira é o botão.
    */
   private ajuda(opcoes: OpcoesHome): HTMLElement {
     const el = elemento("section", "home-ajuda");
-    el.setAttribute("aria-labelledby", "home-ajuda-titulo");
+    el.setAttribute("aria-label", "Como jogar");
 
-    const conta = elemento("p", "home-ajuda-conta");
+    const face = opcoes.modoFace ?? "pintas";
+    const conta = elemento("span", "home-ajuda-conta");
+    conta.setAttribute("aria-hidden", "true");
     conta.append(
-      pecaDeAmostra(3, opcoes.modoFace ?? "pintas"),
+      pecaDeAmostra(3, face),
       elemento("span", "home-ajuda-sinal", "+"),
-      pecaDeAmostra(4, opcoes.modoFace ?? "pintas"),
+      pecaDeAmostra(4, face),
       elemento("span", "home-ajuda-sinal", "="),
       elemento("span", "home-ajuda-sete", "7"),
     );
 
-    const titulo = elemento("h2", "home-ajuda-titulo", "Como jogar?");
-    titulo.id = "home-ajuda-titulo";
-
-    const b = botao("Ler as regras", "com-icone", opcoes.aoEscolherComoJogar);
-    b.prepend(iconeRegras());
-
-    el.append(
-      conta,
-      titulo,
-      elemento(
-        "p",
-        "home-ajuda-texto",
-        "Junta peças encostadas até somarem 7. Em meio minuto sabes tudo.",
-      ),
-      b,
+    const texto = elemento("span", "home-ajuda-texto");
+    texto.append(
+      elemento("span", "home-ajuda-titulo", "Como jogar?"),
+      elemento("span", "home-ajuda-legenda", "Junta peças encostadas até somarem 7."),
     );
+
+    const b = botao("", "home-ajuda-faixa", opcoes.aoEscolherComoJogar);
+    b.append(conta, texto, iconeSeguir());
+    el.appendChild(b);
 
     return el;
   }

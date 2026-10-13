@@ -65,6 +65,8 @@ import { criarPeca } from "./dice";
 import { botao, botaoRedondo, confirmar, elemento, reanimar } from "./dom";
 import { iconeReiniciar, iconeVoltar } from "./icones";
 import { JokerPicker } from "./JokerPicker";
+import type { DesafioNoEcra } from "./partilha";
+import { botaoPartilhar } from "./partilha";
 
 /**
  * Quanto tempo a queimadura fica à vista antes do painel de fim.
@@ -95,10 +97,19 @@ export interface OpcoesSurvival {
   readonly aoTerminar: (info: {
     readonly limpou: boolean;
     readonly tempoMs: number;
+    readonly linhas: number;
   }) => void;
   readonly aoSair: () => void;
   /** Recomeçar com outra seed. Sem isto, acabar é um beco. */
   readonly aoRecomecar: (seed: number) => void;
+  /**
+   * A corrida é o Desafio do Dia. Ver `DesafioNoEcra`.
+   *
+   * Muda duas coisas: **não há «Recomeçar» nem «Outra corrida»** — o desafio é
+   * esta seed, e trocá-la a meio era sair dele —, e o fim oferece partilhar e
+   * treinar a mesma corrida.
+   */
+  readonly desafio?: DesafioNoEcra;
 }
 
 export type { CorridaGuardada };
@@ -215,6 +226,7 @@ topo.append(sair, this.elRelogio);
     this.btRecomecar.prepend(iconeReiniciar());
 
     acoes.append(this.btPuxar, this.btRecomecar);
+    this.btRecomecar.hidden = opcoes.desafio !== undefined;
 
     rodape.append(acoes);
 
@@ -661,6 +673,7 @@ topo.append(sair, this.elRelogio);
     this.opcoes.aoTerminar({
       limpou: this.estado.limpo,
       tempoMs: this.decorridoMs(),
+      linhas: this.estado.linhasInjetadas,
     });
 
     this.pintarFim();
@@ -697,6 +710,10 @@ topo.append(sair, this.elRelogio);
     if (recorde) marca.append(elemento("span", "selo-recorde", "recorde"));
 
     const corpo = elemento("div", "popup-corpo");
+    const desafio = this.opcoes.desafio;
+    if (desafio !== undefined) {
+      corpo.appendChild(elemento("p", "popup-etiqueta", desafio.etiqueta));
+    }
     corpo.append(
       elemento(
         "h2",
@@ -714,6 +731,16 @@ topo.append(sair, this.elRelogio);
     );
 
     const acoes = elemento("div", "acoes");
+
+    if (desafio !== undefined) {
+      this.acoesDoDesafio(acoes, desafio);
+      corpo.appendChild(acoes);
+      this.elFim.replaceChildren(corpo);
+      if (typeof this.elFim.showModal === "function") this.elFim.showModal();
+      else this.elFim.open = true;
+      return;
+    }
+
     acoes.appendChild(
       botao("Outra corrida", "primario", () => {
         this.opcoes.aoRecomecar(novaSeed());
@@ -746,6 +773,29 @@ topo.append(sair, this.elRelogio);
     this.elFim.replaceChildren(corpo);
     if (typeof this.elFim.showModal === "function") this.elFim.showModal();
     else this.elFim.open = true;
+  }
+
+  /**
+   * O fim do Desafio do Dia: partilhar, se houver resultado oficial; treinar a
+   * mesma corrida; sair. Sem «Outra corrida»: uma seed sorteada já não era o
+   * desafio.
+   */
+  private acoesDoDesafio(acoes: HTMLElement, desafio: DesafioNoEcra): void {
+    const aoPartilhar = desafio.aoPartilhar;
+    if (aoPartilhar !== undefined) acoes.appendChild(botaoPartilhar(aoPartilhar, "primario com-icone"));
+
+    acoes.append(
+      botao(
+        "Treinar outra vez",
+        aoPartilhar === undefined ? "primario" : undefined,
+        () => {
+          this.opcoes.aoRecomecar(this.estado.seed);
+        },
+      ),
+      botao("Sair", undefined, () => {
+        this.opcoes.aoSair();
+      }),
+    );
   }
 
   /* ─── desenho ───────────────────────────────────────────────────────────── */

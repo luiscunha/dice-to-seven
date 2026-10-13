@@ -1075,6 +1075,134 @@ repõe as durações de antes.
 
 ---
 
+## O Desafio do Dia
+
+O jogo ficou exigente, e faltava-lhe uma razão para voltar amanhã. O plano §6.4
+previa um puzzle diário; o que entrou primeiro foram **os dois modos de corrida
+do dia**, porque não precisam de gerar nada — o Survival e o Contra-Relógio já
+eram determinísticos na seed.
+
+**Um desafio por dia, à vez** (`modoDoDia`): Puzzle, Contra-Relógio, Survival, e
+outra vez o Puzzle — o #1, a 12 de outubro de 2026, é um Puzzle. Foram três por
+dia, um de cada modo, e em playtest o desafio passou a ser uma lista de tarefas
+que tirava o foco ao resto do jogo. Com um só, é uma coisa a fazer hoje, e a
+rotação é o que faz amanhã ser diferente. A sequência conta os dias com **o
+desafio desse dia** feito; o registo continua por modo dentro de cada dia, e os
+outros modos de um dia de quando havia três ficam guardados sem contar.
+
+- **A seed sai da data**, no fuso de quem joga (`seedDoDia`, FNV-1a sobre
+  `dicetoseven|AAAA-MM-DD|modo`): no mesmo dia, toda a gente recebe as mesmas
+  linhas, os mesmos tabuleiros e as mesmas bombas. O Contra-Relógio passou a
+  aceitar uma `seed`; sem ela, continua a sair do relógio. O filtro de largura
+  dos níveis é uma constante, portanto o desafio sai igual em qualquer ecrã. Um
+  pack diferente — outra versão da aplicação — dá outro desafio no mesmo dia.
+- **Conta a primeira tentativa**, e marca-se ao **entrar**: uma corrida que
+  corria mal e se abandonava voltava a ser a primeira. Um Contra-Relógio
+  abandonado fica «Interrompido»; o Survival guarda-se a meio numa chave
+  própria (`dicetoseven.desafio.survival`, à parte da corrida normal) e
+  retoma-se. Depois da tentativa oficial, jogar é **treino** — os mesmos
+  tabuleiros, sem gravar.
+- **O Contra-Relógio oficial espera por um «Começar»**, e é aí que a tentativa
+  se marca, e não ao entrar. Marcada ao entrar, abrir o desafio para ver o que
+  era e sair pela seta gravava 0 pontos como resultado do dia, e a corrida a
+  sério, a seguir, já era treino — foi o primeiro defeito do desafio em
+  playtest. O painel de arranque fica no sítio do de fim, com o tabuleiro
+  escondido e o relógio parado: diz quanto tempo há e que só esta tentativa
+  conta. «Voltar» não gasta nada; depois do «Começar», sair pergunta, e diz que
+  é esta a que conta. A bomba do primeiro tabuleiro só se sorteia no arranque,
+  portanto o treino (que arranca logo, sem painel) gasta a seed pela mesma
+  ordem e continua a ser a mesma corrida.
+- **Regras iguais para todos**: o Contra-Relógio do Dia arranca sempre com 60 s,
+  seja qual for a definição. No Survival do Dia não há «Recomeçar» — trocar de
+  seed a meio era sair do desafio.
+- **Os recordes normais ficam de fora**: o desafio tem o seu registo
+  (`dicetoseven.desafio`, os últimos três anos), e a sequência de dias seguidos
+  com o desafio feito. Hoje por jogar não parte a sequência.
+- **Partilhar sem servidor**: um texto curto com o número, o dia, o resultado
+  e a sequência, pela folha de partilha do sistema quando existe e copiado
+  quando não (o WebView do Android não a tem). Uma tabela de classificação
+  precisa de backend, e fica para depois.
+- **Um cartão na Home, e um ecrã próprio.** A primeira versão punha o desafio
+  inteiro na Home — o bilhete e a lista dos desafios —, e a Home ficou a ser um
+  ecrã sobre o desafio do dia, com os modos de jogo encostados por baixo. Ficou
+  assim:
+  - **Na Home, um cartão compacto**, que se toca inteiro: a faixa com as seis
+    faces, «Desafio do dia», a sequência 🔥, e o desafio de hoje — o ícone na
+    cor do modo, o nome, o número e a data — com o estado: «Jogar»,
+    «Continuar», o resultado, ou «Interrompido».
+  - **O ecrã do desafio** (`#/desafio`, `DesafioScreen`) é **um trilho**,
+    como num jogo de tabuleiro. Esteve como um calendário do mês: mostrava
+    tudo e não dizia nada — trinta casas iguais, e hoje uma entre elas. O
+    trilho diz que se está a avançar:
+    - Em cima, **a faixa da série** («🔥 Série: 5 dias seguidos!») e o desafio
+      de hoje, com o número e a data.
+    - **O caminho sobe.** Os dias são casas redondas e grossas, com a sombra
+      dura por baixo, numa onda presa ao número do dia (uma casa não muda de
+      sítio quando muda o dia): **os dois dias seguintes** em cima, em
+      cinzento e fechados a cadeado — com hoje, são a rotação inteira; **hoje**
+      a meio, maior, com «Hoje» escrito e um aro aceso que respira; e **pelo
+      menos as duas últimas semanas** em baixo, a começar num dia 1 e nunca
+      antes do #1 — feitas com o visto na cor do modo, perdidas como casa
+      vazia. Por baixo de cada casa, a data e o modo; a onda tem 60 px de
+      amplitude, o que deixa o rótulo mais comprido caber num ecrã de 375.
+    - **Os meses para trás.** Onde o mês muda, uma placa no meio da estrada,
+      com o nome do mês que começa por baixo dela e as contas dele
+      («Novembro de 2026 · 29 de 30 feitos»); o mês de hoje não leva placa.
+      No fundo, **«Ver outubro de 2026»** traz o mês anterior inteiro
+      (`diasDoMes`), por baixo, sem mexer no que está à vista, e põe o foco na
+      primeira casa nova. Repete-se até ao mês do #1, onde o trilho acaba na
+      partida — «🏁 O primeiro desafio: 12 de outubro de 2026» —, ou até ao
+      primeiro mês que o armazenamento ainda guarda inteiro
+      (`primeiroMesDoTrilho`): mais para trás, um dia feito que já se apagou
+      aparecia como perdido. O registo passou a guardar três anos
+      (`DIAS_GUARDADOS`, 1100 dias — pouco mais de cem quilobytes).
+    - **A estrada** é um SVG desenhado depois de as casas estarem no sítio,
+      pelos centros que o browser mede: curvas que saem e chegam na vertical,
+      na cor de destaque de hoje para trás e em cinzento de hoje para a
+      frente, com um tracejado claro por cima.
+    - **O balão** abre por cima da casa selecionada — hoje, ao entrar — e
+      vive no fluxo da página: empurra as casas de baixo em vez de tapar a de
+      amanhã. Diz quando é e em que pé está («Hoje · por jogar»), o que a série
+      ganha («🔥 +1», onde a maqueta tinha pontos que o jogo não tem), o modo
+      com o que é, e a ação: jogar, continuar, ou treinar e partilhar depois
+      da tentativa que conta. Tocar noutra casa leva-lhe o balão, com o
+      resultado, o que ficou por jogar, ou quando abre; a casa tocada não sai
+      do sítio, porque o rolo desliza o mesmo que o balão a empurra.
+    - **Só se joga o de hoje.** Um endereço com outro modo
+      (`#/desafio/survival` num dia de Puzzle) volta ao trilho. Sair de um
+      desafio volta a este ecrã, e daqui à Home.
+- **O resto da Home ficou como era**: os modos com o rótulo «Modos de jogo» e os
+  mosaicos de pé, e as regras numa faixa — a conta 3 + 4 = 7 em peças, «Como
+  jogar?», e a seta. **Quem ainda não fez um nível vê os modos primeiro**: a
+  campanha é a porta de entrada. A 375×812 cabe tudo; num ecrã mais baixo a
+  Home desliza em vez de encolher os cartões.
+
+**O Puzzle do Dia veio a seguir**, e abre a rotação. Nos modos de
+corrida, depois do primeiro tabuleiro nada é ao calhas — o Contra-Relógio dá a
+toda a gente os mesmos tabuleiros pela mesma ordem, e o Survival as mesmas
+linhas —, mas o que se compara é o que cada um fez com isso. Faltava o desafio
+que se percebe sem explicação, e que qualquer pessoa consegue jogar: **um
+tabuleiro fixo, o mesmo para toda a gente**.
+
+- Sai dos **níveis que a campanha reservou**: os das bandas com joker que a
+  intercalação não usa (`meio-joker` e `denso`), que nunca aparecem na campanha
+  — 34 ao todo. `escolherDoDia` baralha-os uma vez, com uma seed fixa, e cada
+  Puzzle do Dia leva o seguinte. Com um Puzzle a cada três dias, **ao fim de 102
+  dias recomeça** (a 22 de janeiro de 2027): antes disso é preciso
+  uma banda própria no pipeline.
+- Todos têm joker, e o tutorial do joker abre-se por cima da primeira vez, como
+  na campanha.
+- **A tentativa oficial fica aberta até ser resolvida**: não há relógio contra
+  ninguém, e sair para pensar não é desistir. Conta o tempo e o selo da
+  resolução (perfeito, limpo ou concluído), e partilha-se como
+  `🧩 Puzzle: 1:23.4 · ★ perfeito`. A brecha conhecida: sair e voltar recomeça
+  o tabuleiro e o relógio, portanto pode-se estudar o tabuleiro antes de o jogar
+  a contar. Sem tabela de classificação, não vale a pena fechá-la.
+
+O desafio #1 é o de 12 de outubro de 2026 (`EPOCA_DESAFIO`).
+
+---
+
 ## Decisões de arquitetura que não se leem no código
 
 - **A campanha não tem pontuação, tem um recorde de tempo.** A pontuação era
