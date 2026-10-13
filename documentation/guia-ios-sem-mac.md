@@ -34,9 +34,20 @@ o número do build, e fica guardado 14 dias.
 
 ### Preparar, uma vez
 
-1. **iTunes e iCloud da página da Apple**, não os da Microsoft Store. O
+1. **iTunes e iCloud nas versões "web"**, não os da Microsoft Store. O
    Sideloadly fala com o iPhone pelos controladores deles, e os da Store não
    servem. Se já tens os da Store, desinstala-os primeiro.
+
+   Não se chega lá pelo site normal: no Windows, `apple.com/itunes` manda para
+   a Microsoft Store. Estes são os instaladores diretos, nos servidores da
+   Apple — os mesmos para que o site do Sideloadly aponta:
+
+   - iTunes, 64 bits: <https://www.apple.com/itunes/download/win64>
+   - iCloud: <https://updates.cdn-apple.com/2020/windows/001-39935-20200911-1A70AA56-F448-11EA-8CC0-99D41950005E/iCloudSetup.exe>
+
+   O iCloud é de 2020 de propósito: é a última versão que a Apple pôs fora da
+   Store. Se o Windows sugerir a aplicação **Dispositivos Apple** quando ligares
+   o iPhone, recusa: substitui a parte do iTunes que fala com o telefone.
 2. **O Sideloadly**, de <https://sideloadly.io>.
 3. Liga o iPhone por USB e aceita **Confiar neste computador**.
 
