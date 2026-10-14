@@ -57,6 +57,7 @@ import {
   iconeCalendario,
   iconeCronometro,
   iconeDefinicoes,
+  iconeMedalha,
   iconePuzzles,
   iconeSeguir,
   iconeSurvival,
@@ -89,6 +90,15 @@ export interface ResumoDoDesafio {
   readonly aoAbrir: () => void;
 }
 
+/** A entrada das medalhas, no rodapé. */
+export interface ResumoDasMedalhas {
+  readonly ganhas: number;
+  readonly total: number;
+  /** Há medalhas que a página ainda não mostrou: o ponto. */
+  readonly novas: boolean;
+  readonly aoAbrir: () => void;
+}
+
 export interface OpcoesHome {
   readonly aoEscolherNiveis: () => void;
   readonly aoEscolherTempo: () => void;
@@ -118,6 +128,8 @@ export interface OpcoesHome {
   readonly modoFace?: ModoFace;
   /** O Desafio do Dia. Sem isto, o cartão não aparece. */
   readonly desafio?: ResumoDoDesafio;
+  /** As medalhas. Sem isto, a entrada não aparece. */
+  readonly medalhas?: ResumoDasMedalhas;
 }
 
 export class HomeScreen {
@@ -249,7 +261,32 @@ export class HomeScreen {
   private rodape(opcoes: OpcoesHome): HTMLElement {
     const el = elemento("footer", "home-rodape");
     el.appendChild(this.jogador(opcoes));
+    if (opcoes.medalhas !== undefined) el.appendChild(this.medalhas(opcoes.medalhas));
     return el;
+  }
+
+  /**
+   * As medalhas, ao lado de quem joga: são dele, e é a mesma pastilha.
+   *
+   * No rodapé e não entre os modos, porque não se jogam: são o que ficou de
+   * jogar. Ao lado do nome lêem-se como o que a pessoa já tem, que é o que são.
+   *
+   * O número é «ganhas/total», e o ponto diz que há medalhas novas por ver — até
+   * a página abrir. Um ponto e não um número de novas: a notícia é que há
+   * alguma coisa lá dentro, e quantas descobre-se a entrar.
+   */
+  private medalhas(m: ResumoDasMedalhas): HTMLButtonElement {
+    const b = botao("", "home-medalhas", m.aoAbrir);
+    if (m.novas) b.dataset["novas"] = "sim";
+
+    const conta = `${String(m.ganhas)}/${String(m.total)}`;
+    b.append(iconeMedalha(), elemento("span", "home-medalhas-conta", conta));
+    b.setAttribute(
+      "aria-label",
+      `Medalhas: ${String(m.ganhas)} de ${String(m.total)}${m.novas ? ", com novas por ver" : ""}`,
+    );
+
+    return b;
   }
 
   /**

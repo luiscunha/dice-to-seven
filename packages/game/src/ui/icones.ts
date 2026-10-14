@@ -133,6 +133,18 @@ export const iconePartilhar = (): SVGElement =>
 export const iconeCalendario = (): SVGElement =>
   icone("icone-calendario", ["M6 5.5h12a1.5 1.5 0 0 1 1.5 1.5v11.5A1.5 1.5 0 0 1 18 20H6a1.5 1.5 0 0 1-1.5-1.5V7A1.5 1.5 0 0 1 6 5.5z", "M4.5 10h15", "M8.5 3.5v4", "M15.5 3.5v4", "M11 14.5h2"]);
 
+/**
+ * Uma medalha: as duas fitas em V e o disco pendurado nelas. As fitas são o que
+ * a separa de um círculo qualquer a 18px.
+ */
+export const iconeMedalha = (): SVGElement =>
+  icone("icone-medalha", [
+    "M8.5 3.5 11 10",
+    "M15.5 3.5 13 10",
+    "M7 15.5a5 5 0 1 0 10 0a5 5 0 1 0-10 0",
+    "M12 13.6v3.8",
+  ]);
+
 /** Fechar uma caixa. */
 export const iconeFechar = (): SVGElement =>
   icone("icone-fechar", ["M6.5 6.5l11 11", "M17.5 6.5l-11 11"]);

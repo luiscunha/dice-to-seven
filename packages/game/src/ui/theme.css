@@ -202,6 +202,35 @@
   --chave-veu: rgb(201 146 0 / 0.18);
   --chave-aro: rgb(176 122 0 / 0.55);
   /*
+   * ─── As medalhas ───────────────────────────────────────────────────────
+   *
+   * O cartão ganho é menta — a rampa das faces, clareada —, e o por ganhar é o
+   * cinzento das superfícies, que é o que diz «ainda não» sem dizer «erro».
+   * As premium têm o ouro: a moldura, o louro e a chama. É o único sítio do
+   * jogo onde o dourado é prémio e não chave, e é da mesma família de tons
+   * que o das chaves para os dois não se lerem como duas paletas.
+   *
+   * O dado do emblema é a peça vista de lado: a face de cima clara, as duas de
+   * lado em dois tons de sombra, e as pintas da cor da tinta.
+   */
+  --medalha-fundo: #d3eee3;
+  --medalha-fundo-bloqueada: #e3e8e6;
+  --medalha-premium-1: #c9efdf;
+  --medalha-premium-2: #7fd0b6;
+  --medalha-pastilha: #164e47;
+  --medalha-pastilha-tinta: #f1f2f0;
+  --medalha-pastilha-bloqueada: #cfd7d4;
+  --ouro: #d9a514;
+  --ouro-claro: #f6d673;
+  --ouro-escuro: #9c7600;
+  --ouro-veu: rgb(201 146 0 / 0.35);
+  --dado-topo: #ffffff;
+  --dado-esquerda: #e2e8e6;
+  --dado-direita: #c7d2cf;
+  --dado-aresta: rgb(18 63 58 / 0.22);
+  --dado-pinta: #123f3a;
+  --emblema-traco: #123f3a;
+  /*
    * O laser do teto, no Survival: o núcleo do feixe e a passagem para o
    * laranja. Iguais nos dois temas — é luz, e a luz não muda com o fundo; o
    * que muda é o `--fogo` à volta, que já tem a sua versão escura.
@@ -383,6 +412,23 @@
     --fogo-veu-meio: rgb(255 106 69 / 0.045);
     --chave-veu: rgb(255 199 64 / 0.16);
     --chave-aro: rgb(255 199 64 / 0.5);
+    /* O cartão ganho escurece para um verde fundo; o dado continua claro. */
+    --medalha-fundo: #1d4038;
+    --medalha-fundo-bloqueada: #1b2e29;
+    --medalha-premium-1: #24574b;
+    --medalha-premium-2: #163a32;
+    --medalha-pastilha: #3ebb94;
+    --medalha-pastilha-tinta: #0d1917;
+    --medalha-pastilha-bloqueada: #2b403a;
+    --ouro: #f0bf3a;
+    --ouro-claro: #ffe08a;
+    --ouro-escuro: #c99a1c;
+    --ouro-veu: rgb(255 199 64 / 0.3);
+    --dado-topo: #eef4f2;
+    --dado-esquerda: #c3d0cc;
+    --dado-direita: #9fb1ac;
+    --dado-aresta: rgb(13 25 23 / 0.3);
+    --emblema-traco: #e3edea;
     --sombra: 0 1px 2px rgb(0 0 0 / 0.5), 0 8px 22px rgb(0 0 0 / 0.35);
     /* No escuro a sombra precisa de ser mais funda para se ver de todo. */
     --sombra-cartao: 0 1px 2px rgb(0 0 0 / 0.4), 0 4px 12px rgb(0 0 0 / 0.3);
@@ -425,6 +471,22 @@
   --fogo-veu-meio: rgb(255 106 69 / 0.045);
   --chave-veu: rgb(255 199 64 / 0.16);
   --chave-aro: rgb(255 199 64 / 0.5);
+  --medalha-fundo: #1d4038;
+  --medalha-fundo-bloqueada: #1b2e29;
+  --medalha-premium-1: #24574b;
+  --medalha-premium-2: #163a32;
+  --medalha-pastilha: #3ebb94;
+  --medalha-pastilha-tinta: #0d1917;
+  --medalha-pastilha-bloqueada: #2b403a;
+  --ouro: #f0bf3a;
+  --ouro-claro: #ffe08a;
+  --ouro-escuro: #c99a1c;
+  --ouro-veu: rgb(255 199 64 / 0.3);
+  --dado-topo: #eef4f2;
+  --dado-esquerda: #c3d0cc;
+  --dado-direita: #9fb1ac;
+  --dado-aresta: rgb(13 25 23 / 0.3);
+  --emblema-traco: #e3edea;
   --sombra: 0 1px 2px rgb(0 0 0 / 0.5), 0 8px 22px rgb(0 0 0 / 0.35);
   /* No escuro a sombra precisa de ser mais funda para se ver de todo. */
   --sombra-cartao: 0 1px 2px rgb(0 0 0 / 0.4), 0 4px 12px rgb(0 0 0 / 0.3);

@@ -39,6 +39,7 @@ export type Rota =
    */
   | { readonly ecra: "desafio"; readonly modo?: ModoDoDesafio; readonly data?: string }
   | { readonly ecra: "definicoes" }
+  | { readonly ecra: "medalhas" }
   /**
    * As regras têm endereço próprio, como tudo o resto — e aqui o endereço faz
    * mais do que arrumação: `#/como-jogar` é o link que se manda a quem perguntou
@@ -71,6 +72,8 @@ export function paraHash(r: Rota): string {
     }
     case "definicoes":
       return "#/definicoes";
+    case "medalhas":
+      return "#/medalhas";
     case "regras":
       return "#/como-jogar";
   }
@@ -94,6 +97,7 @@ export function deHash(hash: string): Rota {
     return { ecra: "tempo" };
   }
   if (primeira === "definicoes") return { ecra: "definicoes" };
+  if (primeira === "medalhas") return { ecra: "medalhas" };
   if (primeira === "como-jogar" || primeira === "regras") {
     return { ecra: "regras" };
   }
@@ -233,6 +237,7 @@ function profundidade(r: Rota): number {
     case "tempo":
     case "survival":
     case "definicoes":
+    case "medalhas":
     case "regras":
       return 1;
 

@@ -377,6 +377,45 @@ export function sequencia(d: Desafios, hoje: string): number {
   return ultimo === undefined ? 0 : lugarNaSequencia(d, ultimo);
 }
 
+/**
+ * A maior sequência que o histórico guarda — a de hoje, ou uma que já partiu.
+ *
+ * Só se conta a partir do último dia de cada sequência, que é onde ela é maior:
+ * contar a partir de todos os dias percorria cada sequência uma vez por dia
+ * dela, e três anos de dias seguidos davam um milhão de passos.
+ */
+export function maiorSequencia(d: Desafios): number {
+  let maior = 0;
+  for (const data of Object.keys(d.dias)) {
+    if (contaParaASequencia(d, somarDias(data, 1))) continue;
+    maior = Math.max(maior, lugarNaSequencia(d, data));
+  }
+  return maior;
+}
+
+/**
+ * O mês ficou completo: o desafio de todos os dias dele foi feito — no dia, ou
+ * depois, com uma chave. É a ★ da linha dos meses, no trilho
+ * (`DesafioScreen`), e as duas têm de dizer o mesmo.
+ *
+ * Só um mês que já acabou: o de hoje ainda tem dias por vir.
+ */
+export function mesCompleto(d: Desafios, mes: string, hoje: string): boolean {
+  if (mes >= mesDe(hoje)) return false;
+
+  const dias = diasDoMes(mes);
+  return (
+    dias.length > 0 &&
+    dias.every((dia) => estadoDoModo(d, dia, modoDoDia(dia))?.estado === "feito")
+  );
+}
+
+/** Quantos meses do histórico ficaram completos — ver `mesCompleto`. */
+export function mesesCompletos(d: Desafios, hoje: string): number {
+  const meses = new Set(Object.keys(d.dias).map(mesDe));
+  return [...meses].filter((mes) => mesCompleto(d, mes, hoje)).length;
+}
+
 /* ─── Guardar e ler ───────────────────────────────────────────────────────── */
 
 export function guardarDesafios(storage: ProfileStorage, d: Desafios): void {

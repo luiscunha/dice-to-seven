@@ -51,6 +51,8 @@ import { anunciar } from "./anuncio";
 import { BoardView } from "./BoardView";
 import { botao, botaoRedondo, confirmar, elemento, reanimar } from "./dom";
 import { iconeCadeado, iconeReiniciar, iconeSaltar, iconeVoltar } from "./icones";
+import type { MedalhaGanha } from "./medalhaNova";
+import { linhaDeMedalhas } from "./medalhaNova";
 import type { DesafioNoEcra } from "./partilha";
 import { botaoPartilhar } from "./partilha";
 
@@ -87,11 +89,12 @@ export interface OpcoesTimeAttack {
    * corrida faz-se só com a escada com garantia, como antes.
    */
   readonly livres?: readonly Level[];
+  /** A corrida acabou. Devolve as medalhas que ela deu, para o painel de fim. */
   readonly aoTerminar: (info: {
     readonly pontos: number;
     readonly tabuleiros: number;
     readonly saltados: number;
-  }) => void;
+  }) => readonly MedalhaGanha[] | void;
   readonly aoSair: () => void;
   /**
    * Outra corrida, a partir do painel de fim. Sem isto o botão não aparece, e o
@@ -643,13 +646,14 @@ export class TimeAttackScreen {
     this.pintarBomba();
     this.pintarSalto();
 
-    this.opcoes.aoTerminar({
-      pontos: this.estado.score,
-      tabuleiros: this.estado.boardsCleared,
-      saltados: this.estado.saltados,
-    });
+    const medalhas =
+      this.opcoes.aoTerminar({
+        pontos: this.estado.score,
+        tabuleiros: this.estado.boardsCleared,
+        saltados: this.estado.saltados,
+      }) ?? [];
 
-    this.pintarFim();
+    this.pintarFim(medalhas);
   }
 
   /* ─── desenho ───────────────────────────────────────────────────────────── */
@@ -807,7 +811,7 @@ export class TimeAttackScreen {
     anunciar(this.palco, caixas, texto, variante);
   }
 
-  private pintarFim(): void {
+  private pintarFim(medalhas: readonly MedalhaGanha[]): void {
     this.elFim.hidden = false;
     this.palco.classList.toggle("terminado", true);
     this.raiz.dataset["estado"] = "fim";
@@ -848,6 +852,8 @@ export class TimeAttackScreen {
      * No desafio, o selo é o nome do desafio: o recorde pessoal não é a
      * comparação que interessa num dia em que toda a gente jogou o mesmo.
      */
+    const linha = linhaDeMedalhas(medalhas);
+
     this.elFim.replaceChildren(
       elemento(
         "div",
@@ -856,6 +862,7 @@ export class TimeAttackScreen {
       ),
       elemento("div", "fim-tempo", `${String(this.estado.score)} pontos`),
       elemento("div", "detalhe", detalheDoFim(this.estado)),
+      ...(linha === undefined ? [] : [linha]),
       acoes,
     );
 

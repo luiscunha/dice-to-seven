@@ -1468,7 +1468,9 @@ body::before {
  */
 .home-rodape {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
+  gap: 8px;
   min-height: var(--alvo);
   align-items: center;
 }
@@ -4809,6 +4811,435 @@ body::before {
 /* Quatro faixas em vez de três: a fila entra entre o topo e o tabuleiro. */
 .ecra.survival {
   grid-template-rows: auto auto 1fr auto;
+}
+
+/* ─── Medalhas ────────────────────────────────────────────────────────────── */
+
+/*
+ * ── A entrada, na Home ──
+ *
+ * A mesma pastilha do jogador, ao lado dela: são as medalhas dele. O ponto é o
+ * vermelho do fogo, que é a única cor do jogo que chama sem ser uma face — e
+ * diz «há aqui uma coisa nova», não «há aqui um erro».
+ */
+.home-medalhas {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: var(--alvo);
+  padding: 4px 14px 4px 10px;
+  border: 0;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.home-medalhas .icone {
+  width: 20px;
+  height: 20px;
+  color: var(--ouro-escuro);
+}
+
+.home-medalhas[data-novas="sim"]::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--fogo);
+  box-shadow: 0 0 0 2px var(--ground);
+}
+
+/*
+ * ── A linha do painel de fim ──
+ *
+ * Uma linha e não um cartão: o painel já tem o resultado como protagonista, e
+ * a medalha é a notícia por baixo dele.
+ */
+.fim-medalhas {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  margin: 2px 0 0;
+  font-size: 14px;
+  color: var(--ink);
+  text-align: center;
+}
+
+.fim-medalhas .icone {
+  width: 20px;
+  height: 20px;
+  color: var(--accent);
+}
+
+.fim-medalhas[data-premium="sim"] .icone {
+  color: var(--ouro-escuro);
+}
+
+/*
+ * ── As abas ──
+ *
+ * Um interruptor de duas posições, à largura toda: a aba ativa é a pastilha
+ * cheia na cor de destaque. A estrela das premium fica sempre dourada, nas duas
+ * posições — é o que diz onde está o ouro antes de se tocar.
+ */
+.medalhas-abas {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 14px;
+  border-radius: 999px;
+  background: var(--surface-alt);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.medalhas-aba {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: var(--alvo);
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-muted);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color var(--t-ui) linear,
+    color var(--t-ui) linear;
+}
+
+.medalhas-aba[aria-selected="true"] {
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: var(--sombra-cartao);
+}
+
+.medalhas-aba-estrela {
+  color: var(--ouro);
+}
+
+.medalhas-aba-conta {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.75;
+}
+
+/* ── A grelha ── */
+
+.medalhas-grelha {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 16px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (min-width: 640px) {
+  .medalhas-grelha {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/*
+ * O cartão: o emblema, o nome, a pastilha. Por ganhar é cinzento e esmorecido,
+ * com o cadeado; ganho, é menta e a cores. O premium ganho troca a menta por um
+ * degradê mais fundo e leva a moldura dupla de ouro — e o premium por ganhar
+ * já tem um fio dourado, para se saber o que se está a perseguir.
+ */
+.medalha {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 10px 14px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--medalha-fundo-bloqueada);
+  color: var(--ink);
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+}
+
+.medalha:active {
+  translate: 0 1px;
+}
+
+.medalha[data-ganha="sim"] {
+  background: var(--medalha-fundo);
+  box-shadow: var(--sombra-cartao);
+}
+
+.medalha[data-tipo="premium"] {
+  box-shadow: inset 0 0 0 2px var(--ouro-veu);
+}
+
+.medalha[data-tipo="premium"][data-ganha="sim"] {
+  background: linear-gradient(165deg, var(--medalha-premium-1), var(--medalha-premium-2));
+  box-shadow:
+    inset 0 0 0 3px var(--ouro),
+    inset 0 0 0 5px var(--ouro-claro),
+    var(--sombra-cartao);
+}
+
+/*
+ * O lugar do cadeado reserva-se em todos os cartões, ganhos ou não: assim os
+ * emblemas ficam à mesma altura em toda a grelha, e o cadeado nunca pisa a coroa
+ * do cronómetro nem a ponta da chama.
+ */
+.medalha-figura {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  padding-top: 16px;
+}
+
+.medalha-cadeado {
+  position: absolute;
+  top: -2px;
+  left: 50%;
+  translate: -50% 0;
+  z-index: 1;
+  display: grid;
+  color: var(--ink);
+}
+
+.medalha-cadeado .icone {
+  width: 18px;
+  height: 18px;
+}
+
+.emblema {
+  display: block;
+  width: 100%;
+  max-width: 132px;
+  height: auto;
+  aspect-ratio: 120 / 96;
+  overflow: visible;
+}
+
+.medalha[data-ganha="nao"] .emblema,
+.medalha-pormenor[data-ganha="nao"] .emblema {
+  filter: grayscale(1);
+  opacity: 0.42;
+}
+
+.medalha-nome {
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 1.2;
+}
+
+.medalha-pastilha {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  padding: 3px 12px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+  background: var(--medalha-pastilha-bloqueada);
+  color: var(--ink-muted);
+}
+
+.medalha[data-ganha="sim"] .medalha-pastilha {
+  background: var(--medalha-pastilha);
+  color: var(--medalha-pastilha-tinta);
+}
+
+.medalha-pastilha .icone {
+  width: 14px;
+  height: 14px;
+  stroke-width: 3;
+}
+
+.medalha-pastilha-estrela {
+  color: var(--ouro-claro);
+}
+
+/* «Nova»: até a página abrir. A cor de destaque, no canto, sem tapar nada. */
+.medalha-nova {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+/* ── O pormenor ── */
+
+.medalha-pormenor {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+}
+
+.medalha-pormenor .emblema {
+  max-width: 150px;
+}
+
+.medalha-pormenor-estado {
+  margin: 0;
+  font-weight: 600;
+}
+
+/* ── O emblema ── */
+
+.emblema-dado-contorno {
+  fill: var(--dado-esquerda);
+  stroke: var(--dado-esquerda);
+  stroke-width: 7;
+  stroke-linejoin: round;
+}
+
+.emblema-dado-topo {
+  fill: var(--dado-topo);
+}
+
+.emblema-dado-esquerda {
+  fill: var(--dado-esquerda);
+}
+
+.emblema-dado-direita {
+  fill: var(--dado-direita);
+}
+
+.emblema-dado-aresta {
+  fill: none;
+  stroke: var(--dado-aresta);
+  stroke-width: 1.2;
+  stroke-linejoin: round;
+}
+
+.emblema-pinta,
+.emblema-marca {
+  fill: var(--dado-pinta);
+}
+
+.emblema-marca {
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.emblema-estrela {
+  fill: var(--ouro);
+  stroke: var(--ouro-escuro);
+  stroke-width: 1;
+  stroke-linejoin: round;
+}
+
+.emblema-relogio-mostrador,
+.emblema-calendario-folha {
+  fill: var(--dado-topo);
+  stroke: var(--emblema-traco);
+  stroke-width: 6;
+}
+
+.emblema-relogio-coroa,
+.emblema-calendario-argola {
+  fill: var(--emblema-traco);
+}
+
+.emblema-relogio-botao,
+.emblema-relogio-traco {
+  fill: none;
+  stroke: var(--emblema-traco);
+  stroke-linecap: round;
+}
+
+.emblema-relogio-botao {
+  stroke-width: 6;
+}
+
+.emblema-relogio-traco {
+  stroke-width: 3;
+}
+
+.emblema-calendario-faixa {
+  fill: var(--accent);
+}
+
+.emblema-poco-fundo {
+  fill: var(--dado-topo);
+}
+
+.emblema-poco-parede {
+  fill: none;
+  stroke: var(--emblema-traco);
+  stroke-width: 6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.emblema-peca.face-1 { fill: var(--face-1); }
+.emblema-peca.face-2 { fill: var(--face-2); }
+.emblema-peca.face-3 { fill: var(--face-3); }
+.emblema-peca.face-4 { fill: var(--face-4); }
+.emblema-peca.face-5 { fill: var(--face-5); }
+.emblema-peca.face-6 { fill: var(--face-6); }
+
+/* A chama do desafio é o fogo da sequência; nas premium, ouro. */
+.emblema-chama-fora {
+  fill: var(--fogo);
+}
+
+.emblema-chama-dentro {
+  fill: var(--fogo-quente);
+}
+
+[data-tipo="premium"] .emblema-chama-fora {
+  fill: var(--ouro);
+}
+
+[data-tipo="premium"] .emblema-chama-dentro {
+  fill: var(--ouro-claro);
+}
+
+.emblema-folha {
+  fill: var(--accent);
+}
+
+.emblema-louro-haste {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+}
+
+[data-tipo="premium"] .emblema-folha {
+  fill: var(--ouro);
+}
+
+[data-tipo="premium"] .emblema-louro-haste {
+  stroke: var(--ouro);
 }
 
 /* ─── Home num ecrã curto ─────────────────────────────────────────────────── */

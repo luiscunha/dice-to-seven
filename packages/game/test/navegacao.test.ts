@@ -55,6 +55,7 @@ describe("rotas", () => {
     { ecra: "desafio", modo: "survival" },
     { ecra: "desafio", modo: "tempo", data: "2026-10-13" },
     { ecra: "definicoes" },
+    { ecra: "medalhas" },
     { ecra: "regras" },
   ];
 

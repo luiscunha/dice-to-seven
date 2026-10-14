@@ -71,6 +71,16 @@ import {
   seedDoDia,
   sequencia,
 } from "./session/desafio";
+import type { RegistoDeMedalhas } from "./session/medalhas";
+import {
+  MEDALHAS,
+  SEM_MEDALHAS,
+  avaliar,
+  contarGanhas,
+  guardarMedalhas,
+  lerMedalhas,
+  marcarVistas,
+} from "./session/medalhas";
 import { mostraSomaDasFaces } from "./session/tutorial";
 import type { CapituloNaLista } from "./ui/CapitulosScreen";
 import { CapitulosScreen } from "./ui/CapitulosScreen";
@@ -87,6 +97,8 @@ import { DesafioScreen } from "./ui/DesafioScreen";
 import type { ResumoDoDesafio } from "./ui/HomeScreen";
 import { HomeScreen } from "./ui/HomeScreen";
 import { JokerTutorial } from "./ui/JokerTutorial";
+import type { MedalhaGanha } from "./ui/medalhaNova";
+import { MedalhasScreen } from "./ui/MedalhasScreen";
 import { NiveisScreen } from "./ui/NiveisScreen";
 import type { DesafioNoEcra, DesfechoDaPartilha } from "./ui/partilha";
 import { dataCurta, partilhar, textoDoDesafio } from "./ui/partilha";
@@ -242,6 +254,40 @@ const guardarPreferencias = (): void => {
   if (armazenamento !== undefined) saveSettings(armazenamento, preferencias);
 };
 
+/*
+ * ── As medalhas ──
+ *
+ * Deduzem-se do perfil e dos desafios (`session/medalhas.ts`); o registo guarda
+ * só as que já se ganharam, e quando. Avalia-se ao arrancar — é aí que chegam as
+ * retroativas, que ficam só com o ponto na Home — e no fim de cada partida, que
+ * as anuncia no painel.
+ */
+let medalhas: RegistoDeMedalhas = SEM_MEDALHAS;
+
+const guardarAsMedalhas = (): void => {
+  if (armazenamento !== undefined) guardarMedalhas(armazenamento, medalhas);
+};
+
+const contextoDasMedalhas = (): Parameters<typeof avaliar>[1] => ({
+  perfil,
+  desafios,
+  capitulos: campanha.map((c) => ({ id: c.capitulo.id, niveis: c.niveis })),
+  hoje: hoje(),
+});
+
+/**
+ * Marca as medalhas que o estado de agora já merece, e devolve as que são
+ * novas. Os ecrãs de jogo devolvem-nas do `aoTerminar`, para o painel de fim.
+ */
+function avaliarMedalhas(): readonly MedalhaGanha[] {
+  const { registo, novas } = avaliar(medalhas, contextoDasMedalhas());
+  if (registo !== medalhas) {
+    medalhas = registo;
+    guardarAsMedalhas();
+  }
+  return novas;
+}
+
 /* ─── navegação ─────────────────────────────────────────────────────────────
  *
  * `ir` escreve no histórico; a rota real vem sempre do `hashchange` que se
@@ -364,7 +410,17 @@ async function montar(rota: Rota): Promise<void> {
         avatar: preferencias.avatar,
         aoEditarPerfil: editarPerfil,
         desafio: resumoDoDesafio(),
+        medalhas: {
+          ganhas: contarGanhas(medalhas),
+          total: MEDALHAS.length,
+          novas: medalhas.porVer.length > 0,
+          aoAbrir: voltarA({ ecra: "medalhas" }),
+        },
       });
+      return;
+
+    case "medalhas":
+      mostrarMedalhas();
       return;
 
     case "regras":
@@ -416,6 +472,11 @@ async function montar(rota: Rota): Promise<void> {
         aoApagarProgresso: () => {
           perfil = emptyProfile();
           guardarPerfil();
+          // As medalhas são do progresso: vão com ele. As do desafio, que não
+          // se apaga, voltam logo — e voltam por ver.
+          medalhas = SEM_MEDALHAS;
+          guardarAsMedalhas();
+          avaliarMedalhas();
         },
         aoVoltar: voltarA({ ecra: "home" }),
       });
@@ -442,6 +503,35 @@ async function montar(rota: Rota): Promise<void> {
         return;
       }
       return mostrarDesafio(rota.modo, rota.data);
+  }
+}
+
+/**
+ * A página das medalhas. Abri-la é vê-las: as novas perdem a marca a partir
+ * daqui — mas mostram-na desta vez, que é para isso que ela existe.
+ */
+function mostrarMedalhas(): void {
+  avaliarMedalhas();
+  const ctx = contextoDasMedalhas();
+  const porVer = new Set(medalhas.porVer);
+
+  atual = new MedalhasScreen(app as HTMLElement, {
+    medalhas: MEDALHAS.map((medalha) => {
+      const ganhaEm = medalhas.ganhas[medalha.id];
+      return {
+        medalha,
+        progresso: medalha.progresso(ctx),
+        ...(ganhaEm === undefined ? {} : { ganhaEm }),
+        nova: porVer.has(medalha.id),
+      };
+    }),
+    aoVoltar: voltarA({ ecra: "home" }),
+  });
+
+  const vistas = marcarVistas(medalhas);
+  if (vistas !== medalhas) {
+    medalhas = vistas;
+    guardarAsMedalhas();
   }
 }
 
@@ -527,6 +617,7 @@ async function mostrarJogo(id: string, indice: number): Promise<void> {
     aoTerminar: ({ level, selo, tempoMs }) => {
       perfil = recordLevel(perfil, level.id, selo as Seal, tempoMs);
       guardarPerfil();
+      return avaliarMedalhas();
     },
     aoPedirSeguinte: () => {
       const seguinte = posicao < 0 ? undefined : sequencia[posicao + 1];
@@ -607,6 +698,7 @@ async function mostrarTempo(): Promise<void> {
     aoTerminar: ({ pontos, tabuleiros }) => {
       perfil = recordTimeAttack(perfil, pontos, tabuleiros);
       guardarPerfil();
+      return avaliarMedalhas();
     },
     aoSair: voltarA({ ecra: "home" }),
     /*
@@ -655,6 +747,7 @@ function mostrarSurvival(seed: number | undefined): void {
       guardarSurvival(undefined);
       perfil = recordSurvival(perfil, limpou, tempoMs);
       guardarPerfil();
+      return avaliarMedalhas();
     },
     /*
      * **Repetir a mesma seed não passa pelo endereço.**
@@ -879,6 +972,8 @@ function trilhoDoDesafio(): TrilhoDoDesafio {
             perguntar: protecaoRecusada !== data,
             aoProteger: () => {
               mudarDesafios(proteger(desafios, hoje()));
+              // Ligar duas sequências pode dar uma medalha: fica por ver.
+              avaliarMedalhas();
               void mostrar({ ecra: "desafio" });
             },
             aoRecusar: () => {
@@ -955,9 +1050,14 @@ async function mostrarDesafio(modo: ModoDoDesafio, dataPedida?: string): Promise
     mudarDesafios(comecar(desafios, data, modo));
   };
 
-  /** A tentativa oficial acabou: grava-se, e a sequência pode ter dado chaves. */
-  const terminar = (registo: (d: Desafios) => Desafios): void => {
-    if (oficial) mudarDesafios(premiar(registo(desafios), data));
+  /**
+   * A tentativa oficial acabou: grava-se, e a sequência pode ter dado chaves —
+   * e medalhas, que se devolvem para o painel de fim.
+   */
+  const terminar = (registo: (d: Desafios) => Desafios): readonly MedalhaGanha[] => {
+    if (!oficial) return [];
+    mudarDesafios(premiar(registo(desafios), data));
+    return avaliarMedalhas();
   };
 
   /*
@@ -988,9 +1088,8 @@ async function mostrarDesafio(modo: ModoDoDesafio, dataPedida?: string): Promise
     atual = new PuzzleScreen(app as HTMLElement, nivel, {
       titulo: etiqueta,
       desafio,
-      aoTerminar: ({ selo, tempoMs }) => {
-        terminar((d) => registar(d, data, "puzzle", { tempoMs, selo: selo as Seal }));
-      },
+      aoTerminar: ({ selo, tempoMs }) =>
+        terminar((d) => registar(d, data, "puzzle", { tempoMs, selo: selo as Seal })),
       aoVoltar: voltarA({ ecra: "desafio" }),
       // O joker como na campanha: o `?` depois de o ter visto, e o tutorial
       // obrigatório da primeira vez, por cima do tabuleiro.
@@ -1019,9 +1118,8 @@ async function mostrarDesafio(modo: ModoDoDesafio, dataPedida?: string): Promise
       melhorPontuacao: Number.POSITIVE_INFINITY,
       tempoInicial: DESAFIO_TEMPO_INICIAL,
       ...(oficial ? { aoComecar: marcarTentativa } : {}),
-      aoTerminar: ({ pontos, tabuleiros, saltados }) => {
-        terminar((d) => registar(d, data, "tempo", { pontos, tabuleiros, saltados }));
-      },
+      aoTerminar: ({ pontos, tabuleiros, saltados }) =>
+        terminar((d) => registar(d, data, "tempo", { pontos, tabuleiros, saltados })),
       aoSair: voltarA({ ecra: "desafio" }),
       aoRecomecar: outraVez,
     });
@@ -1036,11 +1134,11 @@ async function mostrarDesafio(modo: ModoDoDesafio, dataPedida?: string): Promise
     melhorTempo: Number.POSITIVE_INFINITY,
     desafio,
     aoTerminar: ({ limpou, tempoMs, linhas }) => {
-      if (!oficial) return;
+      if (!oficial) return [];
       guardarCorridaDesafio(undefined);
       // Transbordar não grava nada (ver `registar`): a tentativa fica aberta,
       // e a próxima corrida começa do princípio.
-      terminar((d) => registar(d, data, "survival", { tempoMs, limpou, linhas }));
+      return terminar((d) => registar(d, data, "survival", { tempoMs, limpou, linhas }));
     },
     aoRecomecar: outraVez,
     aoSair: voltarA({ ecra: "desafio" }),
@@ -1152,6 +1250,7 @@ async function arrancar(): Promise<void> {
     corridaSurvival = lerCorrida(armazenamento);
     desafios = lerDesafios(armazenamento);
     corridaDesafio = lerCorrida(armazenamento, CORRIDA_DESAFIO_KEY);
+    medalhas = lerMedalhas(armazenamento);
   }
 
   aplicarTema(document.documentElement, preferencias.tema);
@@ -1171,6 +1270,13 @@ async function arrancar(): Promise<void> {
     idsComJoker = bandas.flatMap((b) =>
       b.niveis.filter((n) => n.joker === true).map((n) => n.id),
     );
+
+    /*
+     * As medalhas que o progresso já merece — as de antes de haver medalhas,
+     * no primeiro arranque. Só depois da campanha montar: antes disso os
+     * capítulos não têm tamanho, e as medalhas deles não têm alvo.
+     */
+    avaliarMedalhas();
 
     // Os links antigos, `?banda=perito&nivel=27`, continuam a levar ao sítio.
     const legada = rotaLegada(location.search);
