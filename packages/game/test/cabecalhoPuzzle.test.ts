@@ -180,13 +180,13 @@ describe("os três botões", () => {
 });
 
 /*
- * ── O Tutorial são dez níveis ──
+ * ── Sem Tutorial, e o andaime no Iniciado ──
  *
- * A banda tem 30, como todas — mas a regra aprende-se aos três, e os últimos 20
- * eram a mesma jogada repetida antes de o jogo começar. O corte é na
- * apresentação: os níveis continuam no pack, válidos, para o puzzle diário.
+ * O Tutorial saiu da campanha: ninguém o jogava, e o Iniciado mais o Como jogar
+ * ensinam o mesmo. A linha da soma, que era o andaime dele, passou para os
+ * primeiros níveis do Iniciado — onde todo o jogador novo começa agora.
  */
-describe("o corte do capítulo", () => {
+describe("o primeiro capítulo", () => {
   const banda = (id: string, quantos: number): BandaNoIndice => ({
     id,
     label: id,
@@ -197,35 +197,20 @@ describe("o corte do capítulo", () => {
     })),
   });
 
-  const tutorial = CAPITULOS.find((c) => c.id === "tutorial");
-
-  it("o Tutorial mostra dez, e a banda continua com trinta", () => {
-    const bandas = [banda("tutorial", 30)];
-    expect(tutorial?.maximo).toBe(10);
-    expect(montarCapitulo(tutorial!, bandas)).toHaveLength(10);
+  it("é o Iniciado, e nenhum capítulo é a banda do tutorial", () => {
+    expect(CAPITULOS[0]?.id).toBe("iniciado");
+    expect(CAPITULOS.some((c) => c.base === "tutorial")).toBe(false);
   });
 
-  it("os dez são os dez primeiros, por esta ordem", () => {
-    const serie = montarCapitulo(tutorial!, [banda("tutorial", 30)]);
-    expect(serie.map((n) => n.indice)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
-  });
-
-  it("nenhum outro capítulo corta", () => {
-    for (const c of CAPITULOS.filter((c) => c.id !== "tutorial")) {
-      expect(c.maximo).toBeUndefined();
+  it("os três primeiros níveis do Iniciado mostram a soma, e mais nenhum", () => {
+    expect(CAPITULOS[0]?.niveisComSoma).toBe(3);
+    for (const c of CAPITULOS.slice(1)) {
+      expect(c.niveisComSoma).toBeUndefined();
     }
   });
 
-  it("o corte é no fim, e não mexe na cadência do joker", () => {
-    /*
-     * Cortar a banda base antes de intercalar mudava a série: o mesmo nível
-     * ficava na posição 9 num capítulo com corte e na 10 sem ele.
-     */
-    const bandas = [banda("meio", 30), banda("meio-joker", 30)];
-    const medio = CAPITULOS.find((c) => c.id === "medio");
-    const inteiro = montarCapitulo(medio!, bandas);
-    const cortado = montarCapitulo({ ...medio!, maximo: 10 }, bandas);
-
-    expect(cortado).toEqual(inteiro.slice(0, 10));
+  it("o Iniciado mostra a banda inteira, sem corte", () => {
+    const iniciado = CAPITULOS[0]!;
+    expect(montarCapitulo(iniciado, [banda("inicio", 30)])).toHaveLength(30);
   });
 });

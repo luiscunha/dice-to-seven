@@ -424,10 +424,9 @@ describe("capítulos", () => {
     return montarCapitulo(c, BANDAS);
   };
 
-  it("são cinco, e nenhum se chama como uma banda de joker", () => {
-    expect(CAPITULOS).toHaveLength(5);
+  it("são quatro, e nenhum se chama como uma banda de joker", () => {
+    expect(CAPITULOS).toHaveLength(4);
     expect(CAPITULOS.map((c) => c.nome)).toEqual([
-      "Tutorial",
       "Iniciado",
       "Médio",
       "Avançado",

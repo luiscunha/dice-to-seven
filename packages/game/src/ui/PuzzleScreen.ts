@@ -144,9 +144,10 @@ export interface OpcoesPuzzleScreen {
   /**
    * A linha da soma por baixo do tabuleiro — `3 + ✳4 = 7`, e o `faltam 3`.
    *
-   * **Desligada por omissão, e ligada só no Tutorial.** É um andaime: faz a
-   * conta que o jogo pede ao jogador, e quem a tem à frente deixa de a fazer de
-   * cabeça. O sítio dela é onde se está a aprender a regra.
+   * **Desligada por omissão, e ligada só nos primeiros níveis do Iniciado**
+   * (`niveisComSoma`, em `capitulos.ts`). É um andaime: faz a conta que o
+   * jogo pede ao jogador, e quem a tem à frente deixa de a fazer de cabeça. O
+   * sítio dela é onde se está a aprender a regra.
    *
    * Os avisos de recusa ficam sempre — ver `pintarAviso`. Explicar porque é que
    * um toque não entrou não é fazer a conta por ninguém.
@@ -872,7 +873,7 @@ export class PuzzleScreen {
 
     /*
      * O `faltam N` é a mesma conta da linha da soma, dita por outras palavras, e
-     * sai com ela: fora do Tutorial ninguém diz ao jogador quanto falta.
+     * sai com ela: fora do andaime ninguém diz ao jogador quanto falta.
      *
      * Também não faria sentido sozinho — sem seleção `faltam 7` é o alvo do
      * jogo escrito em permanência.

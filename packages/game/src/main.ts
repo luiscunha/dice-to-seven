@@ -470,8 +470,9 @@ async function mostrarJogo(id: string, indice: number): Promise<void> {
       ? { titulo: `${capitulo.nome} ${String(posicao + 1).padStart(2, "0")}` }
       : {}),
 
-    // A linha da soma é o andaime do Tutorial, e só de lá — ver `mostrarSoma`.
-    mostrarSoma: capitulo?.id === "tutorial",
+    // A linha da soma é andaime dos primeiros níveis do Iniciado, e só de lá —
+    // ver `niveisComSoma`, em `capitulos.ts`.
+    mostrarSoma: posicao >= 0 && posicao < (capitulo?.niveisComSoma ?? 0),
     // O recorde de **antes** desta partida: o painel de fim compara com ele, e
     // o `recordLevel` abaixo é que o atualiza.
     melhorTempoMs: perfil.levels[nivel.id]?.bestTimeMs ?? 0,
