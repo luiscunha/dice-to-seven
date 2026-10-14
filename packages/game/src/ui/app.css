@@ -2901,7 +2901,8 @@ body::before {
  *
  * E a seleção de texto tem de voltar aqui: o `body` desliga-a, porque o
  * tabuleiro é uma superfície de toque e não de arrastar para selecionar — mas
- * num campo de escrita isso tira o que faz dele um campo.
+ * num campo de escrita isso tira o que faz dele um campo. O menu do toque longo
+ * volta pela mesma razão: é por ele que se cola um nome.
  */
 .perfil-nome {
   font: inherit;
@@ -2914,6 +2915,7 @@ body::before {
   color: var(--ink);
   -webkit-user-select: text;
   user-select: text;
+  -webkit-touch-callout: default;
 }
 
 .perfil-nome::placeholder {

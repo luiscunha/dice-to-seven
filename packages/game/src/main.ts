@@ -90,6 +90,7 @@ import {
   aplicacaoPronta,
   definirVibracao,
   ligarBotaoDeVoltar,
+  travarZoom,
 } from "./plataforma/nativo";
 import { SurvivalScreen, novaSeed } from "./ui/SurvivalScreen";
 import { relogio } from "./ui/tempo";
@@ -1026,6 +1027,7 @@ async function arrancar(): Promise<void> {
   sincronizarCromado();
   definirVibracao(preferencias.vibracao);
   ligarBotaoDeVoltar(subirUmNivel);
+  travarZoom();
 
   try {
     bandas = await carregarIndice();
