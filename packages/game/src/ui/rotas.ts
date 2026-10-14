@@ -13,6 +13,7 @@
  */
 
 import type { ModoDoDesafio } from "../session/desafio";
+import { eData } from "../session/desafio";
 
 export type Rota =
   | { readonly ecra: "home" }
@@ -31,11 +32,12 @@ export type Rota =
   | { readonly ecra: "survival"; readonly seed?: number }
   /**
    * O Desafio do Dia: sem modo, o ecrã de escolha; com modo, o desafio.
-   * **Sem a data no endereço**: o desafio é o de hoje, e um link de ontem que
-   * abrisse a corrida de ontem era uma porta para a jogar outra vez sabendo o
-   * que vem.
+   * **Sem a data no endereço**, o desafio é o de hoje. Com ela, é um dia
+   * passado — e só abre se uma chave o desbloqueou: um link de ontem que
+   * abrisse sozinho a corrida de ontem era uma porta para a jogar outra vez
+   * sabendo o que vem. Quem guarda a porta é o `main.ts`; a rota só a nomeia.
    */
-  | { readonly ecra: "desafio"; readonly modo?: ModoDoDesafio }
+  | { readonly ecra: "desafio"; readonly modo?: ModoDoDesafio; readonly data?: string }
   | { readonly ecra: "definicoes" }
   /**
    * As regras têm endereço próprio, como tudo o resto — e aqui o endereço faz
@@ -62,12 +64,11 @@ export function paraHash(r: Rota): string {
       return r.seed === undefined
         ? "#/survival"
         : `#/survival/${String(r.seed)}`;
-    case "desafio":
-      return r.modo === undefined
-        ? "#/desafio"
-        : r.modo === "tempo"
-          ? "#/desafio/contrarrelogio"
-          : `#/desafio/${r.modo}`;
+    case "desafio": {
+      if (r.modo === undefined) return "#/desafio";
+      const modo = r.modo === "tempo" ? "contrarrelogio" : r.modo;
+      return r.data === undefined ? `#/desafio/${modo}` : `#/desafio/${modo}/${r.data}`;
+    }
     case "definicoes":
       return "#/definicoes";
     case "regras":
@@ -87,22 +88,14 @@ export function deHash(hash: string): Rota {
 
   if (primeira === undefined) return ROTA_INICIAL;
 
+  if (primeira === "desafio") return rotaDoDesafio(segunda, terceira);
+
   if (primeira === "contrarrelogio" || primeira === "tempo") {
     return { ecra: "tempo" };
   }
   if (primeira === "definicoes") return { ecra: "definicoes" };
   if (primeira === "como-jogar" || primeira === "regras") {
     return { ecra: "regras" };
-  }
-
-  if (primeira === "desafio") {
-    if (segunda === undefined) return { ecra: "desafio" };
-    if (segunda === "survival") return { ecra: "desafio", modo: "survival" };
-    if (segunda === "puzzle") return { ecra: "desafio", modo: "puzzle" };
-    if (segunda === "contrarrelogio" || segunda === "tempo") {
-      return { ecra: "desafio", modo: "tempo" };
-    }
-    return ROTA_INICIAL;
   }
 
   if (primeira === "survival") {
@@ -136,6 +129,27 @@ export function deHash(hash: string): Rota {
   }
 
   return ROTA_INICIAL;
+}
+
+/**
+ * `#/desafio/<modo>` e, para um dia passado, `#/desafio/<modo>/<AAAA-MM-DD>`.
+ * Uma data que não o seja cai: fica o desafio de hoje, que é o que o endereço
+ * pedia antes de a data se estragar.
+ */
+function rotaDoDesafio(modo: string | undefined, data: string | undefined): Rota {
+  if (modo === undefined) return { ecra: "desafio" };
+
+  const m: ModoDoDesafio | undefined =
+    modo === "survival" || modo === "puzzle"
+      ? modo
+      : modo === "contrarrelogio" || modo === "tempo"
+        ? "tempo"
+        : undefined;
+  if (m === undefined) return ROTA_INICIAL;
+
+  return data !== undefined && eData(data)
+    ? { ecra: "desafio", modo: m, data }
+    : { ecra: "desafio", modo: m };
 }
 
 /**

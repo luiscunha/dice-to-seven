@@ -195,6 +195,13 @@
    */
   --fogo-veu-meio: rgb(217 58 22 / 0.05);
   /*
+   * O dourado das chaves do Desafio do Dia. Só o véu e o aro: a chave em si é
+   * o emoji, e o que o rodeia diz que é uma coisa que se guarda — ao lado do
+   * véu de fogo da sequência, sem se confundir com ele.
+   */
+  --chave-veu: rgb(201 146 0 / 0.18);
+  --chave-aro: rgb(176 122 0 / 0.55);
+  /*
    * O laser do teto, no Survival: o núcleo do feixe e a passagem para o
    * laranja. Iguais nos dois temas — é luz, e a luz não muda com o fundo; o
    * que muda é o `--fogo` à volta, que já tem a sua versão escura.
@@ -374,6 +381,8 @@
     --fogo-quente: #ffb488;
     --fogo-veu: rgb(255 106 69 / 0.14);
     --fogo-veu-meio: rgb(255 106 69 / 0.045);
+    --chave-veu: rgb(255 199 64 / 0.16);
+    --chave-aro: rgb(255 199 64 / 0.5);
     --sombra: 0 1px 2px rgb(0 0 0 / 0.5), 0 8px 22px rgb(0 0 0 / 0.35);
     /* No escuro a sombra precisa de ser mais funda para se ver de todo. */
     --sombra-cartao: 0 1px 2px rgb(0 0 0 / 0.4), 0 4px 12px rgb(0 0 0 / 0.3);
@@ -414,6 +423,8 @@
   --fogo-quente: #ffb488;
   --fogo-veu: rgb(255 106 69 / 0.14);
   --fogo-veu-meio: rgb(255 106 69 / 0.045);
+  --chave-veu: rgb(255 199 64 / 0.16);
+  --chave-aro: rgb(255 199 64 / 0.5);
   --sombra: 0 1px 2px rgb(0 0 0 / 0.5), 0 8px 22px rgb(0 0 0 / 0.35);
   /* No escuro a sombra precisa de ser mais funda para se ver de todo. */
   --sombra-cartao: 0 1px 2px rgb(0 0 0 / 0.4), 0 4px 12px rgb(0 0 0 / 0.3);

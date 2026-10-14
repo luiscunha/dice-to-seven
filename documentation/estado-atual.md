@@ -1196,9 +1196,11 @@ outros modos de um dia de quando havia três ficam guardados sem contar.
       da tentativa que conta. Tocar noutra casa leva-lhe o balão, com o
       resultado, o que ficou por jogar, ou quando abre; a casa tocada não sai
       do sítio, porque o rolo desliza o mesmo que o balão a empurra.
-    - **Só se joga o de hoje.** Um endereço com outro modo
-      (`#/desafio/survival` num dia de Puzzle) volta a este ecrã. Sair de um
-      desafio volta a este ecrã, e daqui à Home.
+    - **Joga-se o de hoje, e os dias que uma chave abriu** — ver «As
+      chaves», mais abaixo. Um endereço com outro modo
+      (`#/desafio/survival` num dia de Puzzle), ou com um dia que nenhuma
+      chave abriu, volta a este ecrã. Sair de um desafio volta a este ecrã,
+      e daqui à Home.
 - **O resto da Home ficou como era**: os modos com o rótulo «Modos de jogo» e os
   mosaicos de pé, e as regras numa faixa — a conta 3 + 4 = 7 em peças, «Como
   jogar?», e a seta. **Quem ainda não fez um nível vê os modos primeiro**: a
@@ -1228,6 +1230,63 @@ tabuleiro fixo, o mesmo para toda a gente**.
   a contar. Sem tabela de classificação, não vale a pena fechá-la.
 
 O desafio #1 é o de 12 de outubro de 2026 (`EPOCA_DESAFIO`).
+
+### As chaves
+
+Um dia falhado partia a sequência sem remédio, e um dia por jogar ficava por
+jogar para sempre. **As chaves** (issue #49, `session/chaves.ts`) resolvem as
+duas coisas. Começa-se com uma — quem já jogava também a recebe, porque o
+registo dele não tem saldo —, e cada uma serve para:
+
+- **Salvar a sequência.** Ontem ficou por jogar: a sequência que acabou
+  anteontem está em risco. **Só ontem**, e só até à meia-noite de hoje — dois
+  dias seguidos por jogar perdem-na, chaves ou não. O dia salvo **liga a
+  sequência mas não lhe soma**: cinco dias, um salvo e hoje feito são seis.
+  Vale também depois de jogar hoje: salvar ontem junta hoje à sequência antiga.
+  - **Pergunta-se ao entrar no Desafio do dia** («A tua sequência está em
+    risco»), com o realce em «Usar 🔑 1» — é uma oferta, e não uma ação que
+    deita fora alguma coisa. A Home avisa antes, no cartão («🔥 5 em risco»,
+    com o fogo em contorno). Quem diz «agora não» não volta a ser perguntado
+    nessa sessão, e encontra a mesma oferta no balão de ontem. **Sem chaves,
+    nada se diz**: avisar do risco era só dar a má notícia.
+- **Abrir um dia passado** que ficou por concluir — por jogar, ou
+  interrompido. Joga-se como hoje: a primeira tentativa conta, o resto é
+  treino. **Conta para o mês e para a estrela, mas não para a sequência**:
+  duas maneiras de reparar a sequência eram uma a mais, e jogar o dia entre
+  duas sequências antigas ligava-as e dava os patamares outra vez. Não se
+  partilha, porque o texto partilhado diz a sequência. **Um dia abre-se uma
+  vez**: interrompido depois de aberto, fica interrompido — pagar outra vez
+  para tentar outra vez era o «joga até te sair bem» que a regra da primeira
+  tentativa fecha. O endereço leva a data, `#/desafio/contrarrelogio/2026-10-13`,
+  e só abre se uma chave abriu esse dia. Ao sair, o trilho abre nesse dia.
+
+**Ganham-se com a sequência**, em patamares: aos 3 dias seguidos +1, aos 7 +2,
+aos 14 +3, aos 30 +5 — onze num mês — e **depois dos 30 o ciclo recomeça** (33,
+37, 44, 60…). Uma sequência nova volta a ganhar desde os 3. O balão de hoje diz
+o que fazê-lo dá («🔥 +1 · 🔑 +2»), o trilho celebra o prémio ao abrir, e a
+casa do dia fica com «+2 🔑». No topo do ecrã, ao lado da série, a carteira;
+tocar-lhe explica tudo isto e diz quando chega a próxima.
+
+Três decisões que não se veem no ecrã:
+
+- **O saldo guarda-se; não se deduz do histórico.** O histórico corta-se aos
+  três anos, e um saldo deduzido perdia as chaves dos dias que saem. Cada
+  prémio deixa a marca no dia em que se ganhou (`premio`), e é a marca que deixa
+  `premiar` correr sempre que a sequência pode ter mudado — ao acabar, ao
+  salvar, ao abrir o jogo — sem dar o mesmo patamar duas vezes. Tudo no mesmo
+  registo do desafio (`dicetoseven.desafio`, versão 1, com `chaves` no
+  envelope e `protegido`, `desbloqueado` e `premio` em cada dia): o saldo e as
+  marcas gravam-se juntos, ou nada.
+- **Uma sequência maior do que o histórico não encolhe.** Antes das chaves, a
+  sequência contava-se só pelo histórico guardado, e parava nos 1100 dias. Com
+  patamares, isso era grave: o lugar de cada dia novo ficava preso no tamanho
+  do histórico, e um patamar que calhasse nesse lugar dava-se todos os dias.
+  `guardarDesafios` grava agora, nos dois primeiros dias que ficam, o lugar que
+  tinham na sequência (`serie`) — dois, porque um dia salvo faz a sequência
+  saltar dois para trás —, e a contagem para aí.
+- **Uma corrida de Survival guardada só há uma.** Um Survival aberto com uma
+  chave e deixado a meio perde-se se a seguir se começar o Survival de hoje:
+  fica interrompido, como qualquer tentativa sem corrida para retomar.
 
 ---
 

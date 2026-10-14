@@ -62,7 +62,7 @@ import {
   iconeSurvival,
 } from "./icones";
 import type { EstadoNoCartao } from "./DesafioScreen";
-import { iconeDoModo, sinalDaSequencia } from "./DesafioScreen";
+import { iconeDoModo, sinalDaSequencia, sinalDasChaves, sinalDeRisco } from "./DesafioScreen";
 import { NOME_DO_MODO } from "./partilha";
 
 /**
@@ -75,6 +75,14 @@ export interface ResumoDoDesafio {
   readonly data: string;
   /** Dias seguidos com o desafio feito. */
   readonly sequencia: number;
+  /**
+   * Os dias seguidos que acabam hoje se ninguém fizer nada: ontem ficou por
+   * jogar, e há uma chave para os salvar. O cartão avisa; o ecrã do desafio
+   * pergunta.
+   */
+  readonly emRisco?: number;
+  /** As chaves na carteira. */
+  readonly chaves: number;
   /** O modo de hoje: um por dia, à vez. */
   readonly modo: ModoDoDesafio;
   readonly estado: EstadoNoCartao;
@@ -483,9 +491,20 @@ export class HomeScreen {
     const rotulo = elemento("span", "home-desafio-rotulo");
     rotulo.append(iconeCalendario(), "Desafio do dia");
 
+    // A série e as chaves, do lado de lá do rótulo. Só o que há: zero dias e
+    // zero chaves não são notícia.
+    const sinais = elemento("span", "home-desafio-sinais");
+    if (d.emRisco !== undefined) sinais.appendChild(sinalDeRisco(d.emRisco));
+    else if (d.sequencia > 0) sinais.appendChild(sinalDaSequencia(d.sequencia));
+    if (d.chaves > 0) {
+      const chaves = elemento("span", "desafio-chaves", sinalDasChaves(d.chaves));
+      chaves.setAttribute("aria-label", d.chaves === 1 ? "1 chave" : `${String(d.chaves)} chaves`);
+      sinais.appendChild(chaves);
+    }
+
     const cabeca = elemento("span", "home-desafio-cabeca");
     cabeca.appendChild(rotulo);
-    if (d.sequencia > 0) cabeca.appendChild(sinalDaSequencia(d.sequencia));
+    if (sinais.childElementCount > 0) cabeca.appendChild(sinais);
 
     const icone = elemento("span", "desafio-modo-icone");
     icone.appendChild(iconeDoModo(d.modo));
@@ -514,7 +533,9 @@ export class HomeScreen {
     b.append(cabeca, linha);
     b.setAttribute(
       "aria-label",
-      `Desafio do dia, número ${String(d.numero)}, ${d.data}: ${nome}, ${estado}. Abrir.`,
+      `Desafio do dia, número ${String(d.numero)}, ${d.data}: ${nome}, ${estado}.` +
+        (d.emRisco === undefined ? "" : ` Sequência de ${String(d.emRisco)} em risco.`) +
+        " Abrir.",
     );
 
     return b;

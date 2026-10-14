@@ -42,12 +42,22 @@ import {
   lerCorrida,
   limparCorrida,
 } from "./session/corridaSurvival";
+import {
+  chavesGanhas,
+  desbloquear,
+  podeDesbloquear,
+  premiar,
+  premioDoLugar,
+  proteger,
+  sequenciaEmRisco,
+} from "./session/chaves";
 import type { Desafios, ModoDoDesafio } from "./session/desafio";
 import {
   DESAFIO_TEMPO_INICIAL,
   SEM_DESAFIOS,
   comecar,
   dataDe,
+  diaAnterior,
   diasDoMes,
   escolherDoDia,
   estadoDoModo,
@@ -171,9 +181,42 @@ let corridaSurvival: CorridaGuardada | undefined;
 let desafios: Desafios = SEM_DESAFIOS;
 let corridaDesafio: CorridaGuardada | undefined;
 
+/** As chaves que a sequência deu e o trilho ainda não celebrou. */
+let premioPorVer: { readonly chaves: number; readonly dias: number } | undefined;
+
+/**
+ * O dia em que se disse «agora não» a salvar a sequência. Só nesta sessão: o
+ * trilho não volta a perguntar ao abrir, mas a oferta continua no balão de
+ * ontem — e uma pergunta por arranque não é insistir.
+ */
+let protecaoRecusada: string | undefined;
+
+/** O dia passado que se acabou de jogar: o trilho abre nele, e não em hoje. */
+let focoDoTrilho: string | undefined;
+
 const guardarOsDesafios = (): void => {
   if (armazenamento !== undefined) guardarDesafios(armazenamento, desafios);
 };
+
+/**
+ * Troca os desafios e grava-os. Se a troca deu chaves — um patamar da
+ * sequência —, ficam à espera de serem celebradas no trilho, que é para onde
+ * todos os desafios voltam.
+ */
+function mudarDesafios(novos: Desafios): void {
+  if (novos === desafios) return;
+
+  const ganhas = chavesGanhas(desafios, novos);
+  desafios = novos;
+  guardarOsDesafios();
+
+  if (ganhas > 0) {
+    premioPorVer = {
+      chaves: ganhas + (premioPorVer?.chaves ?? 0),
+      dias: sequencia(desafios, hoje()),
+    };
+  }
+}
 
 const guardarCorridaDesafio = (corrida: CorridaGuardada | undefined): void => {
   corridaDesafio = corrida;
@@ -294,6 +337,10 @@ async function montar(rota: Rota): Promise<void> {
   atual?.destruir();
   atual = undefined;
 
+  // O foco do trilho é para quem volta de um dia passado, e não sobrevive a um
+  // passeio por outro ecrã.
+  if (rota.ecra !== "desafio") focoDoTrilho = undefined;
+
   switch (rota.ecra) {
     case "home":
       atual = new HomeScreen(app as HTMLElement, {
@@ -394,7 +441,7 @@ async function montar(rota: Rota): Promise<void> {
         });
         return;
       }
-      return mostrarDesafio(rota.modo);
+      return mostrarDesafio(rota.modo, rota.data);
   }
 }
 
@@ -671,23 +718,48 @@ const partilharDia = (data: string): Promise<DesfechoDaPartilha> =>
  * tentativa abandonada: a aplicação fechou, ou o browser recuou. Fica
  * interrompida — o resto do dia é treino. O Survival escapa se a corrida dele
  * estiver guardada: retoma-se, como a corrida normal.
+ *
+ * Arrumam-se os dias que se jogam: hoje, e os que uma chave abriu. A corrida
+ * do Survival guardada é uma só, portanto um Survival aberto com uma chave e
+ * deixado a meio perde-se se a seguir se começar outro.
+ *
+ * E dão-se os prémios que estejam por dar — de uma sequência que chegou a um
+ * patamar numa versão do jogo que ainda não tinha chaves. `premiar` só dá
+ * cada um uma vez, portanto pode correr sempre.
+ *
+ * Devolve hoje, que é o que todos os que arrumam querem saber a seguir.
  */
-function arrumarDesafio(data: string): void {
-  const seed = seedDoDia(data, "survival");
-  const antes = desafios;
+function arrumarDesafios(): string {
+  const data = hoje();
+  let d = desafios;
 
-  if (estadoDoModo(desafios, data, "tempo")?.estado === "a-jogar") {
-    desafios = interromper(desafios, data, "tempo");
-  }
-  if (
-    estadoDoModo(desafios, data, "survival")?.estado === "a-jogar" &&
-    corridaDesafio?.estado.seed !== seed
-  ) {
-    desafios = interromper(desafios, data, "survival");
+  const jogaveis = [
+    data,
+    ...Object.keys(d.dias).filter((k) => k < data && d.dias[k]?.desbloqueado === true),
+  ];
+
+  for (const dia of jogaveis) {
+    if (estadoDoModo(d, dia, "tempo")?.estado === "a-jogar") {
+      d = interromper(d, dia, "tempo");
+    }
+    if (
+      estadoDoModo(d, dia, "survival")?.estado === "a-jogar" &&
+      corridaDesafio?.estado.seed !== seedDoDia(dia, "survival")
+    ) {
+      d = interromper(d, dia, "survival");
+    }
   }
 
-  if (desafios !== antes) guardarOsDesafios();
+  mudarDesafios(premiar(premiar(d, diaAnterior(data)), data));
+  return data;
 }
+
+/**
+ * A sequência que uma chave pode salvar hoje — só se houver chave para isso.
+ * Sem chaves não há nada a oferecer, e avisar do risco era só dar a má notícia.
+ */
+const emRisco = (data: string): ReturnType<typeof sequenciaEmRisco> =>
+  desafios.chaves > 0 ? sequenciaEmRisco(desafios, data) : undefined;
 
 /** O glifo do selo, o mesmo da grelha de níveis. */
 const GLIFO_DO_SELO = { perfect: " ★", clean: " ◆", completed: "" } as const;
@@ -729,14 +801,16 @@ function estadoNoCartao(data: string, modo: ModoDoDesafio): EstadoNoCartao {
 
 /** O cartão da Home: só o desafio de hoje. Tocar-lhe abre o trilho. */
 function resumoDoDesafio(): ResumoDoDesafio {
-  const data = hoje();
-  arrumarDesafio(data);
+  const data = arrumarDesafios();
   const modo = modoDoDia(data);
+  const risco = emRisco(data);
 
   return {
     numero: numeroDoDia(data),
     data: dataCurta(data),
     sequencia: sequencia(desafios, data),
+    ...(risco === undefined ? {} : { emRisco: risco.sequencia }),
+    chaves: desafios.chaves,
     modo,
     estado: estadoNoCartao(data, modo),
     aoAbrir: voltarA({ ecra: "desafio" }),
@@ -746,32 +820,81 @@ function resumoDoDesafio(): ResumoDoDesafio {
 /**
  * Uma casa do trilho, vista de hoje. Um dia passado está feito ou perdido: a
  * tentativa que ficou a meio ontem — um Survival guardado, um Puzzle aberto —
- * já não se acaba, porque o desafio de hoje é outro.
+ * já não se acaba, porque o desafio de hoje é outro. **A não ser que uma chave
+ * o tenha aberto**: aí joga-se como hoje, e tem os estados do cartão.
  */
 function estadoNoTrilho(data: string, dataDeHoje: string): EstadoNoTrilho {
   if (data > dataDeHoje) return { tipo: "futuro" };
 
   const estado = estadoNoCartao(data, modoDoDia(data));
-  if (data === dataDeHoje || estado.tipo === "feito") return estado;
+  const jogavel = data === dataDeHoje || desafios.dias[data]?.desbloqueado === true;
+  if (jogavel || estado.tipo === "feito") return estado;
   return { tipo: "perdido" };
 }
 
-function trilhoDoDesafio(): TrilhoDoDesafio {
-  const data = hoje();
-  arrumarDesafio(data);
-  const feito = estadoDoModo(desafios, data, modoDoDia(data))?.estado === "feito";
+/** O endereço do desafio de um dia: sem data, se for hoje. */
+const rotaDoDia = (data: string, dataDeHoje: string): Rota =>
+  data === dataDeHoje
+    ? { ecra: "desafio", modo: modoDoDia(data) }
+    : { ecra: "desafio", modo: modoDoDia(data), data };
 
-  const casa = (d: string): DiaNoTrilho => ({
-    data: d,
-    numero: numeroDoDia(d),
-    modo: modoDoDia(d),
-    estado: estadoNoTrilho(d, data),
-  });
+function trilhoDoDesafio(): TrilhoDoDesafio {
+  const data = arrumarDesafios();
+  const feito = estadoDoModo(desafios, data, modoDoDia(data))?.estado === "feito";
+  const risco = emRisco(data);
+  const seq = sequencia(desafios, data);
+
+  // Uma vez cada: o prémio celebra-se ao abrir, e o foco é o do regresso.
+  const premio = premioPorVer;
+  premioPorVer = undefined;
+  const foco = focoDoTrilho;
+  focoDoTrilho = undefined;
+
+  const casa = (d: string): DiaNoTrilho => {
+    const dia = desafios.dias[d];
+    return {
+      data: d,
+      numero: numeroDoDia(d),
+      modo: modoDoDia(d),
+      estado: estadoNoTrilho(d, data),
+      ...(dia?.protegido === true ? { protegido: true } : {}),
+      ...(dia?.desbloqueado === true ? { desbloqueado: true } : {}),
+      ...(dia?.premio === undefined ? {} : { premio: dia.premio }),
+      ...(podeDesbloquear(desafios, d, data) ? { desbloqueavel: true } : {}),
+    };
+  };
 
   return {
     hoje: data,
-    sequencia: sequencia(desafios, data),
-    aoJogar: voltarA({ ecra: "desafio", modo: modoDoDia(data) }),
+    sequencia: seq,
+    chaves: desafios.chaves,
+    // Feito hoje, a sequência passa a ser a de ontem mais um.
+    ...(feito ? {} : { premioDeHoje: premioDoLugar(seq + 1) }),
+    aoJogar: (dia) => {
+      ir(rotaDoDia(dia, data));
+    },
+    aoDesbloquear: (dia) => {
+      const antes = desafios;
+      mudarDesafios(desbloquear(desafios, dia, hoje()));
+      if (desafios !== antes) ir(rotaDoDia(dia, data));
+    },
+    ...(risco === undefined
+      ? {}
+      : {
+          protecao: {
+            ...risco,
+            perguntar: protecaoRecusada !== data,
+            aoProteger: () => {
+              mudarDesafios(proteger(desafios, hoje()));
+              void mostrar({ ecra: "desafio" });
+            },
+            aoRecusar: () => {
+              protecaoRecusada = data;
+            },
+          },
+        }),
+    ...(premio === undefined ? {} : { premio }),
+    ...(foco === undefined ? {} : { foco }),
     ...(feito ? { aoPartilhar: () => partilharDia(data) } : {}),
     // Um mês de cada vez: o de hoje ao entrar, e os outros pela linha dos meses.
     diasDoMes: (mes) => diasDoMes(mes).map(casa),
@@ -790,19 +913,31 @@ function trilhoDoDesafio(): TrilhoDoDesafio {
  *
  * Os recordes normais ficam de fora: o desafio tem as suas regras (o tempo de
  * arranque fixo, por exemplo), e o seu próprio registo.
+ *
+ * **Um dia passado joga-se da mesma maneira**, se uma chave o abriu: a
+ * primeira tentativa conta — para o mês, não para a sequência — e o resto é
+ * treino. Só não se partilha: o texto partilhado diz a sequência, e um dia
+ * jogado depois não lhe pertence.
  */
-async function mostrarDesafio(modo: ModoDoDesafio): Promise<void> {
-  const data = hoje();
-  arrumarDesafio(data);
+async function mostrarDesafio(modo: ModoDoDesafio, dataPedida?: string): Promise<void> {
+  const dataDeHoje = arrumarDesafios();
+  const data = dataPedida ?? dataDeHoje;
+  const passado = data !== dataDeHoje;
 
   /*
-   * Só se joga o desafio de hoje. Um endereço com outro modo — de ontem, de um
-   * separador que ficou aberto depois da meia-noite — volta ao trilho.
+   * Joga-se o desafio de hoje, e os dias passados que uma chave abriu. Um
+   * endereço com outro modo — de ontem, de um separador que ficou aberto
+   * depois da meia-noite — ou com um dia que nenhuma chave abriu volta ao
+   * trilho.
    */
-  if (modo !== modoDoDia(data)) {
+  const aberto = !passado || (data < dataDeHoje && desafios.dias[data]?.desbloqueado === true);
+  if (modo !== modoDoDia(data) || !aberto) {
     ir({ ecra: "desafio" });
     return;
   }
+
+  // Ao sair, o trilho abre neste dia, e não em hoje.
+  if (passado) focoDoTrilho = data;
 
   const seed = seedDoDia(data, modo);
   const antes = estadoDoModo(desafios, data, modo);
@@ -821,8 +956,12 @@ async function mostrarDesafio(modo: ModoDoDesafio): Promise<void> {
 
   const marcarTentativa = (): void => {
     if (estadoDoModo(desafios, data, modo) !== undefined) return;
-    desafios = comecar(desafios, data, modo);
-    guardarOsDesafios();
+    mudarDesafios(comecar(desafios, data, modo));
+  };
+
+  /** A tentativa oficial acabou: grava-se, e a sequência pode ter dado chaves. */
+  const terminar = (registo: (d: Desafios) => Desafios): void => {
+    if (oficial) mudarDesafios(premiar(registo(desafios), data));
   };
 
   /*
@@ -833,11 +972,13 @@ async function mostrarDesafio(modo: ModoDoDesafio): Promise<void> {
   if (modo !== "tempo") marcarTentativa();
 
   const etiqueta = `Desafio #${String(numeroDoDia(data))}`;
-  const desafio: DesafioNoEcra = oficial
-    ? { etiqueta, aoPartilhar: () => partilharDia(data) }
-    : { etiqueta: `${etiqueta} · treino` };
+  const desafio: DesafioNoEcra = !oficial
+    ? { etiqueta: `${etiqueta} · treino` }
+    : passado
+      ? { etiqueta }
+      : { etiqueta, aoPartilhar: () => partilharDia(data) };
   const outraVez = (): void => {
-    void mostrar({ ecra: "desafio", modo });
+    void mostrar(rotaDoDia(data, dataDeHoje));
   };
 
   if (modo === "puzzle") {
@@ -852,12 +993,7 @@ async function mostrarDesafio(modo: ModoDoDesafio): Promise<void> {
       titulo: etiqueta,
       desafio,
       aoTerminar: ({ selo, tempoMs }) => {
-        if (!oficial) return;
-        desafios = registar(desafios, data, "puzzle", {
-          tempoMs,
-          selo: selo as Seal,
-        });
-        guardarOsDesafios();
+        terminar((d) => registar(d, data, "puzzle", { tempoMs, selo: selo as Seal }));
       },
       aoVoltar: voltarA({ ecra: "desafio" }),
       // O joker como na campanha: o `?` depois de o ter visto, e o tutorial
@@ -888,9 +1024,7 @@ async function mostrarDesafio(modo: ModoDoDesafio): Promise<void> {
       tempoInicial: DESAFIO_TEMPO_INICIAL,
       ...(oficial ? { aoComecar: marcarTentativa } : {}),
       aoTerminar: ({ pontos, tabuleiros, saltados }) => {
-        if (!oficial) return;
-        desafios = registar(desafios, data, "tempo", { pontos, tabuleiros, saltados });
-        guardarOsDesafios();
+        terminar((d) => registar(d, data, "tempo", { pontos, tabuleiros, saltados }));
       },
       aoSair: voltarA({ ecra: "desafio" }),
       aoRecomecar: outraVez,
@@ -908,8 +1042,7 @@ async function mostrarDesafio(modo: ModoDoDesafio): Promise<void> {
     aoTerminar: ({ limpou, tempoMs, linhas }) => {
       if (!oficial) return;
       guardarCorridaDesafio(undefined);
-      desafios = registar(desafios, data, "survival", { tempoMs, limpou, linhas });
-      guardarOsDesafios();
+      terminar((d) => registar(d, data, "survival", { tempoMs, limpou, linhas }));
     },
     aoRecomecar: outraVez,
     aoSair: voltarA({ ecra: "desafio" }),

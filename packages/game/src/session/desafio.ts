@@ -38,6 +38,13 @@
  * Como em toda a parte: quem sabe que dia é hoje é o ecrã, que o passa para
  * aqui como texto, `AAAA-MM-DD`. É o que deixa testar a sequência de dias sem
  * esperar por amanhã.
+ *
+ * ── As chaves ──
+ *
+ * Vivem no mesmo registo, porque mexem na sequência — um dia salvo por uma
+ * chave liga-a, um dia jogado depois com uma chave não lhe soma — e porque o
+ * saldo e as marcas de cada dia têm de se gravar juntos, ou nada. As regras
+ * estão em `chaves.ts`; aqui ficam os dados, e a sequência que os lê.
  */
 
 import { mulberry32, shuffled } from "@dicetoseven/engine";
@@ -103,14 +110,31 @@ export interface DiaDeDesafio {
   readonly puzzle?: EstadoDoModo<ResultadoPuzzle>;
   readonly tempo?: EstadoDoModo<ResultadoTempo>;
   readonly survival?: EstadoDoModo<ResultadoSurvival>;
+  /** Ficou por jogar, e uma chave salvou a sequência — ver `chaves.ts`. */
+  readonly protegido?: true;
+  /** Uma chave abriu-o depois de ele passar: joga-se, mas não conta para a sequência. */
+  readonly desbloqueado?: true;
+  /** As chaves que a sequência ganhou neste dia, por chegar a um patamar. */
+  readonly premio?: number;
+  /** O lugar do dia na sequência, guardado só onde o histórico se corta — ver `guardarDesafios`. */
+  readonly serie?: number;
 }
+
+/**
+ * As chaves com que se começa: uma, ao abrir o jogo pela primeira vez — e
+ * também quem já jogava antes de haver chaves a recebe, porque o registo dele
+ * não tem saldo nenhum.
+ */
+export const CHAVES_INICIAIS = 1;
 
 export interface Desafios {
   /** Por data, `AAAA-MM-DD`. */
   readonly dias: Readonly<Record<string, DiaDeDesafio>>;
+  /** As chaves na carteira. */
+  readonly chaves: number;
 }
 
-export const SEM_DESAFIOS: Desafios = { dias: {} };
+export const SEM_DESAFIOS: Desafios = { dias: {}, chaves: CHAVES_INICIAIS };
 
 /* ─── Datas ───────────────────────────────────────────────────────────────── */
 
@@ -191,8 +215,8 @@ export function primeiroMesDoTrilho(hoje: string): string {
   return guardado > epoca ? guardado : epoca;
 }
 
-/** Uma data bem formada, que é tudo o que se aceita vindo do armazenamento. */
-const eData = (s: string): boolean =>
+/** Uma data bem formada, que é tudo o que se aceita vindo do armazenamento ou do endereço. */
+export const eData = (s: string): boolean =>
   /^\d{4}-\d{2}-\d{2}$/.test(s) && deDias(emDias(s)) === s;
 
 /* ─── A seed ──────────────────────────────────────────────────────────────── */
@@ -245,7 +269,7 @@ function comEstado<M extends ModoDoDesafio>(
   modo: M,
   estado: EstadoDoModo<ResultadoDe[M]>,
 ): Desafios {
-  return { dias: { ...d.dias, [data]: { ...d.dias[data], [modo]: estado } } };
+  return { ...d, dias: { ...d.dias, [data]: { ...d.dias[data], [modo]: estado } } };
 }
 
 /** Começa a tentativa oficial, se ainda não houve nenhuma nesse dia. */
@@ -278,11 +302,56 @@ export function interromper(d: Desafios, data: string, modo: ModoDoDesafio): Des
 /* ─── A sequência ─────────────────────────────────────────────────────────── */
 
 /**
- * Um dia conta para a sequência se o desafio desse dia foi feito. Os outros
- * modos guardados num dia — de quando havia três — não contam.
+ * Um dia conta para a sequência se o desafio desse dia foi feito **nesse
+ * dia**. Os outros modos guardados num dia — de quando havia três — não
+ * contam; e um dia jogado depois, com uma chave, também não: a sequência é de
+ * dias seguidos, e jogar ontem hoje não é jogar ontem.
  */
-const conta = (d: Desafios, data: string): boolean =>
+export const contaParaASequencia = (d: Desafios, data: string): boolean =>
+  d.dias[data]?.desbloqueado !== true &&
   estadoDoModo(d, data, modoDoDia(data))?.estado === "feito";
+
+/**
+ * O dia que vem antes deste na sequência: ontem, se contou; anteontem, se
+ * ontem ficou por jogar mas uma chave o salvou. Senão, nenhum — a sequência
+ * começa aqui.
+ *
+ * O dia salvo **liga** a sequência, mas não lhe soma: cinco dias, um salvo e
+ * hoje feito são seis. A chave guarda o que se tinha; não dá um dia que não se
+ * jogou.
+ */
+function anteriorNaSequencia(d: Desafios, data: string): string | undefined {
+  const ontem = diaAnterior(data);
+  if (contaParaASequencia(d, ontem)) return ontem;
+
+  const anteontem = diaAnterior(ontem);
+  if (d.dias[ontem]?.protegido === true && contaParaASequencia(d, anteontem)) return anteontem;
+
+  return undefined;
+}
+
+/**
+ * O lugar de um dia na sequência que acaba nele: o primeiro dia é o 1. Um dia
+ * que não conta não tem lugar, e dá 0.
+ *
+ * Para quando encontra um `serie` guardado: é onde o histórico foi cortado, e
+ * daí para trás já não há dias para contar — ver `guardarDesafios`.
+ */
+export function lugarNaSequencia(d: Desafios, data: string): number {
+  let n = 0;
+
+  for (
+    let dia: string | undefined = data;
+    dia !== undefined && contaParaASequencia(d, dia);
+    dia = anteriorNaSequencia(d, dia)
+  ) {
+    const guardado = d.dias[dia]?.serie;
+    if (guardado !== undefined) return n + guardado;
+    n++;
+  }
+
+  return n;
+}
 
 /**
  * Dias seguidos com desafio feito, até hoje.
@@ -292,15 +361,10 @@ const conta = (d: Desafios, data: string): boolean =>
  * tido hipótese de a continuar.
  */
 export function sequencia(d: Desafios, hoje: string): number {
-  let dia = conta(d, hoje) ? hoje : diaAnterior(hoje);
-  let n = 0;
+  if (contaParaASequencia(d, hoje)) return lugarNaSequencia(d, hoje);
 
-  while (conta(d, dia)) {
-    n++;
-    dia = diaAnterior(dia);
-  }
-
-  return n;
+  const ultimo = anteriorNaSequencia(d, hoje);
+  return ultimo === undefined ? 0 : lugarNaSequencia(d, ultimo);
 }
 
 /* ─── Guardar e ler ───────────────────────────────────────────────────────── */
@@ -308,17 +372,39 @@ export function sequencia(d: Desafios, hoje: string): number {
 export function guardarDesafios(storage: ProfileStorage, d: Desafios): void {
   // Só os dias mais recentes: os três anos que o trilho deixa ver. O
   // armazenamento de um telemóvel não é sítio para um diário infinito.
-  const datas = Object.keys(d.dias).sort().slice(-DIAS_GUARDADOS);
-  const dias = Object.fromEntries(datas.map((k) => [k, d.dias[k]]));
+  const todas = Object.keys(d.dias).sort();
+  const datas = todas.slice(-DIAS_GUARDADOS);
+  const dias: Record<string, DiaDeDesafio> = {};
+  for (const k of datas) dias[k] = d.dias[k] ?? {};
+
+  /*
+   * Uma sequência que atravessa o corte não recomeça do zero: os primeiros
+   * dias que ficam guardam o lugar que tinham. Sem isto, uma sequência de mais
+   * de três anos ficava presa no tamanho do histórico — e os patamares das
+   * chaves, que se contam por ela, repetiam-se dia após dia. Dois dias, porque
+   * um dia salvo por uma chave faz a sequência saltar dois para trás.
+   */
+  if (datas.length < todas.length) {
+    for (const k of datas.slice(0, 2)) {
+      const lugar = lugarNaSequencia(d, k);
+      if (lugar > 0) dias[k] = { ...dias[k], serie: lugar };
+    }
+  }
 
   try {
-    storage.setItem(DESAFIO_KEY, JSON.stringify({ versao: DESAFIO_VERSAO, dias }));
+    storage.setItem(
+      DESAFIO_KEY,
+      JSON.stringify({ versao: DESAFIO_VERSAO, chaves: d.chaves, dias }),
+    );
   } catch {
     // Disco cheio ou armazenamento negado: perde-se o registo, não o jogo.
   }
 }
 
 const numero = (x: unknown): x is number => typeof x === "number" && Number.isFinite(x);
+
+const contagem = (x: unknown): x is number =>
+  typeof x === "number" && Number.isInteger(x) && x >= 0;
 
 function estadoValido<R>(
   x: unknown,
@@ -363,6 +449,9 @@ const survivalValido = (r: unknown): r is ResultadoSurvival => {
  *
  * Dia a dia e modo a modo: um dia estragado — de um armazenamento mexido à mão,
  * de uma versão futura — perde-se sozinho, e a sequência dos outros fica.
+ *
+ * Um registo sem saldo é de antes das chaves, e começa com as iniciais, como
+ * quem chega agora.
  */
 export function lerDesafios(storage: ProfileStorage): Desafios {
   let parsed: unknown;
@@ -375,7 +464,7 @@ export function lerDesafios(storage: ProfileStorage): Desafios {
   }
 
   if (typeof parsed !== "object" || parsed === null) return SEM_DESAFIOS;
-  const env = parsed as { versao?: unknown; dias?: unknown };
+  const env = parsed as { versao?: unknown; chaves?: unknown; dias?: unknown };
   if (env.versao !== DESAFIO_VERSAO) return SEM_DESAFIOS;
   if (typeof env.dias !== "object" || env.dias === null) return SEM_DESAFIOS;
 
@@ -383,18 +472,31 @@ export function lerDesafios(storage: ProfileStorage): Desafios {
   for (const [data, valor] of Object.entries(env.dias as Record<string, unknown>)) {
     if (!eData(data) || typeof valor !== "object" || valor === null) continue;
 
-    const v = valor as { puzzle?: unknown; tempo?: unknown; survival?: unknown };
+    const v = valor as {
+      puzzle?: unknown;
+      tempo?: unknown;
+      survival?: unknown;
+      protegido?: unknown;
+      desbloqueado?: unknown;
+      premio?: unknown;
+      serie?: unknown;
+    };
     const puzzle = estadoValido(v.puzzle, puzzleValido);
     const tempo = estadoValido(v.tempo, tempoValido);
     const survival = estadoValido(v.survival, survivalValido);
 
-    if (puzzle === undefined && tempo === undefined && survival === undefined) continue;
-    dias[data] = {
+    const dia: DiaDeDesafio = {
       ...(puzzle === undefined ? {} : { puzzle }),
       ...(tempo === undefined ? {} : { tempo }),
       ...(survival === undefined ? {} : { survival }),
+      ...(v.protegido === true ? { protegido: true as const } : {}),
+      ...(v.desbloqueado === true ? { desbloqueado: true as const } : {}),
+      ...(contagem(v.premio) && v.premio > 0 ? { premio: v.premio } : {}),
+      ...(contagem(v.serie) && v.serie > 0 ? { serie: v.serie } : {}),
     };
+
+    if (Object.keys(dia).length > 0) dias[data] = dia;
   }
 
-  return { dias };
+  return { dias, chaves: contagem(env.chaves) ? env.chaves : CHAVES_INICIAIS };
 }

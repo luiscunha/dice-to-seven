@@ -20,7 +20,7 @@ import type { SurvivalState } from "../src/session/SurvivalSession";
 import { DEFAULT_SURVIVAL, startSurvival } from "../src/session/SurvivalSession";
 import { DEFAULT_TIME_ATTACK } from "../src/session/TimeAttackSession";
 import { diasDoMes, modoDoDia, numeroDoDia } from "../src/session/desafio";
-import type { EstadoNoCartao, TrilhoDoDesafio } from "../src/ui/DesafioScreen";
+import type { DiaNoTrilho, EstadoNoCartao, TrilhoDoDesafio } from "../src/ui/DesafioScreen";
 import { DesafioScreen } from "../src/ui/DesafioScreen";
 import type { ResumoDoDesafio } from "../src/ui/HomeScreen";
 import { HomeScreen } from "../src/ui/HomeScreen";
@@ -175,6 +175,7 @@ describe("o cartão do Desafio do Dia, na Home", () => {
         numero: 3,
         data: "14 out",
         sequencia: 0,
+        chaves: 0,
         modo: "survival",
         estado: { tipo: "por-jogar" },
         aoAbrir: () => undefined,
@@ -230,6 +231,28 @@ describe("o cartão do Desafio do Dia, na Home", () => {
     ecra.destruir();
   });
 
+  it("as chaves aparecem quando há, ao lado da série", () => {
+    let ecra = abrir({ sequencia: 4, chaves: 2 });
+    const sinais = [...host.querySelectorAll(".home-desafio-sinais > *")].map((e) => e.textContent);
+    expect(sinais).toEqual(["🔥 4", "🔑 2"]);
+    ecra.destruir();
+
+    ecra = abrir();
+    expect(host.querySelector(".home-desafio .desafio-chaves")).toBeNull();
+    ecra.destruir();
+  });
+
+  it("**a sequência em risco avisa no cartão**, no lugar da série", () => {
+    const ecra = abrir({ emRisco: 5, chaves: 1 });
+    const risco = host.querySelector<HTMLElement>(".home-desafio .desafio-sequencia");
+    expect(risco?.textContent).toBe("🔥 5 em risco");
+    expect(risco?.hasAttribute("data-risco")).toBe(true);
+    expect(host.querySelector(".home-desafio")?.getAttribute("aria-label")).toContain(
+      "Sequência de 5 em risco",
+    );
+    ecra.destruir();
+  });
+
   it("fica por baixo dos modos, para quem chega e para quem já joga", () => {
     // A ordem não depende do perfil: dois telemóveis lado a lado mostram a mesma Home.
     for (const perfil of [emptyProfile(), jogador]) {
@@ -276,6 +299,7 @@ describe("o ecrã do Desafio do Dia: um caminho por mês", () => {
       trilho: {
         hoje,
         sequencia: 5,
+        chaves: 1,
         aoJogar: () => undefined,
         diasDoMes: (mes) =>
           diasDoMes(mes).map((data) => ({
@@ -488,6 +512,259 @@ describe("o ecrã do Desafio do Dia: um caminho por mês", () => {
     expect(host.querySelector(".desafio-mes-nome")?.textContent).toBe("Fevereiro de 2027");
     mes("dez")?.click();
     expect(host.querySelector(".desafio-mes-nome")?.textContent).toBe("Dezembro de 2026");
+    ecra.destruir();
+  });
+});
+
+/* ─── As chaves, no caminho ───────────────────────────────────────────────── */
+
+describe("as chaves, no caminho", () => {
+  /** O #55, um Puzzle. Ontem, o 4, é o dia que a fixture deixa por jogar. */
+  const HOJE = "2026-12-05";
+  const ONTEM = "2026-12-04";
+  /** Um dia de novembro que ficou por jogar: o #27, um Puzzle. */
+  const PERDIDO = "2026-11-07";
+
+  /**
+   * Tudo feito, menos `ONTEM` e os dias 7, que ficaram por jogar — e se abrem
+   * com uma chave. `marcas` acrescenta o que se quiser a um dia.
+   */
+  const abrir = (
+    t: Partial<TrilhoDoDesafio> = {},
+    marcas: Readonly<Record<string, Partial<DiaNoTrilho>>> = {},
+  ): DesafioScreen =>
+    new DesafioScreen(host, {
+      aoVoltar: () => undefined,
+      trilho: {
+        hoje: HOJE,
+        sequencia: 0,
+        chaves: 1,
+        aoJogar: () => undefined,
+        aoDesbloquear: () => undefined,
+        diasDoMes: (mes) =>
+          diasDoMes(mes).map((data): DiaNoTrilho => {
+            const perdido = data === ONTEM || data.endsWith("-07");
+            return {
+              data,
+              numero: numeroDoDia(data),
+              modo: modoDoDia(data),
+              estado:
+                data > HOJE
+                  ? { tipo: "futuro" }
+                  : data === HOJE
+                    ? { tipo: "por-jogar" }
+                    : perdido
+                      ? { tipo: "perdido" }
+                      : { tipo: "feito", texto: "ok" },
+              ...(perdido && data < HOJE ? { desbloqueavel: true } : {}),
+              ...marcas[data],
+            };
+          }),
+        primeiroMes: "2026-10",
+        ...t,
+      },
+    });
+
+  const casa = (data: string): HTMLElement | undefined =>
+    [...host.querySelectorAll<HTMLElement>(".trilho-dia")].find(
+      (li) => li.querySelector(".trilho-rotulo")?.textContent?.startsWith(`${String(Number(data.slice(8)))} `),
+    );
+
+  const tocar = (data: string): void => {
+    casa(data)?.querySelector<HTMLElement>(".trilho-no")?.click();
+  };
+
+  const mes = (nome: string): HTMLButtonElement | undefined =>
+    [...host.querySelectorAll<HTMLButtonElement>(".desafio-meses-botao")].find(
+      (b) => b.querySelector(".desafio-meses-nome")?.textContent === nome,
+    );
+
+  const botoesDo = (seletor: string): HTMLButtonElement[] => [
+    ...host.querySelectorAll<HTMLButtonElement>(`${seletor} .btn`),
+  ];
+
+  const botao = (seletor: string, rotulo: string): HTMLButtonElement | undefined =>
+    botoesDo(seletor).find((b) => b.textContent === rotulo);
+
+  const PROTECAO = {
+    data: ONTEM,
+    sequencia: 5,
+    perguntar: true,
+    aoProteger: () => undefined,
+    aoRecusar: () => undefined,
+  };
+
+  it("**a carteira fica no topo**, e tocar-lhe explica as chaves e a próxima", () => {
+    const ecra = abrir({ chaves: 2, sequencia: 5 });
+
+    expect(host.querySelector(".topo .desafio-chaves")?.textContent).toBe("🔑 2");
+    host.querySelector<HTMLElement>(".desafio-chaves-botao")?.click();
+
+    const caixa = host.querySelector(".chaves-explicacao");
+    expect(caixa?.querySelector(".popup-titulo")?.textContent).toBe("As chaves · 🔑 2");
+    expect([...(caixa?.querySelectorAll(".chaves-patamares li") ?? [])].map((li) => li.textContent)).toEqual([
+      "3 dias seguidos+1 🔑",
+      "7 dias seguidos+2 🔑",
+      "14 dias seguidos+3 🔑",
+      "30 dias seguidos+5 🔑",
+    ]);
+    expect(caixa?.textContent).toContain("A próxima: aos 7 dias, +2 🔑 — faltam 2 dias.");
+
+    botao(".chaves-explicacao", "Percebi")?.click();
+    expect(host.querySelector(".chaves-explicacao")).toBeNull();
+    ecra.destruir();
+  });
+
+  it("**ontem por jogar: pergunta logo ao abrir**, e a série no topo diz que está em risco", () => {
+    const aoProteger = vi.fn();
+    // Hoje já feito: a série é 1, mas o que está em jogo são os cinco de antes.
+    const ecra = abrir({ sequencia: 1, protecao: { ...PROTECAO, aoProteger } });
+
+    expect(host.querySelector(".topo .desafio-sequencia")?.textContent).toBe("🔥 5 em risco");
+
+    const caixa = host.querySelector("dialog.confirmacao");
+    expect(caixa?.querySelector(".popup-titulo")?.textContent).toBe("A tua sequência está em risco");
+    expect(caixa?.textContent).toContain("a tua sequência de 5 dias acaba aí");
+    // Salvar é o que se oferece: o realce é dele, e não da saída.
+    expect(botao("dialog.confirmacao", "Usar 🔑 1")?.classList.contains("primario")).toBe(true);
+
+    botao("dialog.confirmacao", "Usar 🔑 1")?.click();
+    expect(aoProteger).toHaveBeenCalledOnce();
+    expect(host.querySelector("dialog.confirmacao")).toBeNull();
+    ecra.destruir();
+  });
+
+  it("«agora não» fica dito — e a oferta continua no balão de ontem", () => {
+    const aoRecusar = vi.fn();
+    const aoProteger = vi.fn();
+    let ecra = abrir({ protecao: { ...PROTECAO, aoRecusar } });
+    botao("dialog.confirmacao", "Agora não")?.click();
+    expect(aoRecusar).toHaveBeenCalledOnce();
+    ecra.destruir();
+
+    // Depois de recusar, abrir já não pergunta.
+    ecra = abrir({ protecao: { ...PROTECAO, perguntar: false, aoProteger } });
+    expect(host.querySelector("dialog")).toBeNull();
+
+    tocar(ONTEM);
+    expect(botoesDo(".trilho-balao").map((b) => b.textContent)).toEqual([
+      "Salvar a sequência",
+      "Desbloquear · 🔑 1",
+    ]);
+    botao(".trilho-balao", "Salvar a sequência")?.click();
+    botao("dialog.confirmacao", "Usar 🔑 1")?.click();
+    expect(aoProteger).toHaveBeenCalledOnce();
+    ecra.destruir();
+  });
+
+  it("**um dia por jogar abre-se com uma chave** — confirmado, joga-se", () => {
+    const aoDesbloquear = vi.fn();
+    const ecra = abrir({ aoDesbloquear });
+
+    mes("nov")?.click();
+    tocar(PERDIDO);
+    expect(host.querySelector(".trilho-balao .desafio-resultado")?.textContent).toBe("Ficou por jogar.");
+
+    botao(".trilho-balao", "Desbloquear · 🔑 1")?.click();
+    const caixa = host.querySelector("dialog.confirmacao");
+    expect(caixa?.querySelector(".popup-titulo")?.textContent).toBe("Desbloquear o desafio #27?");
+    expect(caixa?.textContent).toContain("não para a sequência");
+
+    // Cancelar não gasta nada.
+    botao("dialog.confirmacao", "Cancelar")?.click();
+    expect(aoDesbloquear).not.toHaveBeenCalled();
+
+    botao(".trilho-balao", "Desbloquear · 🔑 1")?.click();
+    botao("dialog.confirmacao", "Desbloquear e jogar")?.click();
+    expect(aoDesbloquear).toHaveBeenCalledWith(PERDIDO);
+    ecra.destruir();
+  });
+
+  it("sem chaves, o botão fica apagado, e diz quando chega a próxima", () => {
+    const ecra = abrir({ chaves: 0, sequencia: 5 });
+    mes("nov")?.click();
+    tocar(PERDIDO);
+
+    expect(botao(".trilho-balao", "Desbloquear · 🔑 1")?.disabled).toBe(true);
+    expect(host.querySelector(".trilho-balao .desafio-nota-chave")?.textContent).toBe(
+      "Sem chaves. A próxima chega aos 7 dias seguidos.",
+    );
+    ecra.destruir();
+  });
+
+  it("**um dia aberto joga-se como hoje** — e, feito, treina-se mas não se partilha", () => {
+    const aoJogar = vi.fn();
+    let ecra = abrir(
+      { aoJogar },
+      { [PERDIDO]: { desbloqueado: true, desbloqueavel: false, estado: { tipo: "por-jogar" } } },
+    );
+    mes("nov")?.click();
+    tocar(PERDIDO);
+    expect(botoesDo(".trilho-balao").map((b) => b.textContent)).toEqual(["Jogar"]);
+    botao(".trilho-balao", "Jogar")?.click();
+    expect(aoJogar).toHaveBeenCalledWith(PERDIDO);
+    ecra.destruir();
+
+    ecra = abrir(
+      { aoPartilhar: () => Promise.resolve("copiado") },
+      { [PERDIDO]: { desbloqueado: true, desbloqueavel: false, estado: { tipo: "feito", texto: "1:02.3" } } },
+    );
+    mes("nov")?.click();
+    tocar(PERDIDO);
+    expect(botoesDo(".trilho-balao").map((b) => b.textContent)).toEqual(["Treinar"]);
+    expect(host.querySelector(".trilho-balao .desafio-nota-chave")?.textContent).toBe(
+      "Jogado depois, com uma chave: conta para o mês, não para a sequência.",
+    );
+    ecra.destruir();
+  });
+
+  it("as casas mostram onde se gastou uma chave, e onde a série deu chaves", () => {
+    const ecra = abrir(
+      {},
+      {
+        "2026-12-01": { premio: 2 },
+        [ONTEM]: { protegido: true, desbloqueavel: true },
+      },
+    );
+
+    expect(casa("2026-12-01")?.querySelector(".trilho-premio")?.textContent).toBe("+2 🔑");
+    expect(casa("2026-12-01")?.querySelector(".trilho-no")?.getAttribute("aria-label")).toContain(
+      "ganhou 2 chaves",
+    );
+    expect(casa(ONTEM)?.querySelector(".trilho-chave")).not.toBeNull();
+    expect(casa("2026-12-02")?.querySelector(".trilho-chave")).toBeNull();
+
+    tocar(ONTEM);
+    expect(host.querySelector(".trilho-balao .desafio-nota-chave")?.textContent).toBe(
+      "🔑 Uma chave salvou a sequência.",
+    );
+    ecra.destruir();
+  });
+
+  it("**o balão de hoje diz as chaves que hoje dá**, quando a série chega a um patamar", () => {
+    let ecra = abrir({ sequencia: 6, premioDeHoje: 2 });
+    expect(host.querySelector(".trilho-balao-premio")?.textContent).toBe("🔥 +1 · 🔑 +2");
+    ecra.destruir();
+
+    ecra = abrir({ sequencia: 4, premioDeHoje: 0 });
+    expect(host.querySelector(".trilho-balao-premio")?.textContent).toBe("🔥 +1");
+    ecra.destruir();
+  });
+
+  it("**as chaves que acabaram de chegar celebram-se ao abrir** — e passam à frente do risco", () => {
+    const ecra = abrir({ premio: { chaves: 1, dias: 3 }, protecao: PROTECAO });
+
+    const caixas = host.querySelectorAll("dialog");
+    expect(caixas).toHaveLength(1);
+    expect(host.querySelector(".chaves-premio .popup-titulo")?.textContent).toBe("🔑 +1");
+    expect(host.querySelector(".chaves-premio")?.textContent).toContain("3 dias seguidos! Ganhaste 1 chave");
+    ecra.destruir();
+  });
+
+  it("**o regresso de um dia passado abre nesse dia**, e não em hoje", () => {
+    const ecra = abrir({ foco: PERDIDO });
+    expect(host.querySelector(".desafio-mes-nome")?.textContent).toBe("Novembro de 2026");
+    expect(casa(PERDIDO)?.querySelector(".trilho-balao")).not.toBeNull();
     ecra.destruir();
   });
 });
