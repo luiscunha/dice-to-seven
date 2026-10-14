@@ -68,6 +68,17 @@
   /* O joker é acromático: no logótipo, o cinzento é o próprio 7. */
   --face-joker: #8e999c;
 
+  /*
+   * O símbolo no meio do joker: um asterisco branco numa caixa verde.
+   *
+   * É o único verde vivo do jogo, fora da rampa, e é de propósito: o joker é a
+   * peça que não é nenhuma das outras, e o símbolo diz isso antes de se ler.
+   * O mesmo nos dois temas, como as faces.
+   */
+  --joker-caixa: #0aa816;
+  --joker-caixa-luz: #3fd34b;
+  --joker-estrela: #ffffff;
+
   /* Tinta das pintas. Escura enquanto a face for clara. */
   --ink-1: #123f3a;
   --ink-2: #123f3a;

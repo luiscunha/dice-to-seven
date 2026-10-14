@@ -428,6 +428,39 @@ body::before {
 }
 
 /*
+ * O símbolo do joker (`simboloJoker`, `dice.ts`). Mede `1em`: na peça é o
+ * tamanho do glifo, numa frase é o da letra à volta.
+ *
+ * Os raios da caixa e o peso dos braços são os do emoji que o iPhone usava no
+ * lugar do `✳`. Esse aspeto ficou como o do joker, agora igual em todos os
+ * sistemas.
+ */
+.simbolo-joker {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.15em;
+  border-radius: 22%;
+  background: linear-gradient(var(--joker-caixa-luz), var(--joker-caixa));
+}
+
+.simbolo-joker svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: var(--joker-estrela);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+/* Dentro da peça é um bloco: sem linha de texto à volta, centra-se exato. */
+.glifo > .simbolo-joker,
+.marca-joker > .simbolo-joker {
+  display: block;
+}
+
+/*
  * A seleção não pode ser uma cor: a rampa ocupa todo o azul-verde da marca, e
  * qualquer matiz entraria em conflito com alguma face. É um anel duplo — claro
  * por dentro, escuro por fora — e um dos dois destaca-se sempre.
@@ -1176,19 +1209,27 @@ body::before {
  * as pintas são a identidade e os dígitos são uma definição que o jogador
  * escolhe, o joker era a única peça que não respeitava nem uma coisa nem outra.
  *
- * Fica o `✳` no canto, pequeno e discreto: diz qual das peças é o joker sem
- * disputar a leitura com as pintas que agora estão lá.
+ * Fica o símbolo do joker, pequeno, a cavalo no canto de cima à direita: diz
+ * qual das peças é o joker sem disputar a leitura com as pintas que agora
+ * estão lá.
+ *
+ * **Por fora da face, e não dentro.** O canto de dentro é onde está a pinta de
+ * cima à direita do 2 ao 6, e a caixa verde é opaca: tapava-a, e a pinta é o
+ * valor. É o mesmo sítio e o mesmo rebordo do pavio da bomba, que já ensina a
+ * ler um sinal agarrado à peça.
  */
 .marca-joker {
   position: absolute;
-  top: calc(var(--lado-real) * 0.04);
-  right: calc(var(--lado-real) * 0.08);
+  top: calc(var(--lado-real) * -0.1);
+  right: calc(var(--lado-real) * -0.1);
 
-  font-size: calc(var(--lado-real) * 0.3);
+  font-size: max(14px, calc(var(--lado-real) * 0.3));
   line-height: 1;
-  color: var(--tinta);
-  opacity: 0.55;
   pointer-events: none;
+}
+
+.marca-joker > .simbolo-joker {
+  box-shadow: 0 0 0 2px var(--surface);
 }
 
 /* ─── Tutorial do joker ───────────────────────────────────────────────────── */

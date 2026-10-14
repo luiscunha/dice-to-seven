@@ -58,6 +58,7 @@ import {
   iconeVoltar,
 } from "./icones";
 import { BoardView } from "./BoardView";
+import { simboloJoker } from "./dice";
 import { JokerPicker } from "./JokerPicker";
 import type { DesafioNoEcra } from "./partilha";
 import { botaoPartilhar } from "./partilha";
@@ -792,15 +793,19 @@ export class PuzzleScreen {
 
     this.elSoma.classList.remove("vazia");
 
-    const parcelas = jogo.selection
-      .map((p) => {
-        const v = cellAt(jogo.board, p);
-        // O joker mostra-se pelo valor que o jogador lhe deu: é isso que conta
-        // para a soma, e é isso que ele precisa de reler.
-        if (v === JOKER) return jogo.jokerAs === undefined ? "✳" : `✳${String(jogo.jokerAs)}`;
-        return String(v ?? "?");
-      })
-      .join(" + ");
+    const parcelas: (string | Node)[] = [];
+    jogo.selection.forEach((p, i) => {
+      if (i > 0) parcelas.push(" + ");
+      const v = cellAt(jogo.board, p);
+      // O joker mostra-se pelo valor que o jogador lhe deu: é isso que conta
+      // para a soma, e é isso que ele precisa de reler.
+      if (v === JOKER) {
+        parcelas.push(simboloJoker("joker"));
+        if (jogo.jokerAs !== undefined) parcelas.push(String(jogo.jokerAs));
+      } else {
+        parcelas.push(String(v ?? "?"));
+      }
+    });
 
     const soma = selectionTotal(jogo);
 
@@ -813,7 +818,7 @@ export class PuzzleScreen {
       this.elSoma.replaceChildren(spanParcelas(parcelas));
     } else {
       this.elSoma.replaceChildren(
-        spanParcelas(`${parcelas} = `),
+        spanParcelas([...parcelas, " = "]),
         texto(String(soma)),
       );
     }
@@ -1197,10 +1202,10 @@ function marca(s: string): HTMLElement {
   return el;
 }
 
-function spanParcelas(s: string): HTMLElement {
+function spanParcelas(conteudo: readonly (string | Node)[]): HTMLElement {
   const el = document.createElement("span");
   el.className = "parcelas";
-  el.textContent = s;
+  el.append(...conteudo);
   return el;
 }
 

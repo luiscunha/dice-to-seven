@@ -348,13 +348,14 @@ describe("o joker mostra a face do valor que toma", () => {
   const pecaDoJoker = (): HTMLElement =>
     host.querySelector(`.peca[data-pos="${String(JOKER)}"]`) as HTMLElement;
 
-  it("sem valor escolhido é o ✳, e mais nada", () => {
+  it("sem valor escolhido é o símbolo do joker, e mais nada", () => {
     const view = new BoardView(host, { aoTocar: () => undefined });
     view.montar(COM_JOKER);
 
     const el = pecaDoJoker();
     expect(el.querySelectorAll(".glifo")).toHaveLength(1);
-    expect(el.textContent).toBe("✳");
+    expect(el.querySelectorAll(".glifo > .simbolo-joker")).toHaveLength(1);
+    expect(el.textContent).toBe("");
     expect(el.querySelectorAll(".pinta")).toHaveLength(0);
 
     view.destruir();
@@ -375,18 +376,18 @@ describe("o joker mostra a face do valor que toma", () => {
     view.destruir();
   });
 
-  it("fica um ✳ pequeno no canto — é o que diz qual das peças é o joker", () => {
+  it("fica o símbolo pequeno no canto — é o que diz qual das peças é o joker", () => {
     const view = new BoardView(host, { aoTocar: () => undefined });
     view.montar(COM_JOKER);
     view.marcarJoker(JOKER, 5);
 
     const marca = pecaDoJoker().querySelector(".marca-joker");
-    expect(marca?.textContent).toBe("✳");
+    expect(marca?.querySelectorAll(".simbolo-joker")).toHaveLength(1);
 
     view.destruir();
   });
 
-  it("desfazer a escolha devolve o ✳ grande", () => {
+  it("desfazer a escolha devolve o símbolo grande", () => {
     const view = new BoardView(host, { aoTocar: () => undefined });
     view.montar(COM_JOKER);
 
@@ -394,7 +395,7 @@ describe("o joker mostra a face do valor que toma", () => {
     view.marcarJoker(undefined, undefined);
 
     const el = pecaDoJoker();
-    expect(el.textContent).toBe("✳");
+    expect(el.querySelectorAll(".glifo > .simbolo-joker")).toHaveLength(1);
     expect(el.querySelectorAll(".pinta")).toHaveLength(0);
     expect(el.querySelectorAll(".marca-joker")).toHaveLength(0);
 
