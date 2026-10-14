@@ -18,6 +18,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { emptyProfile } from "../src/session/progress";
+import { DEFAULT_TIME_ATTACK } from "../src/session/TimeAttackSession";
 import type { Profile } from "../src/session/progress";
 import type { OpcoesComoJogar } from "../src/ui/ComoJogarScreen";
 import { ComoJogarScreen } from "../src/ui/ComoJogarScreen";
@@ -149,11 +150,28 @@ describe("o ecrã das regras", () => {
   const abrir = (extra: Partial<OpcoesComoJogar> = {}): ComoJogarScreen =>
     new ComoJogarScreen(host, { aoVoltar: () => undefined, ...extra });
 
+  /** A secção com este título. */
+  const seccao = (titulo: string): HTMLElement => {
+    const h2 = [...host.querySelectorAll(".regra h2")].find(
+      (h) => h.textContent === titulo,
+    );
+    const el = h2?.closest<HTMLElement>(".regra");
+    if (el === null || el === undefined) throw new Error(`sem a secção «${titulo}»`);
+    return el;
+  };
+
+  const vereditos = (el: HTMLElement): (string | undefined)[] =>
+    [...el.querySelectorAll<HTMLElement>(".regras-exemplo")].map(
+      (e) => e.dataset["veredito"],
+    );
+
   it("explica a adjacência com um exemplo que vale e outro que não", () => {
     const ecra = abrir();
 
     const exemplos = [
-      ...host.querySelectorAll<HTMLElement>(".regras-exemplo"),
+      ...seccao("Encostadas, não em diagonal").querySelectorAll<HTMLElement>(
+        ".regras-exemplo",
+      ),
     ];
     expect(exemplos.map((e) => e.dataset["veredito"])).toEqual(["vale", "nao"]);
 
@@ -162,6 +180,65 @@ describe("o ecrã das regras", () => {
       expect(exemplo.querySelectorAll(".peca").length).toBe(2);
       expect(exemplo.querySelectorAll(".regras-vazio").length).toBe(2);
     }
+
+    ecra.destruir();
+  });
+
+  it("as peças especiais vêm pela ordem em que se encontram, antes dos selos", () => {
+    const ecra = abrir();
+
+    const titulos = [...host.querySelectorAll(".regra h2")].map(
+      (h) => h.textContent,
+    );
+    const ordem = ["O joker", "As soldas", "O gelo", "A bomba", "Os selos"];
+    expect(titulos.filter((t) => ordem.includes(t ?? ""))).toEqual(ordem);
+
+    ecra.destruir();
+  });
+
+  it("as soldas mostram-se com o grampo do jogo, num par que vale e noutro que não", () => {
+    const ecra = abrir();
+    const el = seccao("As soldas");
+
+    expect(vereditos(el)).toEqual(["vale", "nao"]);
+    for (const exemplo of el.querySelectorAll(".regras-exemplo")) {
+      // O par é o de cima e o de baixo, com as classes que o tabuleiro usa.
+      expect(exemplo.querySelectorAll(".peca.soldada-cima")).toHaveLength(1);
+      expect(exemplo.querySelectorAll(".peca.soldada-baixo")).toHaveLength(1);
+    }
+
+    ecra.destruir();
+  });
+
+  it("o gelo mostra-se com a peça gelada do jogo, a par e com três", () => {
+    const ecra = abrir();
+    const el = seccao("O gelo");
+
+    expect(vereditos(el)).toEqual(["vale", "nao"]);
+    const [aPar, comTres] = [...el.querySelectorAll(".regras-exemplo")];
+    expect(aPar?.querySelectorAll(".peca")).toHaveLength(2);
+    expect(comTres?.querySelectorAll(".peca")).toHaveLength(3);
+    for (const exemplo of [aPar, comTres]) {
+      expect(exemplo?.querySelectorAll(".peca.gelada")).toHaveLength(1);
+    }
+
+    ecra.destruir();
+  });
+
+  it("a bomba mostra-se com o pavio, e diz o castigo dos dois modos", () => {
+    const ecra = abrir();
+    const el = seccao("A bomba");
+
+    const pavio = el.querySelector(".peca.bomba > .pavio");
+    expect(pavio?.textContent).toBe("6");
+    // Quem ouve o ecrã recebe a explicação pelo texto ao lado.
+    expect(pavio?.getAttribute("aria-hidden")).toBe("true");
+
+    const castigo = DEFAULT_TIME_ATTACK.bomba.penalizacaoMs / 1000;
+    expect(el.textContent).toContain(
+      `Contra-Relógio, rebentar custa ${String(castigo)} segundos`,
+    );
+    expect(el.textContent).toContain("No Survival, cai mais uma linha");
 
     ecra.destruir();
   });

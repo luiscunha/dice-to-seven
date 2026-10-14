@@ -139,7 +139,7 @@ A **Fase 8** está construída e **publicada**:
 https://luiscunha.github.io/dice-to-seven/
 ```
 
-Home, **Puzzles** (campanha em cinco capítulos, com grelha e selos),
+Home, **Puzzles** (campanha em quatro capítulos, com grelha e selos),
 **Contra-Relógio** e definições. Publica-se por botão em Actions → Publicar, e o
 `pnpm check` corre antes; se falhar, não publica.
 
@@ -339,6 +339,21 @@ tradução nenhuma.
 **Sobram 15 níveis de cada banda com joker**, 30 ao todo, gerados e por jogar. É
 assumido, e há um teste que o vigia: são o corpo natural do puzzle diário
 (desenho §8, passo 10).
+
+### O Tutorial saiu da campanha
+
+Ficaram **quatro capítulos**, a começar no Iniciado. Ninguém jogava o Tutorial, e
+o Iniciado mais o ecrã Como jogar ensinam o mesmo. A banda `tutorial` continua no
+pipeline e no pack, válida, e um link antigo para o capítulo leva à lista dos
+Puzzles.
+
+A linha da soma era o andaime do Tutorial, e passou para os **três primeiros
+níveis do Iniciado** (`niveisComSoma`, em `capitulos.ts`) — é onde todo o
+jogador novo começa agora.
+
+O Como jogar ganhou, na mesma altura, as três peças especiais que não tinham
+explicação nenhuma: as **soldas**, o **gelo** e a **bomba**, cada uma com as
+peças do jogo a servir de exemplo.
 
 ---
 

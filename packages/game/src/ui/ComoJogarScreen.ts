@@ -16,12 +16,19 @@
  *
  * A ordem é a de quem está a aprender, e não a da spec: primeiro o que se quer
  * fazer, depois como se faz uma jogada, depois o que o tabuleiro faz a seguir.
- * O joker e os selos vêm no fim, porque nenhum dos dois é preciso para jogar o
- * primeiro nível.
+ * As peças especiais vêm a seguir, pela ordem em que se encontram — o joker, as
+ * soldas, o gelo e a bomba —, e os selos no fim, porque nada disso é preciso
+ * para jogar o primeiro nível.
+ *
+ * As três últimas peças especiais tiveram de entrar aqui porque **não têm
+ * tutorial nenhum**: aparecem a meio de um modo, com uma linha de recusa como
+ * única explicação. Quem viu uma peça presa num bloco de gelo e quer saber
+ * porque é que ela não sai procura a resposta neste ecrã.
  */
 
 import type { Cell } from "@dicetoseven/engine";
 
+import { DEFAULT_TIME_ATTACK } from "../session/TimeAttackSession";
 import type { ModoFace } from "./dice";
 import { pecaDeAmostra, simboloJoker } from "./dice";
 import { botao, cabecalho, elemento } from "./dom";
@@ -32,6 +39,27 @@ export interface OpcoesComoJogar {
   readonly aoVerTutorialDoJoker?: () => void;
   readonly modoFace?: ModoFace;
 }
+
+/**
+ * Uma casa de um exemplo: vazia, uma peça, ou uma peça com marcas — as classes
+ * que o `BoardView` lhe daria no tabuleiro, como `gelada` ou `soldada-cima`.
+ * São as mesmas classes, e por isso o mesmo desenho.
+ */
+type Casa =
+  | Cell
+  | undefined
+  | { readonly valor: Cell; readonly marcas: readonly string[] };
+
+const gelada = (valor: Cell): Casa => ({ valor, marcas: ["gelada"] });
+const soldadaCima = (valor: Cell): Casa => ({ valor, marcas: ["soldada-cima"] });
+const soldadaBaixo = (valor: Cell): Casa => ({ valor, marcas: ["soldada-baixo"] });
+
+/**
+ * O que custa a bomba no Contra-Relógio, lido da configuração do modo. É número
+ * de playtest e vai mudar; uma regra escrita à mão ficava a mentir no dia em
+ * que mudasse.
+ */
+const CASTIGO_BOMBA_S = DEFAULT_TIME_ATTACK.bomba.penalizacaoMs / 1000;
 
 /** Os três selos, na ordem em que valem. */
 const SELOS: readonly {
@@ -74,6 +102,9 @@ export class ComoJogarScreen {
       this.ligadas(),
       this.depois(),
       this.joker(opcoes),
+      this.soldas(),
+      this.gelo(),
+      this.bomba(),
       this.selos(),
       this.modos(),
     );
@@ -117,9 +148,9 @@ export class ComoJogarScreen {
     el.appendChild(this.conta([3, 4]));
     el.appendChild(
       this.paragrafo(
-        "A soma vai aparecendo em baixo à medida que tocas. Quando chega a 7, " +
-          "as peças saem sozinhas. Se passares de 7 a jogada não entra — e " +
-          "tocar outra vez numa peça já escolhida tira-a da conta.",
+        "As peças que tocas ficam marcadas. Quando somarem 7, saem sozinhas. " +
+          "Se passares de 7 a jogada não entra — e tocar outra vez numa peça " +
+          "já escolhida tira-a da conta.",
       ),
     );
     el.appendChild(
@@ -230,6 +261,122 @@ export class ComoJogarScreen {
     return el;
   }
 
+  /**
+   * As soldas: o mesmo par de exemplos da adjacência, porque a pergunta é a
+   * mesma — que grupos valem —, e a resposta lê-se melhor em peças.
+   */
+  private soldas(): HTMLElement {
+    const el = this.seccao(
+      "As soldas",
+      "Duas peças unidas por um grampo saem juntas, ou não sai nenhuma.",
+    );
+
+    const exemplos = elemento("div", "regras-exemplos");
+    exemplos.append(
+      this.exemplo("vale", "Vale: 2 + 1 + 4, o par todo", [
+        [soldadaCima(2), undefined],
+        [soldadaBaixo(1), 4],
+      ]),
+      this.exemplo("nao", "Não vale: 2 + 5 deixa o 1 para trás", [
+        [soldadaCima(2), 5],
+        [soldadaBaixo(1), undefined],
+      ]),
+    );
+
+    el.appendChild(exemplos);
+    el.appendChild(
+      this.paragrafo(
+        "As duas peças contam na soma. Uma solda nunca se parte: o par desce " +
+          "junto até sair. Aparecem nos Puzzles, a partir do Avançado.",
+      ),
+    );
+
+    return el;
+  }
+
+  private gelo(): HTMLElement {
+    const el = this.seccao(
+      "O gelo",
+      "Uma peça gelada só sai a par: com uma única peça, que não esteja gelada.",
+    );
+
+    const exemplos = elemento("div", "regras-exemplos");
+    exemplos.append(
+      this.exemplo("vale", "Vale: 5 + 2, a par", [
+        [undefined, undefined],
+        [gelada(5), 2],
+      ]),
+      this.exemplo("nao", "Não vale: 5 + 1 + 1", [
+        [1, undefined],
+        [gelada(5), 1],
+      ]),
+    );
+
+    el.appendChild(exemplos);
+    el.appendChild(
+      this.paragrafo(
+        "Duas peças geladas também não saem juntas, mesmo que somem 7. O gelo " +
+          "não derrete: a peça que solta a gelada vale ouro, e gastá-la noutra " +
+          "jogada pode deixar a gelada presa.",
+      ),
+    );
+    el.appendChild(
+      this.paragrafo(
+        "Aparece nos Puzzles Perito e no Contra-Relógio, a partir do sétimo " +
+          "tabuleiro.",
+      ),
+    );
+
+    return el;
+  }
+
+  /**
+   * A bomba é a única peça especial com castigo, e o castigo muda com o modo —
+   * cada modo pune na sua moeda (`bomba.ts`). Diz-se uma vez cada um, em vez
+   * de deixar o jogador descobri-lo a perder.
+   */
+  private bomba(): HTMLElement {
+    const el = this.seccao(
+      "A bomba",
+      "Uma peça com pavio. Tira-a numa jogada antes de ele acabar.",
+    );
+
+    const linha = elemento("p", "regras-conta regras-bomba");
+    linha.appendChild(this.pecaComBomba(4));
+    linha.appendChild(
+      elemento(
+        "span",
+        "regras-conta-nota",
+        "O número no pavio são os segundos que faltam.",
+      ),
+    );
+    el.appendChild(linha);
+
+    el.appendChild(
+      this.paragrafo(
+        "Para a desarmar, basta que ela entre num grupo de 7, como qualquer " +
+          "outra peça. Se o pavio acabar, rebenta — e a peça fica no tabuleiro.",
+      ),
+    );
+    el.appendChild(
+      this.paragrafo(
+        `No Contra-Relógio, rebentar custa ${String(CASTIGO_BOMBA_S)} segundos. ` +
+          "No Survival, cai mais uma linha, e as peças encostadas à bomba " +
+          "sobem um ponto: um 1 passa a 2, e um 6 fica 6.",
+      ),
+    );
+    el.appendChild(
+      this.paragrafo(
+        "Há uma bomba de cada vez. No Contra-Relógio pode aparecer a partir do " +
+          "quarto tabuleiro. No Survival vês na linha seguinte se ela traz " +
+          "bomba — e mais à frente há bombas que se acendem numa peça que já " +
+          "está na pilha.",
+      ),
+    );
+
+    return el;
+  }
+
   private selos(): HTMLElement {
     const el = this.seccao(
       "Os selos",
@@ -315,6 +462,33 @@ export class ComoJogarScreen {
     return elemento("p", "regra-texto", texto);
   }
 
+  /** Uma peça de amostra, com as marcas que tiver. */
+  private amostra(casa: Exclude<Casa, undefined>): HTMLElement {
+    if (typeof casa === "number") return pecaDeAmostra(casa, this.modo);
+
+    const el = pecaDeAmostra(casa.valor, this.modo);
+    el.classList.add(...casa.marcas);
+    return el;
+  }
+
+  /**
+   * A peça-bomba parada: o pavio a meio, e sem arder.
+   *
+   * No tabuleiro o pavio pulsa para chamar o olho, porque há pressa. Aqui não
+   * há pressa nenhuma, e uma peça a pulsar ao lado de um texto que se está a
+   * ler só distrai — o CSS desliga-lhe o pulso (`.amostra .pavio`).
+   */
+  private pecaComBomba(valor: Cell): HTMLElement {
+    const el = pecaDeAmostra(valor, this.modo);
+    el.classList.add("bomba");
+    el.style.setProperty("--pavio", "0.6");
+
+    const pavio = elemento("span", "pavio", "6");
+    pavio.setAttribute("aria-hidden", "true");
+    el.appendChild(pavio);
+    return el;
+  }
+
   /** `3 + 4 = 7`, com as peças a sério. */
   private conta(valores: readonly Cell[]): HTMLElement {
     const el = elemento("p", "regras-conta");
@@ -342,7 +516,7 @@ export class ComoJogarScreen {
   private exemplo(
     veredito: string,
     rotulo: string,
-    linhas: readonly (readonly (Cell | undefined)[])[],
+    linhas: readonly (readonly Casa[])[],
   ): HTMLElement {
     const el = elemento("figure", "regras-exemplo");
     el.dataset["veredito"] = veredito;
@@ -353,7 +527,7 @@ export class ComoJogarScreen {
         grelha.appendChild(
           valor === undefined
             ? elemento("span", "regras-vazio")
-            : pecaDeAmostra(valor, this.modo),
+            : this.amostra(valor),
         );
       }
     }
