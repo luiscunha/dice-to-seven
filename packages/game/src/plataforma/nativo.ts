@@ -170,6 +170,30 @@ export function ligarBotaoDeVoltar(subir: () => boolean): void {
 }
 
 /**
+ * Desliga o zoom de pinça — só no telemóvel.
+ *
+ * O `touch-action: manipulation` do `body` já tira o zoom por duplo toque, mas
+ * a pinça continua. No iOS, uma pinça amplia a interface inteira, com o
+ * tabuleiro a sair do ecrã. É o gesto que denuncia uma página dentro de uma
+ * caixa, e é exatamente isso que a Apple recusa pela diretriz 4.2.
+ *
+ * Por código, e não no `index.html`, porque a demo web é a mesma página: num
+ * browser, tirar o zoom é tirá-lo a quem precisa dele para ler. O Safari ignora
+ * o `user-scalable=no` por essa razão, mas a WebView da aplicação respeita-o.
+ * No Android a WebView já não tem pinça, portanto na prática isto só muda o
+ * iOS — mas distinguir as duas plataformas seria código para não mudar nada.
+ */
+export function travarZoom(): void {
+  if (!nativo()) return;
+
+  const viewport = document.querySelector('meta[name="viewport"]');
+  viewport?.setAttribute(
+    "content",
+    "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover",
+  );
+}
+
+/**
  * Acerta a tinta das barras do sistema com o fundo do jogo.
  *
  * **As duas barras, e sempre que o tema muda** — não só no arranque. Com o

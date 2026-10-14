@@ -460,18 +460,25 @@ body {
   user-select: none;
 
   /*
-   * Duas coisas que só se notam com o dedo, e que estragam o jogo inteiro se
+   * Três coisas que só se notam com o dedo, e que estragam o jogo inteiro se
    * faltarem.
    *
    * O realce de toque do iOS pinta um retângulo azul por cima da peça — por cima
    * do anel de seleção que desenhámos justamente para não depender de cor.
    *
+   * O toque longo do iOS abre o menu de contexto do Safari — copiar, partilhar,
+   * pré-visualizar — por cima do tabuleiro. Numa aplicação é a marca de uma
+   * página web, e um dedo que hesita numa peça não está a pedir menu nenhum.
+   * É herdado, e o campo do nome devolve-o, como devolve a seleção.
+   *
    * E "touch-action: manipulation" desliga o zoom por duplo toque. Sem ele o
    * browser espera 300 ms a cada toque para ver se vem um segundo, e numa jogada
    * de sete peças seguidas isso não se lê como zoom: lê-se como o jogo estar
-   * lento.
+   * lento. A pinça fica de fora — essa só se desliga no telemóvel, ver
+   * `travarZoom`.
    */
   -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
   touch-action: manipulation;
   /* Safe areas, para a fase 9 não ser uma surpresa. */
   padding: env(safe-area-inset-top) env(safe-area-inset-right)
