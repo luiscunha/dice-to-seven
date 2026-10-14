@@ -713,11 +713,12 @@ export class BoardView {
    * jogador escolhe, o joker era a única peça que não respeitava nem uma coisa
    * nem outra — aparecia em número mesmo para quem joga com pintas.
    *
-   * Fica um `✳` pequeno no canto, senão perdia-se de vista qual das peças é o
-   * joker, que é o que diz ao jogador que ainda pode mudar de ideias.
+   * Fica o símbolo do joker, pequeno, no canto: senão perdia-se de vista qual
+   * das peças é o joker, que é o que diz ao jogador que ainda pode mudar de
+   * ideias.
    */
   marcarJoker(p: Packed | undefined, valor: number | undefined): void {
-    // Quem já tinha valor volta ao ✳ — e só esses, para não redesenhar o
+    // Quem já tinha valor volta ao símbolo — e só esses, para não redesenhar o
     // tabuleiro inteiro a cada toque.
     for (const [q, el] of this.pecas) {
       if (!el.classList.contains("joker-escolhido")) continue;

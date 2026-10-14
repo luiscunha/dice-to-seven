@@ -23,7 +23,7 @@
 import type { Cell } from "@dicetoseven/engine";
 
 import type { ModoFace } from "./dice";
-import { pecaDeAmostra } from "./dice";
+import { pecaDeAmostra, simboloJoker } from "./dice";
 import { botao, cabecalho, elemento } from "./dom";
 
 export interface OpcoesComoJogar {
@@ -190,10 +190,11 @@ export class ComoJogarScreen {
   }
 
   private joker(opcoes: OpcoesComoJogar): HTMLElement {
-    const el = this.seccao(
-      "O joker",
-      "A peça cinzenta com um ✳. Há no máximo uma por tabuleiro.",
-    );
+    const el = this.seccao("O joker", [
+      "A peça cinzenta com um ",
+      simboloJoker("asterisco verde"),
+      ". Há no máximo uma por tabuleiro.",
+    ]);
 
     const linha = elemento("p", "regras-conta");
     linha.appendChild(pecaDeAmostra(0, this.modo));
@@ -295,11 +296,17 @@ export class ComoJogarScreen {
 
   /* ─── As peças de que as secções são feitas ─────────────────────────────── */
 
-  private seccao(titulo: string, chamada?: string): HTMLElement {
+  /** A chamada pode trazer o símbolo do joker no meio, e por isso aceita nós. */
+  private seccao(
+    titulo: string,
+    chamada?: string | readonly (string | Node)[],
+  ): HTMLElement {
     const el = elemento("section", "regra");
     el.appendChild(elemento("h2", undefined, titulo));
     if (chamada !== undefined) {
-      el.appendChild(elemento("p", "regra-chamada", chamada));
+      const p = elemento("p", "regra-chamada");
+      p.append(...(typeof chamada === "string" ? [chamada] : chamada));
+      el.appendChild(p);
     }
     return el;
   }

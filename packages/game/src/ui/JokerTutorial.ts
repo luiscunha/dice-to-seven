@@ -27,6 +27,7 @@ import { NIVEL_TUTORIAL_JOKER, contaDoJoker } from "../session/tutorial";
 import { BoardView } from "./BoardView";
 import { JokerPicker } from "./JokerPicker";
 import type { ModoFace } from "./dice";
+import { simboloJoker } from "./dice";
 
 export interface OpcoesJokerTutorial {
   /** Corre quando o jogador sai. Só acontece depois de ele limpar o tabuleiro. */
@@ -135,10 +136,13 @@ export class JokerTutorial {
     const el = document.createElement("div");
     el.className = "tutorial-conta";
 
-    const passos: readonly (readonly [string, string])[] = [
-      ["as faces somam", String(CONTA.faces)],
-      [`faltam ${String(CONTA.joker)} para`, String(CONTA.total)],
-      [`que é 7 × ${String(CONTA.jogadas)}`, `✳ = ${String(CONTA.joker)}`],
+    const passos: readonly (readonly [string, readonly (string | Node)[]])[] = [
+      ["as faces somam", [String(CONTA.faces)]],
+      [`faltam ${String(CONTA.joker)} para`, [String(CONTA.total)]],
+      [
+        `que é 7 × ${String(CONTA.jogadas)}`,
+        [simboloJoker("joker"), ` = ${String(CONTA.joker)}`],
+      ],
     ];
 
     for (const [rotulo, valor] of passos) {
@@ -151,7 +155,7 @@ export class JokerTutorial {
 
       const v = document.createElement("span");
       v.className = "valor";
-      v.textContent = valor;
+      v.append(...valor);
 
       passo.append(r, v);
       el.appendChild(passo);

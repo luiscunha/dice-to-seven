@@ -64,7 +64,7 @@ export function desenharFace(
   el.replaceChildren();
 
   if (valor === JOKER) {
-    el.appendChild(glifo("✳"));
+    el.appendChild(glifo(simboloJoker()));
     return;
   }
 
@@ -114,14 +114,57 @@ export function pecaDeAmostra(valor: Cell, modo: ModoFace = "pintas"): HTMLEleme
 export function marcaDeJoker(): HTMLElement {
   const el = document.createElement("span");
   el.className = "marca-joker";
-  el.textContent = "✳";
+  el.appendChild(simboloJoker());
   el.setAttribute("aria-hidden", "true");
   return el;
 }
 
-function glifo(texto: string): HTMLElement {
+const SVG_NS = "http://www.w3.org/2000/svg";
+
+/** Os oito braços do asterisco, na grelha de 24 dos ícones. */
+const BRACOS = "M12 5.5v13M5.5 12h13M7.4 7.4l9.2 9.2M16.6 7.4l-9.2 9.2";
+
+/**
+ * O símbolo do joker: um asterisco branco de oito braços numa caixa verde.
+ *
+ * Era o carácter `✳`, e cada sistema desenhava-o à sua maneira. O iPhone
+ * trocava-o pelo emoji da Apple, a caixa verde que este desenho reproduz. O
+ * Android e o Windows mostravam um asterisco de texto, da cor das pintas. Era
+ * a peça mais importante do tabuleiro a mudar de cara conforme o telemóvel.
+ * Desenhado aqui, é igual em todo o lado.
+ *
+ * Mede `1em`, e por isso acompanha a letra de onde estiver: o glifo na peça, a
+ * linha da soma, o texto das regras.
+ *
+ * Com `rotulo`, anuncia-se a quem ouve o ecrã. É o caso no meio de uma frase,
+ * onde o símbolo é uma palavra. Sem rótulo é decoração de um elemento que já se
+ * anuncia, como a peça com o seu `aria-label`.
+ */
+export function simboloJoker(rotulo?: string): HTMLElement {
+  const el = document.createElement("span");
+  el.className = "simbolo-joker";
+  if (rotulo === undefined) {
+    el.setAttribute("aria-hidden", "true");
+  } else {
+    el.setAttribute("role", "img");
+    el.setAttribute("aria-label", rotulo);
+  }
+
+  const svg = document.createElementNS(SVG_NS, "svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
+  svg.setAttribute("aria-hidden", "true");
+
+  const bracos = document.createElementNS(SVG_NS, "path");
+  bracos.setAttribute("d", BRACOS);
+  svg.appendChild(bracos);
+
+  el.appendChild(svg);
+  return el;
+}
+
+function glifo(conteudo: string | Node): HTMLElement {
   const el = document.createElement("span");
   el.className = "glifo";
-  el.textContent = texto;
+  el.append(conteudo);
   return el;
 }
