@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  O arranque fora da API do Android 12: o que o tema pinta por trás e o que o
+  plugin SplashScreen mostra se essa API falhar.
+
+  Eram onze PNG, um por densidade e orientação, e todos esticavam para encher o
+  ecrã: um telefone de hoje é mais comprido do que eles, e o cubo saía um terço
+  mais alto do que largo. Numa lista de camadas, a cor enche e o ícone fica com
+  o tamanho dele, ao centro — igual ao que a API do Android 12 desenha.
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/splash_background" />
+    <item
+        android:width="288dp"
+        android:height="288dp"
+        android:drawable="@drawable/splash_icon"
+        android:gravity="center" />
+</layer-list>
