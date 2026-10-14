@@ -401,11 +401,21 @@ body::before {
  * Perde as duas coisas que só fazem sentido dentro da grelha: a posição
  * absoluta e o transform que a coloca em `(c, r)`. Fica a mesma face, com a
  * mesma cor e o mesmo rebordo, a assentar no fluxo do texto à volta.
+ *
+ * `relative` e não `static`: as marcas das peças especiais — o grampo da solda,
+ * a laje do gelo, o pavio — posicionam-se pela peça, e numa peça estática iam
+ * ancorar-se no primeiro antepassado posicionado, longe dela. O `left: 0` da
+ * `.peca` não a desloca, porque é zero.
  */
 .peca.amostra {
-  position: static;
+  position: relative;
   transform: none;
   cursor: default;
+}
+
+/* O pavio de exemplo não arde: no Como jogar não há pressa nenhuma. */
+.peca.amostra .pavio {
+  animation: none;
 }
 
 .pinta {
@@ -1414,7 +1424,7 @@ body::before {
 }
 
 /*
- * Com o Desafio do Dia, uma faixa a mais entre o lema e os modos.
+ * Com o Desafio do Dia, uma faixa a mais, entre os modos e o cartão das regras.
  *
  * A faixa dos modos deixa de poder encolher abaixo do que tem dentro
  * (`minmax(auto, …)` e não `minmax(0, …)`): com o cartão do dia, num ecrã
@@ -1422,7 +1432,7 @@ body::before {
  * desliza.
  */
 .ecra.home[data-desafio="sim"] {
-  grid-template-rows: auto auto auto minmax(auto, 1fr) auto auto;
+  grid-template-rows: auto auto minmax(auto, 1fr) auto auto auto;
   gap: 12px;
   /*
    * Altura **mínima** do ecrã, e não altura fixa. Fixa, num telemóvel baixo a
@@ -1432,11 +1442,6 @@ body::before {
    */
   height: auto;
   min-height: 100%;
-}
-
-/* Para quem chega, os modos vêm antes do desafio: a faixa elástica é a deles. */
-.ecra.home[data-desafio="sim"][data-novato="sim"] {
-  grid-template-rows: auto auto minmax(auto, 1fr) auto auto auto;
 }
 
 /*
@@ -3033,6 +3038,15 @@ body::before {
   line-height: 1;
   letter-spacing: -0.02em;
   color: var(--accent);
+}
+
+/*
+ * A linha da bomba de exemplo. O pavio sai por cima da peça e o anel de fogo
+ * por fora dela: sem esta folga, um tocava na frase de cima e o outro era
+ * cortado pela margem do rolo.
+ */
+.regras-bomba {
+  padding: 10px 0 0 3px;
 }
 
 .regras-conta-nota {

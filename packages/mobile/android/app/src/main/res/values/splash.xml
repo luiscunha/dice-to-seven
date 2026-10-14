@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      O fundo do arranque: o ground do tema claro do jogo (theme.css), a cor que
+      ele pinta a seguir. O escuro está em values-night/.
+    -->
+    <color name="splash_background">#F1F2F0</color>
+</resources>

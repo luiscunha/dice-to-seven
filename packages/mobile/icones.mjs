@@ -1,5 +1,5 @@
 /**
- * Os ícones do Android e do iOS, e o ecrã de arranque do iOS, a partir da marca.
+ * Os ícones e os ecrãs de arranque do Android e do iOS, a partir da marca.
  *
  * Corre-se à mão quando a marca mudar — `node icones.mjs` daqui — e as páginas
  * que deixa fotografam-se com o Chrome em modo headless, uma a uma, com o lado
@@ -62,6 +62,17 @@ for (const [dpi, lado] of Object.entries(DENSIDADES)) {
     nome: `ic_launcher_foreground-${dpi}`,
     html: pagina(frente, ladoAdapt),
     lado: ladoAdapt,
+  });
+
+  /*
+   * O arranque do Android: 288dp, dos quais o sistema mostra o círculo de 192
+   * do meio. É a proporção do adaptativo — 72 em 108 —, portanto serve a mesma
+   * frente, só que seis vezes os 48dp do ícone.
+   */
+  trabalhos.push({
+    nome: `splash_icon-${dpi}`,
+    html: pagina(frente, lado * 6),
+    lado: lado * 6,
   });
 }
 

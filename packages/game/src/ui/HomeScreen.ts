@@ -138,14 +138,14 @@ export class HomeScreen {
     );
 
     /*
-     * ── Quem chega pela primeira vez vai para os Puzzles ──
+     * ── O desafio do dia vem depois dos modos, para toda a gente ──
      *
-     * O desafio do dia fica por cima dos modos para quem já joga: é a razão de
-     * voltar amanhã. Para quem ainda não fez um único nível, a ordem inverte-se
-     * — a campanha é a porta de entrada, e um Contra-Relógio do dia como
-     * primeira coisa do jogo era a porta errada.
+     * Esteve por cima dos modos para quem já jogava, como a razão de voltar
+     * amanhã, e por baixo só para quem ainda não tinha feito um nível. A mesma
+     * Home mudava de ordem conforme o perfil, e dois telemóveis lado a lado
+     * pareciam duas versões do jogo. Ficou a ordem de quem chega: os modos são
+     * o jogo, e o desafio do dia é uma maneira de o jogar.
      */
-    const novato = Object.keys(opcoes.perfil.levels).length === 0;
     const desafio = opcoes.desafio === undefined ? [] : [this.desafio(opcoes.desafio)];
 
     // Com o desafio, os modos ganham um nome: são duas secções, e não uma lista.
@@ -156,12 +156,12 @@ export class HomeScreen {
     this.raiz.append(
       this.barra(opcoes),
       lema,
-      ...(novato ? [modos, ...desafio] : [...desafio, modos]),
+      modos,
+      ...desafio,
       this.ajuda(opcoes),
       this.rodape(opcoes),
     );
     this.raiz.dataset["desafio"] = opcoes.desafio === undefined ? "nao" : "sim";
-    this.raiz.dataset["novato"] = novato ? "sim" : "nao";
 
     host.replaceChildren(this.raiz);
   }

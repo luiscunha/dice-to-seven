@@ -211,7 +211,7 @@ topo.append(sair, this.elRelogio);
      * ── Só os botões ──
      *
      * A linha por cima deles dizia «Toca nas peças para somar 7» e depois
-     * «4 / 7», e mais tarde o resto para limpar. A soma é andaime do Tutorial —
+     * «4 / 7», e mais tarde o resto para limpar. A soma é andaime do Iniciado —
      * quem chega aqui já jogou a campanha, e a conta está nas peças acesas. O
      * resto quase nunca mudava a jogada, e ocupava uma linha que é do
      * tabuleiro.

@@ -230,17 +230,14 @@ describe("o cartão do Desafio do Dia, na Home", () => {
     ecra.destruir();
   });
 
-  it("para quem chega, os Puzzles vêm primeiro — a campanha é a porta de entrada", () => {
-    const ecra = abrir({}, emptyProfile());
-    expect(ordem().indexOf("home-modos")).toBeLessThan(ordem().indexOf("home-desafio"));
-    ecra.destruir();
-  });
-
-  it("para quem já joga, fica por cima dos modos", () => {
-    const ecra = abrir();
-    expect(ordem().indexOf("home-desafio")).toBeLessThan(ordem().indexOf("home-modos"));
-    expect(host.querySelector(".home-modos .home-seccao")?.textContent).toBe("Modos de jogo");
-    ecra.destruir();
+  it("fica por baixo dos modos, para quem chega e para quem já joga", () => {
+    // A ordem não depende do perfil: dois telemóveis lado a lado mostram a mesma Home.
+    for (const perfil of [emptyProfile(), jogador]) {
+      const ecra = abrir({}, perfil);
+      expect(ordem().indexOf("home-modos")).toBeLessThan(ordem().indexOf("home-desafio"));
+      expect(host.querySelector(".home-modos .home-seccao")?.textContent).toBe("Modos de jogo");
+      ecra.destruir();
+    }
   });
 
   it("sem desafio, a Home é a de sempre", () => {

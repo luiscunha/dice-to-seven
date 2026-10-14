@@ -19,7 +19,8 @@
  * uma restrição de *geração*.
  *
  * A apresentação não tem essa restrição nenhuma. Daí a separação viver aqui: as
- * bandas continuam a ser oito no pipeline, e a campanha lê-as em cinco.
+ * bandas continuam a ser oito no pipeline, e a campanha lê-as em quatro
+ * capítulos — eram cinco, até o Tutorial sair (ver `CAPITULOS`).
  */
 
 import type { BandaNoIndice } from "./levels";
@@ -38,33 +39,31 @@ export interface Capitulo {
   readonly joker?: string;
 
   /**
-   * Quantos níveis o capítulo mostra, no máximo. Ausente = todos os que houver.
+   * Quantos níveis do início do capítulo mostram a linha da soma. Ausente =
+   * nenhum.
    *
-   * Existe por causa do Tutorial. A banda tem 30 níveis como todas as outras,
-   * porque o pipeline gera 30 por banda — mas um tutorial de 30 níveis de pares
-   * não ensina nada nos últimos 20: a regra aprende-se aos três, e o resto é a
-   * mesma jogada repetida antes de o jogo começar.
-   *
-   * **Corta na apresentação, não no pack.** Os níveis continuam lá, válidos e
-   * verificados, e o destino deles é o puzzle diário (desenho §8, passo 10).
-   * Tirá-los do pack era perder trabalho de geração para arrumar uma lista.
+   * A linha é um andaime (`mostrarSoma`, no `PuzzleScreen`): faz a conta que o
+   * jogo pede, e o sítio dela é onde se aprende a regra. Era o Tutorial, que
+   * saiu da campanha — ninguém o jogava, e o Iniciado mais o ecrã Como jogar
+   * ensinam o mesmo. O andaime passou para os primeiros níveis do Iniciado,
+   * que é agora onde todo o jogador novo começa.
    */
-  readonly maximo?: number;
+  readonly niveisComSoma?: number;
 }
 
+/**
+ * **Sem Tutorial.** A banda `tutorial` continua no pipeline e no pack, válida
+ * e verificada, mas não é capítulo: ninguém a jogava, e a regra aprende-se no
+ * Iniciado com o Como jogar à mão. Os níveis dela ficam para o puzzle diário
+ * (desenho §8, passo 10).
+ */
 export const CAPITULOS: readonly Capitulo[] = [
-  {
-    id: "tutorial",
-    nome: "Tutorial",
-    descricao: "Só pares. Impossível bloquear",
-    base: "tutorial",
-    maximo: 10,
-  },
   {
     id: "iniciado",
     nome: "Iniciado",
     descricao: "Pares e trios, sem pressa",
     base: "inicio",
+    niveisComSoma: 3,
   },
   {
     id: "medio",
@@ -140,18 +139,7 @@ export function montarCapitulo(
   const base = niveisDe(capitulo.base);
   const joker = niveisDe(capitulo.joker);
 
-  /*
-   * O corte aplica-se **no fim**, à série já montada, e não à banda base.
-   * Cortar a base primeiro mudava a cadência do joker no último nível do
-   * capítulo, e um capítulo com `maximo` ficaria com uma série diferente da que
-   * teria sem ele — o mesmo nível na posição 9 hoje e na 10 amanhã.
-   */
-  const cortar = (
-    serie: readonly NivelDoCapitulo[],
-  ): readonly NivelDoCapitulo[] =>
-    capitulo.maximo === undefined ? serie : serie.slice(0, capitulo.maximo);
-
-  if (joker.length === 0) return cortar(base);
+  if (joker.length === 0) return base;
 
   const fora: NivelDoCapitulo[] = [];
   let proximoBase = 0;
@@ -179,5 +167,5 @@ export function montarCapitulo(
     fora.push(seguinte);
   }
 
-  return cortar(fora);
+  return fora;
 }

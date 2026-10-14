@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- O ground do tema escuro do jogo (theme.css). -->
+    <color name="splash_background">#0D1917</color>
+</resources>
