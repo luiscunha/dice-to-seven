@@ -24,6 +24,7 @@ import type { DiaNoTrilho, EstadoNoCartao, TrilhoDoDesafio } from "../src/ui/Des
 import { DesafioScreen } from "../src/ui/DesafioScreen";
 import type { ResumoDoDesafio } from "../src/ui/HomeScreen";
 import { HomeScreen } from "../src/ui/HomeScreen";
+import type { DesafioNoEcra } from "../src/ui/partilha";
 import {
   botaoPartilhar,
   dataCurta,
@@ -54,7 +55,7 @@ describe("o texto que se partilha", () => {
   } as const;
   const SURVIVAL = {
     estado: "feito",
-    resultado: { tempoMs: 222_100, limpou: false, linhas: 18 },
+    resultado: { tempoMs: 222_100, limpou: true, linhas: 18 },
   } as const;
 
   const PUZZLE = { estado: "feito", resultado: { tempoMs: 83_400, selo: "perfect" } } as const;
@@ -67,7 +68,7 @@ describe("o texto que se partilha", () => {
     ).toBe(
       [
         "DiceToSeven · Desafio #3 · 14 out",
-        "🧱 Survival: 3:42.1 · 18 linhas",
+        "🧱 Survival: limpo em 3:42.1",
         "🔥 3 dias seguidos",
       ].join("\n"),
     );
@@ -85,13 +86,6 @@ describe("o texto que se partilha", () => {
   it("sem resultado, só o dia; e a sequência só a partir de dois dias", () => {
     expect(textoDoDesafio("2026-10-13", { tempo: { estado: "a-jogar" } }, 1)).toBe(
       "DiceToSeven · Desafio #2 · 13 out",
-    );
-  });
-
-  it("um Survival limpo di-lo", () => {
-    const limpo = { estado: "feito", resultado: { tempoMs: 95_000, limpou: true, linhas: 9 } } as const;
-    expect(textoDoDesafio("2026-10-14", { survival: limpo }, 0)).toContain(
-      "🧱 Survival: limpo em 1:35.0",
     );
   });
 
@@ -954,19 +948,42 @@ describe("o Survival do Dia", () => {
     vi.useRealTimers();
   });
 
-  it("**não deixa recomeçar com outra seed**, e o fim oferece partilhar e treinar", async () => {
-    const aoRecomecar = vi.fn();
-    const aoTerminar = vi.fn();
-    const ecra = new SurvivalScreen(host, {
+  /** Duas peças que somam 7: um toque em cada e o tabuleiro fica limpo. */
+  const quaseLimpo = (): SurvivalState => {
+    const base = startSurvival(5);
+    return { ...base, game: { ...base.game, board: [[3], [4]] } };
+  };
+
+  const OFICIAL: DesafioNoEcra = {
+    etiqueta: "Desafio #3",
+    oficial: true,
+    aoPartilhar: () => Promise.resolve("copiado"),
+  };
+
+  const correr = (
+    estado: SurvivalState,
+    desafio: DesafioNoEcra,
+    aoTerminar: () => void = () => undefined,
+    aoRecomecar: (seed: number) => void = () => undefined,
+  ): SurvivalScreen =>
+    new SurvivalScreen(host, {
       seed: 5,
-      retomar: { estado: noTeto(), decorridoMs: 1_000 },
+      retomar: { estado, decorridoMs: 1_000 },
       melhorTempo: Number.POSITIVE_INFINITY,
       aoGuardar: () => undefined,
       aoTerminar,
       aoSair: () => undefined,
       aoRecomecar,
-      desafio: { etiqueta: "Desafio #3", aoPartilhar: () => Promise.resolve("copiado") },
+      desafio,
     });
+
+  const fim = (): HTMLElement | null => host.querySelector<HTMLElement>("dialog.popup");
+  const botoesDoFim = (): HTMLElement[] => [...(fim()?.querySelectorAll<HTMLElement>(".btn") ?? [])];
+
+  it("**não deixa recomeçar com outra seed**, e transbordar a oficial é tentar outra vez", async () => {
+    const aoRecomecar = vi.fn();
+    const aoTerminar = vi.fn();
+    const ecra = correr(noTeto(), OFICIAL, aoTerminar, aoRecomecar);
 
     const recomecar = [...host.querySelectorAll<HTMLButtonElement>(".rodape .btn")].find(
       (b) => b.textContent === "Recomeçar",
@@ -979,13 +996,43 @@ describe("o Survival do Dia", () => {
       expect.objectContaining({ limpou: false, linhas: expect.any(Number) as number }),
     );
 
-    const popup = host.querySelector("dialog.popup");
-    expect(popup?.querySelector(".popup-etiqueta")?.textContent).toBe("Desafio #3");
-    const botoes = [...(popup?.querySelectorAll(".btn") ?? [])].map((b) => b.textContent);
-    expect(botoes).toEqual(["Partilhar", "Treinar outra vez", "Sair"]);
+    // Transbordar não fecha o desafio: não há nada para partilhar, e a próxima ainda conta.
+    expect(fim()?.querySelector(".popup-etiqueta")?.textContent).toBe("Desafio #3");
+    expect(fim()?.textContent).toContain("O desafio fica feito quando limpares o tabuleiro");
+    expect(botoesDoFim().map((b) => b.textContent)).toEqual(["Tentar outra vez", "Sair"]);
 
-    [...(popup?.querySelectorAll<HTMLElement>(".btn") ?? [])][1]?.click();
+    botoesDoFim()[0]?.click();
     expect(aoRecomecar).toHaveBeenCalledWith(5);
+    ecra.destruir();
+  });
+
+  it("no treino, transbordar é treinar outra vez", async () => {
+    const ecra = correr(noTeto(), { etiqueta: "Desafio #3 · treino" });
+    await vi.advanceTimersByTimeAsync(4_000);
+
+    expect(fim()?.textContent).not.toContain("limpares");
+    expect(botoesDoFim().map((b) => b.textContent)).toEqual(["Treinar outra vez", "Sair"]);
+    ecra.destruir();
+  });
+
+  it("limpar o tabuleiro acaba o desafio: partilhar, e o resto é treino", async () => {
+    const aoTerminar = vi.fn();
+    const ecra = correr(quaseLimpo(), OFICIAL, aoTerminar);
+
+    for (const p of [0, 64]) {
+      host
+        .querySelector(`.tabuleiro .peca[data-pos="${String(p)}"]`)
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    }
+    await vi.advanceTimersByTimeAsync(1_000);
+
+    expect(aoTerminar).toHaveBeenCalledWith(expect.objectContaining({ limpou: true }));
+    expect(fim()?.textContent).toContain("Tabuleiro limpo");
+    expect(botoesDoFim().map((b) => b.textContent)).toEqual([
+      "Partilhar",
+      "Treinar outra vez",
+      "Sair",
+    ]);
     ecra.destruir();
   });
 });

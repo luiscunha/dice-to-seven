@@ -2097,6 +2097,15 @@ body::before {
   transform: translateY(1px);
 }
 
+/*
+ * A série e as chaves alinham-se ao meio da linha. A `meta` estica os filhos à
+ * altura do mais alto, e o mais alto é o botão das chaves, com o alvo de toque
+ * inteiro: a pastilha do fogo crescia para 44px, com o número encostado em cima.
+ */
+.desafio > .topo > .meta {
+  align-items: center;
+}
+
 /* Os patamares, na explicação das chaves: os dias de um lado, o prémio do outro. */
 .chaves-ganhar {
   display: grid;

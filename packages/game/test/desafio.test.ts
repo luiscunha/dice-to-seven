@@ -44,7 +44,7 @@ const memoria = (): ProfileStorage & { readonly dados: Map<string, string> } => 
 
 const PUZZLE = { tempoMs: 83_400, selo: "perfect" } as const;
 const TEMPO = { pontos: 1240, tabuleiros: 14, saltados: 1 };
-const SURVIVAL = { tempoMs: 222_100, limpou: false, linhas: 18 };
+const SURVIVAL = { tempoMs: 222_100, limpou: true, linhas: 18 };
 const RESULTADO = { puzzle: PUZZLE, tempo: TEMPO, survival: SURVIVAL } as const;
 
 /** Um dia com o desafio desse dia feito. */
@@ -182,6 +182,22 @@ describe("a tentativa que conta", () => {
     expect(estadoDoModo(d, HOJE, "tempo")?.estado).toBe("feito");
     expect(estadoDoModo(d, HOJE, "survival")).toEqual({ estado: "feito", resultado: SURVIVAL });
   });
+
+  it("**o Survival só fica feito com o tabuleiro limpo**: transbordar deixa a tentativa aberta", () => {
+    // O #3 é um Survival.
+    const DIA = "2026-10-14";
+    const transbordou = { tempoMs: 29_900, limpou: false, linhas: 4 };
+
+    let d = registar(comecar(SEM_DESAFIOS, DIA, "survival"), DIA, "survival", transbordou);
+    expect(estadoDoModo(d, DIA, "survival")).toEqual({ estado: "a-jogar" });
+    expect(sequencia(d, DIA)).toBe(0);
+
+    // Outra vez, e outra: até limpar.
+    d = registar(d, DIA, "survival", { ...transbordou, tempoMs: 61_000 });
+    d = registar(d, DIA, "survival", SURVIVAL);
+    expect(estadoDoModo(d, DIA, "survival")).toEqual({ estado: "feito", resultado: SURVIVAL });
+    expect(sequencia(d, DIA)).toBe(1);
+  });
 });
 
 describe("a sequência de dias", () => {
@@ -247,6 +263,29 @@ describe("guardar e ler", () => {
     );
 
     expect(Object.keys(lerDesafios(s).dias)).toEqual(["2026-10-11"]);
+  });
+
+  it("um Survival de antes, que transbordou ou ficou interrompido, lê-se como aberto", () => {
+    const s = memoria();
+    s.setItem(
+      DESAFIO_KEY,
+      JSON.stringify({
+        versao: 1,
+        dias: {
+          // O #3 e o #6 são Survivals.
+          "2026-10-14": { survival: { estado: "feito", resultado: { ...SURVIVAL, limpou: false } } },
+          "2026-10-17": { survival: { estado: "interrompido" } },
+          "2026-10-20": { survival: { estado: "feito", resultado: SURVIVAL } },
+        },
+      }),
+    );
+
+    const d = lerDesafios(s);
+    expect(estadoDoModo(d, "2026-10-14", "survival")).toEqual({ estado: "a-jogar" });
+    expect(estadoDoModo(d, "2026-10-17", "survival")).toEqual({ estado: "a-jogar" });
+    expect(estadoDoModo(d, "2026-10-20", "survival")).toEqual({ estado: "feito", resultado: SURVIVAL });
+    // O fogo que o transbordo tinha dado vai-se.
+    expect(sequencia(d, "2026-10-14")).toBe(0);
   });
 
   it("lixo no armazenamento não rebenta nada", () => {
