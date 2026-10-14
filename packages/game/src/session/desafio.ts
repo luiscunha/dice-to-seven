@@ -28,10 +28,16 @@
  * A primeira tentativa marca-se ao **começar**, e não só ao acabar. Uma corrida
  * que corria mal e se abandonava a meio — a aplicação fechada, o browser a
  * recuar — voltava a ser a primeira, e era a mesma porta aberta. Fica
- * «interrompida», sem resultado, e o resto do dia é treino. O Survival é a
- * exceção boa: guarda-se a meio, como a corrida normal, e retoma-se. O Puzzle
- * também: não há relógio a correr contra ninguém, e sair para pensar não é
- * desistir — a tentativa oficial fica aberta até ser resolvida.
+ * «interrompida», sem resultado, e o resto do dia é treino. É assim no
+ * Contra-Relógio. O Puzzle e o Survival têm um fim que se ganha, e a tentativa
+ * oficial fica aberta até lá: o Puzzle até ser resolvido — não há relógio a
+ * correr contra ninguém, e sair para pensar não é desistir —, e o Survival até
+ * o tabuleiro ficar limpo. Guarda-se a meio, como a corrida normal, e
+ * retoma-se; transbordar volta ao princípio, com as mesmas linhas.
+ *
+ * Um Survival que transbordava contava como feito. Dava o fogo da sequência a
+ * quem perdeu, e quem se deixava perder de propósito ficava com o dia feito em
+ * trinta segundos.
  *
  * ── A sessão não lê as horas ──
  *
@@ -281,6 +287,9 @@ export function comecar(d: Desafios, data: string, modo: ModoDoDesafio): Desafio
 /**
  * O resultado da tentativa oficial. Só a primeira conta: um resultado de um
  * dia que já tem um, ou de uma tentativa interrompida, não muda nada.
+ *
+ * **Um Survival que transbordou não é resultado**: o dia resolve-se com o
+ * tabuleiro limpo, e a tentativa continua aberta.
  */
 export function registar<M extends ModoDoDesafio>(
   d: Desafios,
@@ -290,6 +299,7 @@ export function registar<M extends ModoDoDesafio>(
 ): Desafios {
   const antes = estadoDoModo(d, data, modo);
   if (antes !== undefined && antes.estado !== "a-jogar") return d;
+  if (modo === "survival" && !(resultado as ResultadoSurvival).limpou) return d;
   return comEstado(d, data, modo, { estado: "feito", resultado });
 }
 
@@ -445,6 +455,20 @@ const survivalValido = (r: unknown): r is ResultadoSurvival => {
 };
 
 /**
+ * O Survival só tem dois estados: aberto, ou feito com o tabuleiro limpo — ver
+ * `registar`. Um registo de antes disso pode ter uma corrida que transbordou,
+ * dada como feita, ou uma interrompida; as duas leem-se como a tentativa que
+ * continua aberta. Hoje, joga-se outra vez; num dia que passou, é um dia por
+ * jogar, como os outros.
+ */
+const survivalAberto = (
+  e: EstadoDoModo<ResultadoSurvival> | undefined,
+): EstadoDoModo<ResultadoSurvival> | undefined =>
+  e === undefined || e.estado === "a-jogar" || (e.estado === "feito" && e.resultado.limpou)
+    ? e
+    : { estado: "a-jogar" };
+
+/**
  * Lê os desafios, ou nenhuns.
  *
  * Dia a dia e modo a modo: um dia estragado — de um armazenamento mexido à mão,
@@ -483,7 +507,7 @@ export function lerDesafios(storage: ProfileStorage): Desafios {
     };
     const puzzle = estadoValido(v.puzzle, puzzleValido);
     const tempo = estadoValido(v.tempo, tempoValido);
-    const survival = estadoValido(v.survival, survivalValido);
+    const survival = survivalAberto(estadoValido(v.survival, survivalValido));
 
     const dia: DiaDeDesafio = {
       ...(puzzle === undefined ? {} : { puzzle }),

@@ -730,10 +730,22 @@ topo.append(sair, this.elRelogio);
       ),
     );
 
+    // O Survival do Dia só fica feito com o tabuleiro limpo.
+    const porLimpar = desafio?.oficial === true && !limpou;
+    if (porLimpar) {
+      corpo.appendChild(
+        elemento(
+          "p",
+          "popup-texto",
+          "O desafio fica feito quando limpares o tabuleiro. As linhas são as mesmas: tenta outra vez.",
+        ),
+      );
+    }
+
     const acoes = elemento("div", "acoes");
 
     if (desafio !== undefined) {
-      this.acoesDoDesafio(acoes, desafio);
+      this.acoesDoDesafio(acoes, desafio, porLimpar);
       corpo.appendChild(acoes);
       this.elFim.replaceChildren(corpo);
       if (typeof this.elFim.showModal === "function") this.elFim.showModal();
@@ -779,8 +791,23 @@ topo.append(sair, this.elRelogio);
    * O fim do Desafio do Dia: partilhar, se houver resultado oficial; treinar a
    * mesma corrida; sair. Sem «Outra corrida»: uma seed sorteada já não era o
    * desafio.
+   *
+   * A tentativa oficial que transbordou fica aberta: não há resultado para
+   * partilhar, e a corrida a seguir ainda conta — é tentar, e não treinar.
    */
-  private acoesDoDesafio(acoes: HTMLElement, desafio: DesafioNoEcra): void {
+  private acoesDoDesafio(acoes: HTMLElement, desafio: DesafioNoEcra, porLimpar: boolean): void {
+    if (porLimpar) {
+      acoes.append(
+        botao("Tentar outra vez", "primario", () => {
+          this.opcoes.aoRecomecar(this.estado.seed);
+        }),
+        botao("Sair", undefined, () => {
+          this.opcoes.aoSair();
+        }),
+      );
+      return;
+    }
+
     const aoPartilhar = desafio.aoPartilhar;
     if (aoPartilhar !== undefined) acoes.appendChild(botaoPartilhar(aoPartilhar, "primario com-icone"));
 

@@ -112,23 +112,27 @@ function linhaDoResultado(modo: ModoDoDesafio, dia: DiaDeDesafio): string | unde
     return `⏱️ Contra-Relógio: ${plural(r.pontos, "ponto", "pontos")} · ${plural(r.tabuleiros, "tabuleiro", "tabuleiros")}`;
   }
 
+  // Feito é sempre limpo: transbordar não fecha o Survival do Dia.
   const e = dia.survival;
   if (e?.estado !== "feito") return undefined;
-  const r = e.resultado;
-  return r.limpou
-    ? `🧱 Survival: limpo em ${relogio(r.tempoMs)}`
-    : `🧱 Survival: ${relogio(r.tempoMs)} · ${plural(r.linhas, "linha", "linhas")}`;
+  return `🧱 Survival: limpo em ${relogio(e.resultado.tempoMs)}`;
 }
 
 export type DesfechoDaPartilha = "partilhado" | "copiado" | "cancelado" | "falhou";
 
 /**
  * O que um ecrã de corrida precisa de saber quando está a jogar o Desafio do
- * Dia: como se chama a corrida — «Desafio #3», ou «Desafio #3 · treino» — e,
- * se houver resultado oficial para partilhar, como o partilhar.
+ * Dia: como se chama a corrida — «Desafio #3», ou «Desafio #3 · treino» —, se
+ * é a tentativa oficial e, se houver resultado oficial para partilhar, como o
+ * partilhar.
  */
 export interface DesafioNoEcra {
   readonly etiqueta: string;
+  /**
+   * A corrida é a tentativa que conta. É o Survival que precisa de o saber:
+   * transbordar não a fecha, e o fim oferece tentar outra vez, e não treinar.
+   */
+  readonly oficial?: true;
   readonly aoPartilhar?: () => Promise<DesfechoDaPartilha>;
 }
 

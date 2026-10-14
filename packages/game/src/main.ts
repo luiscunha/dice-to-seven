@@ -714,14 +714,12 @@ const partilharDia = (data: string): Promise<DesfechoDaPartilha> =>
   partilhar(textoDoDesafio(data, desafios.dias[data] ?? {}, sequencia(desafios, data)));
 
 /**
- * Uma tentativa oficial que ficou «a jogar» sem ecrã nenhum a jogá-la é uma
- * tentativa abandonada: a aplicação fechou, ou o browser recuou. Fica
- * interrompida — o resto do dia é treino. O Survival escapa se a corrida dele
- * estiver guardada: retoma-se, como a corrida normal.
+ * Um Contra-Relógio oficial que ficou «a jogar» sem ecrã nenhum a jogá-lo é
+ * uma tentativa abandonada: a aplicação fechou, ou o browser recuou. Fica
+ * interrompido — o resto do dia é treino. O Puzzle e o Survival ficam abertos
+ * até se ganharem (ver `mostrarDesafio`), e não se interrompem.
  *
- * Arrumam-se os dias que se jogam: hoje, e os que uma chave abriu. A corrida
- * do Survival guardada é uma só, portanto um Survival aberto com uma chave e
- * deixado a meio perde-se se a seguir se começar outro.
+ * Arrumam-se os dias que se jogam: hoje, e os que uma chave abriu.
  *
  * E dão-se os prémios que estejam por dar — de uma sequência que chegou a um
  * patamar numa versão do jogo que ainda não tinha chaves. `premiar` só dá
@@ -741,12 +739,6 @@ function arrumarDesafios(): string {
   for (const dia of jogaveis) {
     if (estadoDoModo(d, dia, "tempo")?.estado === "a-jogar") {
       d = interromper(d, dia, "tempo");
-    }
-    if (
-      estadoDoModo(d, dia, "survival")?.estado === "a-jogar" &&
-      corridaDesafio?.estado.seed !== seedDoDia(dia, "survival")
-    ) {
-      d = interromper(d, dia, "survival");
     }
   }
 
@@ -787,16 +779,17 @@ function estadoNoCartao(data: string, modo: ModoDoDesafio): EstadoNoCartao {
     return { tipo: "interrompido" };
   }
 
+  /*
+   * O Survival também não se interrompe: só fica feito com o tabuleiro limpo,
+   * e até lá está a meio — se a corrida guardada for a deste dia — ou por
+   * jogar outra vez, do princípio.
+   */
   const e = estadoDoModo(desafios, data, "survival");
-  if (e === undefined) return { tipo: "por-jogar" };
-  if (e.estado === "feito") {
-    const r = e.resultado;
-    return { tipo: "feito", texto: r.limpou ? `limpo · ${relogio(r.tempoMs)}` : relogio(r.tempoMs) };
-  }
-  if (e.estado === "a-jogar" && corridaDesafio !== undefined) {
+  if (e?.estado === "feito") return { tipo: "feito", texto: `limpo · ${relogio(e.resultado.tempoMs)}` };
+  if (e?.estado === "a-jogar" && corridaDesafio?.estado.seed === seedDoDia(data, "survival")) {
     return { tipo: "a-meio", texto: relogio(corridaDesafio.decorridoMs) };
   }
-  return { tipo: "interrompido" };
+  return { tipo: "por-jogar" };
 }
 
 /** O cartão da Home: só o desafio de hoje. Tocar-lhe abre o trilho. */
@@ -906,10 +899,11 @@ function trilhoDoDesafio(): TrilhoDoDesafio {
  * Um desafio do dia: a mesma corrida para toda a gente, com a seed da data.
  *
  * **A primeira tentativa é a oficial**, e marca-se ao entrar — o
- * Contra-Relógio, no «Começar». Daí em diante, no mesmo dia, é treino: os
- * mesmos tabuleiros, sem gravar nada. O Survival oficial que ficou a meio
- * retoma-se; um Contra-Relógio oficial abandonado já não volta — ver
- * `arrumarDesafio`.
+ * Contra-Relógio, no «Começar». No Contra-Relógio acaba com a corrida; no
+ * Puzzle e no Survival, só quando se ganha — o tabuleiro resolvido, o
+ * tabuleiro limpo. Daí em diante, no mesmo dia, é treino: os mesmos
+ * tabuleiros, sem gravar nada. O Survival oficial que ficou a meio retoma-se;
+ * um Contra-Relógio oficial abandonado já não volta — ver `arrumarDesafios`.
  *
  * Os recordes normais ficam de fora: o desafio tem as suas regras (o tempo de
  * arranque fixo, por exemplo), e o seu próprio registo.
@@ -947,12 +941,14 @@ async function mostrarDesafio(modo: ModoDoDesafio, dataPedida?: string): Promise
     corridaDesafio?.estado.seed === seed
       ? corridaDesafio
       : undefined;
-  const oficial =
-    antes === undefined ||
-    retoma !== undefined ||
-    // O Puzzle oficial fica aberto até ser resolvido: sair para pensar não é
-    // desistir. Volta-se ao tabuleiro do início, e o relógio também.
-    (modo === "puzzle" && antes.estado === "a-jogar");
+  /*
+   * O Puzzle oficial fica aberto até ser resolvido: sair para pensar não é
+   * desistir. O Survival, até o tabuleiro ficar limpo: transbordar também não
+   * fecha a tentativa. Sem corrida para retomar, os dois voltam ao princípio,
+   * com o relógio a zero. Um Contra-Relógio «a jogar» já não chega aqui —
+   * `arrumarDesafios` interrompeu-o.
+   */
+  const oficial = antes === undefined || antes.estado === "a-jogar";
 
   const marcarTentativa = (): void => {
     if (estadoDoModo(desafios, data, modo) !== undefined) return;
@@ -975,8 +971,8 @@ async function mostrarDesafio(modo: ModoDoDesafio, dataPedida?: string): Promise
   const desafio: DesafioNoEcra = !oficial
     ? { etiqueta: `${etiqueta} · treino` }
     : passado
-      ? { etiqueta }
-      : { etiqueta, aoPartilhar: () => partilharDia(data) };
+      ? { etiqueta, oficial: true }
+      : { etiqueta, oficial: true, aoPartilhar: () => partilharDia(data) };
   const outraVez = (): void => {
     void mostrar(rotaDoDia(data, dataDeHoje));
   };
@@ -1042,6 +1038,8 @@ async function mostrarDesafio(modo: ModoDoDesafio, dataPedida?: string): Promise
     aoTerminar: ({ limpou, tempoMs, linhas }) => {
       if (!oficial) return;
       guardarCorridaDesafio(undefined);
+      // Transbordar não grava nada (ver `registar`): a tentativa fica aberta,
+      // e a próxima corrida começa do princípio.
       terminar((d) => registar(d, data, "survival", { tempoMs, limpou, linhas }));
     },
     aoRecomecar: outraVez,

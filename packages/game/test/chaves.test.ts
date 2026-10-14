@@ -53,7 +53,7 @@ const memoria = (): ProfileStorage & { readonly dados: Map<string, string> } => 
 const RESULTADO = {
   puzzle: { tempoMs: 83_400, selo: "perfect" },
   tempo: { pontos: 1240, tabuleiros: 14, saltados: 1 },
-  survival: { tempoMs: 222_100, limpou: false, linhas: 18 },
+  survival: { tempoMs: 222_100, limpou: true, linhas: 18 },
 } as const;
 
 /** O desafio desse dia, feito — e o prémio dado, como o jogo faz ao acabar. */
@@ -197,8 +197,11 @@ describe("ganhar chaves com a sequência", () => {
 
   it("um dia que não conta não dá prémio, e um dia sem registo também não", () => {
     let d = dias(SEM_DESAFIOS, D(1), 2);
-    // O 3 é um Survival: interrompido, não conta.
-    d = interromper(comecar(d, D(3), "survival"), D(3), "survival");
+    // O 3 é um Survival: transbordou, não conta.
+    d = registar(comecar(d, D(3), "survival"), D(3), "survival", {
+      ...RESULTADO.survival,
+      limpou: false,
+    });
     expect(premiar(d, D(3))).toBe(d);
     expect(premiar(d, D(9))).toBe(d);
   });
@@ -298,6 +301,15 @@ describe("abrir um dia passado", () => {
 
     expect(podeDesbloquear(d, D(1), HOJE)).toBe(false);
     expect(podeDesbloquear(d, D(2), HOJE)).toBe(true);
+    expect(podeDesbloquear(d, D(3), HOJE)).toBe(true);
+  });
+
+  it("um Survival que transbordou também ficou por concluir", () => {
+    // O 3 é um Survival.
+    const d = registar(comecar(SEM_DESAFIOS, D(3), "survival"), D(3), "survival", {
+      ...RESULTADO.survival,
+      limpou: false,
+    });
     expect(podeDesbloquear(d, D(3), HOJE)).toBe(true);
   });
 

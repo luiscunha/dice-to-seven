@@ -152,7 +152,7 @@ export interface OpcoesDesafio {
 export const LEGENDA_DO_MODO: Readonly<Record<ModoDoDesafio, string>> = {
   puzzle: "Um tabuleiro, o mesmo para todos. Resolve-o.",
   tempo: "Sessenta segundos, e os mesmos tabuleiros para todos.",
-  survival: "As mesmas linhas para todos. Aguenta o mais que puderes.",
+  survival: "As mesmas linhas para todos. Limpa o tabuleiro antes que transborde.",
 };
 
 /** O ícone do modo — o mesmo do cartão dele na Home. */

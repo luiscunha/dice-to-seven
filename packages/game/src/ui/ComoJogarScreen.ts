@@ -427,7 +427,7 @@ export class ComoJogarScreen {
       ],
       [
         "Desafio do dia",
-        "Todos os dias, um desafio igual para toda a gente: um Puzzle, um Contra-Relógio ou um Survival, à vez. O trilho mostra o caminho — o que já fizeste e o que vem. Conta a primeira tentativa; depois é treino, com os mesmos tabuleiros. No fim, partilha o resultado — e não deixes partir a sequência de dias. A sequência dá chaves (aos 3, 7, 14 e 30 dias): uma chave abre um desafio que ficou por jogar, ou salva a sequência se falhares um dia.",
+        "Todos os dias, um desafio igual para toda a gente: um Puzzle, um Contra-Relógio ou um Survival, à vez. O trilho mostra o caminho — o que já fizeste e o que vem. O Puzzle e o Survival ficam feitos quando limpas o tabuleiro, e podes tentar até lá; no Contra-Relógio, conta a primeira corrida. Depois é treino, com os mesmos tabuleiros. No fim, partilha o resultado — e não deixes partir a sequência de dias. A sequência dá chaves (aos 3, 7, 14 e 30 dias): uma chave abre um desafio que ficou por jogar, ou salva a sequência se falhares um dia.",
       ],
     ];
 

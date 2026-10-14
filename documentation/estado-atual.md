@@ -1117,6 +1117,16 @@ outros modos de um dia de quando havia três ficam guardados sem contar.
   própria (`dicetoseven.desafio.survival`, à parte da corrida normal) e
   retoma-se. Depois da tentativa oficial, jogar é **treino** — os mesmos
   tabuleiros, sem gravar.
+- **O Survival do Dia só fica feito com o tabuleiro limpo.** Transbordar
+  contava como feito — dava o 🔥 a quem perdeu, e quem se deixava perder de
+  propósito tinha o dia feito em trinta segundos (playtest). Agora transbordar
+  não grava nada (`registar`): a tentativa oficial continua aberta, como a do
+  Puzzle, e volta ao princípio com as mesmas linhas. O painel de fim diz que o
+  desafio fica feito quando se limpar o tabuleiro, e oferece «Tentar outra
+  vez» em vez de partilhar. Por isso o Survival já não se interrompe: sem
+  corrida guardada, está por jogar outra vez. Os registos de antes —
+  transbordos dados como feitos, e Survivals interrompidos — leem-se como
+  tentativas abertas (`lerDesafios`).
 - **O Contra-Relógio oficial espera por um «Começar»**, e é aí que a tentativa
   se marca, e não ao entrar. Marcada ao entrar, abrir o desafio para ver o que
   era e sair pela seta gravava 0 pontos como resultado do dia, e a corrida a
@@ -1285,8 +1295,8 @@ Três decisões que não se veem no ecrã:
   tinham na sequência (`serie`) — dois, porque um dia salvo faz a sequência
   saltar dois para trás —, e a contagem para aí.
 - **Uma corrida de Survival guardada só há uma.** Um Survival aberto com uma
-  chave e deixado a meio perde-se se a seguir se começar o Survival de hoje:
-  fica interrompido, como qualquer tentativa sem corrida para retomar.
+  chave e deixado a meio perde a corrida se a seguir se começar o Survival de
+  hoje: a tentativa continua aberta, mas recomeça do princípio.
 
 ---
 
