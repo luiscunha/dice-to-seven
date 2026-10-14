@@ -117,37 +117,96 @@ export interface OpcoesConfirmar {
   /** O rótulo da ação a sério. «Sim» não diz o que vai acontecer. */
   readonly confirmar: string;
   readonly aoConfirmar: () => void;
+  /** O rótulo da saída. Por omissão, «Cancelar». */
+  readonly cancelar?: string;
+  /** Fechou-se sem confirmar: pelo botão, por fora, pelo `Esc` ou pelo «para trás». */
+  readonly aoCancelar?: () => void;
+  /**
+   * O realce vai para a ação, e não para a saída. Só para o que **não deita
+   * nada fora** e é o que o jogo está a oferecer — salvar a sequência, por
+   * exemplo. Uma oferta com o realce em «Agora não» parecia desconfiar dela
+   * própria.
+   */
+  readonly realcarConfirmar?: boolean;
 }
 
 export function confirmar(
   host: HTMLElement,
   opcoes: OpcoesConfirmar,
 ): HTMLDialogElement {
-  const d = document.createElement("dialog");
-  // Classe própria: os ecrãs já têm um `.popup` seu, e os dois não se confundem.
-  d.className = "popup confirmacao";
+  let confirmado = false;
+  const realce = opcoes.realcarConfirmar === true;
 
-  const corpo = elemento("div", "popup-corpo");
-  corpo.appendChild(elemento("h2", "popup-titulo", opcoes.titulo));
-  if (opcoes.texto !== undefined) {
-    corpo.appendChild(elemento("p", "popup-texto", opcoes.texto));
-  }
-
-  const fechar = (): void => {
-    if (typeof d.close === "function") d.close();
-    else d.open = false;
-    d.remove();
-  };
+  const { d, corpo, fechar } = caixa(host, opcoes.titulo, opcoes.texto, () => {
+    if (!confirmado) opcoes.aoCancelar?.();
+  });
 
   const acoes = elemento("div", "acoes");
   acoes.append(
-    botao("Cancelar", "primario", fechar),
-    botao(opcoes.confirmar, undefined, () => {
+    botao(opcoes.cancelar ?? "Cancelar", realce ? undefined : "primario", fechar),
+    botao(opcoes.confirmar, realce ? "primario" : undefined, () => {
+      confirmado = true;
       fechar();
       opcoes.aoConfirmar();
     }),
   );
   corpo.appendChild(acoes);
+
+  return abrir(d);
+}
+
+/**
+ * Um aviso, com um botão só: diz uma coisa e sai do caminho. O `conteudo` vai
+ * entre o texto e o botão, para o que não cabe num parágrafo.
+ */
+export interface OpcoesAvisar {
+  readonly titulo: string;
+  readonly texto?: string;
+  readonly conteudo?: Node;
+  /** O rótulo do botão que fecha. */
+  readonly fechar: string;
+  /** Uma classe a mais na caixa, para o ecrã a vestir. */
+  readonly classe?: string;
+}
+
+export function avisar(host: HTMLElement, opcoes: OpcoesAvisar): HTMLDialogElement {
+  const { d, corpo, fechar } = caixa(host, opcoes.titulo, opcoes.texto);
+  if (opcoes.classe !== undefined) d.classList.add(opcoes.classe);
+  if (opcoes.conteudo !== undefined) corpo.appendChild(opcoes.conteudo);
+
+  const acoes = elemento("div", "acoes");
+  acoes.appendChild(botao(opcoes.fechar, "primario", fechar));
+  corpo.appendChild(acoes);
+
+  return abrir(d);
+}
+
+/** A caixa das duas de cima, ainda fechada e sem botões. */
+function caixa(
+  host: HTMLElement,
+  titulo: string,
+  texto: string | undefined,
+  aoFechar?: () => void,
+): { readonly d: HTMLDialogElement; readonly corpo: HTMLElement; readonly fechar: () => void } {
+  const d = document.createElement("dialog");
+  // Classe própria: os ecrãs já têm um `.popup` seu, e os dois não se confundem.
+  d.className = "popup confirmacao";
+
+  const corpo = elemento("div", "popup-corpo");
+  corpo.appendChild(elemento("h2", "popup-titulo", titulo));
+  if (texto !== undefined) {
+    corpo.appendChild(elemento("p", "popup-texto", texto));
+  }
+
+  let fechada = false;
+  const fechar = (): void => {
+    if (fechada) return;
+    fechada = true;
+    if (typeof d.close === "function") d.close();
+    else d.open = false;
+    d.remove();
+    aoFechar?.();
+  };
 
   // Tocar fora cancela: é o gesto de quem percebeu que se enganou.
   d.addEventListener("click", (e) => {
@@ -159,15 +218,16 @@ export function confirmar(
    * passar pelos botões. Sem isto a caixa fechada ficava na árvore, e cada
    * confirmação seguinte empilhava-se por cima das mortas.
    */
-  d.addEventListener("close", () => {
-    d.remove();
-  });
+  d.addEventListener("close", fechar);
 
   d.appendChild(corpo);
   host.appendChild(d);
 
+  return { d, corpo, fechar };
+}
+
+function abrir(d: HTMLDialogElement): HTMLDialogElement {
   if (typeof d.showModal === "function") d.showModal();
   else d.open = true;
-
   return d;
 }

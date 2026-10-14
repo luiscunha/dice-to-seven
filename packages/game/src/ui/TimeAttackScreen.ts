@@ -377,7 +377,7 @@ export class TimeAttackScreen {
       texto:
         this.opcoes.aoComecar === undefined
           ? "O relógio não pára: a corrida acaba aqui."
-          : "O relógio não pára: a corrida acaba aqui, e é esta a que conta para o desafio de hoje.",
+          : "O relógio não pára: a corrida acaba aqui, e é esta a que conta para o desafio.",
       confirmar: "Sair",
       aoConfirmar: () => {
         this.terminar();

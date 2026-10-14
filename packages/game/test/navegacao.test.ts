@@ -53,6 +53,7 @@ describe("rotas", () => {
     { ecra: "desafio", modo: "puzzle" },
     { ecra: "desafio", modo: "tempo" },
     { ecra: "desafio", modo: "survival" },
+    { ecra: "desafio", modo: "tempo", data: "2026-10-13" },
     { ecra: "definicoes" },
     { ecra: "regras" },
   ];
@@ -122,8 +123,8 @@ describe("rotas", () => {
     expect(paraHash({ ecra: "desafio", modo: "survival" })).toBe("#/desafio/survival");
     expect(paraHash({ ecra: "desafio", modo: "puzzle" })).toBe("#/desafio/puzzle");
 
-    // Sem modo é o ecrã de escolha; um modo que não existe — ou uma data de
-    // outro dia — é a Home.
+    // Sem modo é o ecrã de escolha; um modo que não existe — ou uma data no
+    // lugar do modo — é a Home.
     expect(deHash("#/desafio")).toEqual({ ecra: "desafio" });
     expect(deHash("#/desafio/2026-10-11")).toEqual({ ecra: "home" });
 
@@ -131,6 +132,27 @@ describe("rotas", () => {
     expect(rotaAcima({ ecra: "desafio", modo: "puzzle" })).toEqual({ ecra: "desafio" });
     expect(rotaAcima({ ecra: "desafio" })).toEqual({ ecra: "home" });
     expect(sentidoEntre({ ecra: "desafio" }, { ecra: "desafio", modo: "tempo" })).toBe("avanca");
+  });
+
+  it("**um dia passado aberto com uma chave leva a data depois do modo**", () => {
+    expect(paraHash({ ecra: "desafio", modo: "survival", data: "2026-10-14" })).toBe(
+      "#/desafio/survival/2026-10-14",
+    );
+    expect(deHash("#/desafio/contrarrelogio/2026-10-13")).toEqual({
+      ecra: "desafio",
+      modo: "tempo",
+      data: "2026-10-13",
+    });
+
+    // Uma data estragada cai, e fica o desafio de hoje.
+    for (const data of ["ontem", "2026-02-30", "2026-1-5"]) {
+      expect(deHash(`#/desafio/puzzle/${data}`)).toEqual({ ecra: "desafio", modo: "puzzle" });
+    }
+
+    // Sobe para o trilho, como o de hoje.
+    expect(rotaAcima({ ecra: "desafio", modo: "puzzle", data: "2026-10-12" })).toEqual({
+      ecra: "desafio",
+    });
   });
 
   it("a forma antiga continua a levar ao sítio certo", () => {

@@ -2046,6 +2046,88 @@ body::before {
   white-space: nowrap;
 }
 
+/*
+ * A sequência em risco: ontem ficou por jogar, e acaba hoje se ninguém gastar
+ * uma chave. O fogo passa do véu para o contorno — o que se tem está por um fio.
+ */
+.desafio-sequencia[data-risco] {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--fogo);
+  color: var(--fogo);
+}
+
+/*
+ * As chaves: o que a sequência dá, ao lado dela, com o mesmo corte de
+ * pastilha. Dourado em vez de fogo — uma coisa que se guarda, e não uma que
+ * arde.
+ */
+.desafio-chaves {
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--chave-veu);
+  box-shadow: inset 0 0 0 1px var(--chave-aro);
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+/* A série e as chaves, juntas no lado de lá da cabeça do cartão. */
+.home-desafio-sinais {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/*
+ * No topo do ecrã do desafio, as chaves explicam-se ao toque. O botão é só o
+ * alvo, do tamanho de um dedo; o que se vê é a pastilha lá dentro.
+ */
+.btn.desafio-chaves-botao {
+  display: grid;
+  place-items: center;
+  min-width: var(--alvo);
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.btn.desafio-chaves-botao:active:not(:disabled) .desafio-chaves {
+  transform: translateY(1px);
+}
+
+/* Os patamares, na explicação das chaves: os dias de um lado, o prémio do outro. */
+.chaves-ganhar {
+  display: grid;
+  gap: 8px;
+}
+
+.chaves-patamares {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chaves-patamares li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: var(--chave-veu);
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* O prémio celebra-se com o número, grande, como o resultado de um desafio. */
+.chaves-premio .popup-titulo {
+  font-size: 32px;
+  letter-spacing: -0.02em;
+}
+
 /* ─── O modo do desafio: a cor e o ícone ──────────────────────────────────── */
 
 /* As cores dos modos, as mesmas dos cartões da Home, onde o desafio as usa. */
@@ -2301,6 +2383,41 @@ body::before {
   height: 14px;
 }
 
+/*
+ * Uma chave gasta neste dia — a salvar a sequência, ou a abri-lo —, no sítio
+ * do cadeado: um dia passado já não o tem. Dourada, como a carteira.
+ */
+.trilho-chave {
+  position: absolute;
+  right: -4px;
+  bottom: -2px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--surface);
+  font-size: 13px;
+  line-height: 1;
+  box-shadow: 0 0 0 2px var(--chave-aro);
+}
+
+/* As chaves que a sequência ganhou neste dia, no canto de cima. */
+.trilho-premio {
+  position: absolute;
+  top: -6px;
+  left: -8px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: var(--surface);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  box-shadow: 0 0 0 2px var(--chave-aro);
+}
+
 /* O que ficou por jogar: a casa vazia, só o contorno. */
 .trilho-dia[data-estado="perdido"] .trilho-no {
   background: var(--surface);
@@ -2466,6 +2583,14 @@ body::before {
   font-size: 20px;
   font-weight: 700;
   color: var(--accent);
+}
+
+/* O que as chaves fizeram — ou podem fazer — neste dia: uma nota por baixo. */
+.desafio-nota-chave {
+  margin: -4px 0 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--ink-muted);
 }
 
 .desafio-acoes {
