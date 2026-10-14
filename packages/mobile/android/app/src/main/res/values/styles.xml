@@ -16,7 +16,15 @@
     </style>
 
 
+    <!--
+      O arranque. O plugin SplashScreen usa sempre a API do Android 12 — pela
+      core-splashscreen, também do 7 ao 11 —, e essa desenha um ícone ao centro
+      sobre uma cor, lidos destes dois atributos. Sem eles, ficava o fundo do
+      sistema — branco ou preto — em vez do papel da marca.
+    -->
     <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_icon</item>
         <item name="android:background">@drawable/splash</item>
     </style>
 </resources>
