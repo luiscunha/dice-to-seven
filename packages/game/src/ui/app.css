@@ -1424,7 +1424,7 @@ body::before {
 }
 
 /*
- * Com o Desafio do Dia, uma faixa a mais entre o lema e os modos.
+ * Com o Desafio do Dia, uma faixa a mais, entre os modos e o cartão das regras.
  *
  * A faixa dos modos deixa de poder encolher abaixo do que tem dentro
  * (`minmax(auto, …)` e não `minmax(0, …)`): com o cartão do dia, num ecrã
@@ -1432,7 +1432,7 @@ body::before {
  * desliza.
  */
 .ecra.home[data-desafio="sim"] {
-  grid-template-rows: auto auto auto minmax(auto, 1fr) auto auto;
+  grid-template-rows: auto auto minmax(auto, 1fr) auto auto auto;
   gap: 12px;
   /*
    * Altura **mínima** do ecrã, e não altura fixa. Fixa, num telemóvel baixo a
@@ -1442,11 +1442,6 @@ body::before {
    */
   height: auto;
   min-height: 100%;
-}
-
-/* Para quem chega, os modos vêm antes do desafio: a faixa elástica é a deles. */
-.ecra.home[data-desafio="sim"][data-novato="sim"] {
-  grid-template-rows: auto auto minmax(auto, 1fr) auto auto auto;
 }
 
 /*
