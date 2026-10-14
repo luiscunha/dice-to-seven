@@ -60,6 +60,8 @@ import {
 import { BoardView } from "./BoardView";
 import { simboloJoker } from "./dice";
 import { JokerPicker } from "./JokerPicker";
+import type { MedalhaGanha } from "./medalhaNova";
+import { linhaDeMedalhas } from "./medalhaNova";
 import type { DesafioNoEcra } from "./partilha";
 import { botaoPartilhar } from "./partilha";
 
@@ -82,12 +84,16 @@ const SELO_GLIFO: Readonly<Record<string, string>> = {
 };
 
 export interface OpcoesPuzzleScreen {
+  /**
+   * O nível acabou. Devolve as medalhas que ele deu, se deu, e o painel de fim
+   * anuncia-as — ver `linhaDeMedalhas`.
+   */
   readonly aoTerminar?: (info: {
     readonly level: Level;
     readonly selo: string;
     /** Quanto demorou, em ms. Zero se o nível não chegou a ser tocado. */
     readonly tempoMs: number;
-  }) => void;
+  }) => readonly MedalhaGanha[] | void;
   readonly aoPedirSeguinte?: () => void;
 
   /** Abre o tutorial do joker em revisão. Sem isto o `?` não aparece. */
@@ -195,6 +201,9 @@ export class PuzzleScreen {
    */
   private recorde: number;
   private recordeAntes: number;
+
+  /** As medalhas que a última partida acabada deu. O painel de fim anuncia-as. */
+  private medalhasNovas: readonly MedalhaGanha[] = [];
 
   private readonly palco: HTMLElement;
   private readonly elTitulo: HTMLElement;
@@ -934,11 +943,12 @@ export class PuzzleScreen {
     if (acabouAgora) {
       this.pararCronometro();
       vibrarVitoria();
-      this.opcoes.aoTerminar?.({
-        level: jogo.level,
-        selo,
-        tempoMs: this.paradoMs,
-      });
+      this.medalhasNovas =
+        this.opcoes.aoTerminar?.({
+          level: jogo.level,
+          selo,
+          tempoMs: this.paradoMs,
+        }) ?? [];
 
       // O recorde a bater passa a ser o desta partida, se o bateu: quem
       // carregar em «Repetir» compara-se com o que acabou de fazer.
@@ -1017,6 +1027,8 @@ export class PuzzleScreen {
       acoes.appendChild(principal);
     }
 
+    const medalhas = linhaDeMedalhas(this.medalhasNovas);
+
     this.elFim.replaceChildren(
       cabeca,
       tempo,
@@ -1024,6 +1036,7 @@ export class PuzzleScreen {
       desafio === undefined
         ? this.marcaDoRecorde()
         : elemento("div", "recorde fim-desafio", desafio.etiqueta),
+      ...(medalhas === undefined ? [] : [medalhas]),
       acoes,
     );
 

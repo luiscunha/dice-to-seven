@@ -65,6 +65,8 @@ import { criarPeca } from "./dice";
 import { botao, botaoRedondo, confirmar, elemento, reanimar } from "./dom";
 import { iconeReiniciar, iconeVoltar } from "./icones";
 import { JokerPicker } from "./JokerPicker";
+import type { MedalhaGanha } from "./medalhaNova";
+import { linhaDeMedalhas } from "./medalhaNova";
 import type { DesafioNoEcra } from "./partilha";
 import { botaoPartilhar } from "./partilha";
 
@@ -93,12 +95,14 @@ export interface OpcoesSurvival {
   /**
    * A corrida acabou. **Chamado também quando o tabuleiro transbordou**, que é
    * como a maioria das corridas acaba — ver `recordSurvival`.
+   *
+   * Devolve as medalhas que a corrida deu, para o painel de fim.
    */
   readonly aoTerminar: (info: {
     readonly limpou: boolean;
     readonly tempoMs: number;
     readonly linhas: number;
-  }) => void;
+  }) => readonly MedalhaGanha[] | void;
   readonly aoSair: () => void;
   /** Recomeçar com outra seed. Sem isto, acabar é um beco. */
   readonly aoRecomecar: (seed: number) => void;
@@ -670,13 +674,14 @@ topo.append(sair, this.elRelogio);
     // Um pavio parado por baixo do painel de fim lia-se como uma bomba por rebentar.
     this.pintarBomba();
 
-    this.opcoes.aoTerminar({
-      limpou: this.estado.limpo,
-      tempoMs: this.decorridoMs(),
-      linhas: this.estado.linhasInjetadas,
-    });
+    const medalhas =
+      this.opcoes.aoTerminar({
+        limpou: this.estado.limpo,
+        tempoMs: this.decorridoMs(),
+        linhas: this.estado.linhasInjetadas,
+      }) ?? [];
 
-    this.pintarFim();
+    this.pintarFim(medalhas);
   }
 
   /**
@@ -691,7 +696,7 @@ topo.append(sair, this.elRelogio);
    * O tempo é o que o cronómetro do topo esteve a contar a corrida inteira —
    * portanto o painel não introduz número nenhum, só fixa o que já se via.
    */
-  private pintarFim(): void {
+  private pintarFim(medalhas: readonly MedalhaGanha[]): void {
     const limpou = this.estado.limpo;
     const tempo = this.decorridoMs();
     const recorde = tempo > 0 && tempo > this.opcoes.melhorTempo;
@@ -729,6 +734,9 @@ topo.append(sair, this.elRelogio);
           : `${String(this.estado.linhasInjetadas)} linhas aguentadas`,
       ),
     );
+
+    const linha = linhaDeMedalhas(medalhas);
+    if (linha !== undefined) corpo.appendChild(linha);
 
     // O Survival do Dia só fica feito com o tabuleiro limpo.
     const porLimpar = desafio?.oficial === true && !limpou;

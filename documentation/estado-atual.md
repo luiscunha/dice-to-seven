@@ -1300,6 +1300,63 @@ Três decisões que não se veem no ecrã:
 
 ---
 
+## As medalhas
+
+Metas de longo prazo, por modo (`session/medalhas.ts`, ecrã `#/medalhas`). O
+jogo recompensava a partida — o selo, o recorde, o 🔥 do dia —, e faltava o
+percurso: acabar um capítulo, aguentar cinco minutos, trinta dias seguidos.
+
+**Duas abas, Normais e Premium.** As normais são metas de progresso; as
+premium são raras, com moldura dourada. **Nenhuma se compra** (plano §9.1): o
+que distingue as premium é a exigência.
+
+| | Normais | Premium |
+|---|---|---|
+| Puzzles | Iniciado, Médio, Avançado, Perito (o capítulo todo); Perfeição (um nível Perfeito) | Perito perfeito; Campanha perfeita |
+| Contra-Relógio | Maratona (15 tabuleiros numa corrida) | Recordista (30 000 pontos); Ultramaratona (40 tabuleiros) |
+| Survival | Cinco minutos | Dez minutos; Dez limpezas |
+| Desafio do Dia | Uma semana (7 dias seguidos); Mês completo (a ★) | Imparável (30 dias); Centenário (100) |
+
+**Os limiares do Contra-Relógio são simulados** contra o pack publicado, com
+60 s de arranque, por dois jogadores de ritmo constante — um que segue a
+solução e nunca encrava, outro que joga ao calhas com a bomba primeiro. A 2 s
+por jogada fazem-se 9 a 22 tabuleiros e 11 000 a 25 000 pontos; 15 tabuleiros é
+um jogador bom, e 30 000 pontos e 40 tabuleiros pedem 1,5 s ou menos a corrida
+inteira. Os números vivem em `LIMIARES`, para o playtest os acertar.
+
+Quatro decisões:
+
+- **Deduzem-se do que o jogo já guarda.** Nenhuma medalha tem contador
+  próprio: o progresso lê-se do perfil e do histórico do desafio. É o que as
+  torna **retroativas** — no primeiro arranque, quem já tinha o Iniciado feito
+  recebe a medalha — e impede um contador de divergir do que conta. **As
+  corridas oficiais do desafio também contam** para as medalhas do modo, ao
+  contrário dos recordes: o desafio tem regras suas, mas quinze tabuleiros
+  feitos lá foram feitos.
+- **Uma medalha ganha não se perde.** Guarda-se a data em que se ganhou
+  (`dicetoseven.medalhas`, versão 1), como o selo de um nível nunca regride.
+  O histórico do desafio corta-se aos três anos, e uma sequência deduzida de lá
+  desaparecia com ele. «Apagar o progresso» leva-as — são do progresso —, e as
+  do desafio, que não se apaga, voltam logo.
+- **Ids que o jogo não conhece ficam no registo.** Um APK mais antigo instalado
+  por cima de um mais novo leria, gravaria, e apagaria as medalhas que ainda
+  não conhece.
+- **As novas anunciam-se onde se ganharam.** No painel de fim do nível ou da
+  corrida, uma linha «Nova medalha: …»; na Home, um ponto na pastilha das
+  medalhas, até a página abrir, e «Nova» no cartão. As retroativas, que chegam
+  de uma vez no primeiro arranque, ficam só com o ponto — anunciá-las no fim
+  de um nível que nada teve a ver com elas lia-se como defeito.
+
+Um capítulo que não montou (índice sem rede) tem alvo zero, e **um alvo zero
+nunca se atinge**: sem essa guarda, «zero de zero feitos» dava a campanha inteira
+a quem nunca a jogou.
+
+Por fazer, na fase seguinte: as medalhas que precisam de contagens novas —
+bombas desarmadas, linhas aguentadas, combo máximo, grupos de sete 1 e as 14
+composições de 7 — e a «Mestre», de todas as normais.
+
+---
+
 ## Decisões de arquitetura que não se leem no código
 
 - **A campanha não tem pontuação, tem um recorde de tempo.** A pontuação era
