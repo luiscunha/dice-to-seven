@@ -1379,6 +1379,56 @@ composições de 7 — e a «Mestre», de todas as normais.
 
 ---
 
+## Os idiomas
+
+O jogo fala quatro línguas: **português de Portugal, inglês britânico,
+espanhol de Espanha e francês de França** (`src/i18n/`).
+
+**Como se escolhe o idioma:**
+- **A preferência.** Nas Definições há «Sistema», que é a omissão e segue o
+  telemóvel, e os quatro idiomas, cada um com o nome na própria língua.
+- **Variantes vizinhas.** Um telemóvel em pt-BR, en-US, es-MX ou fr-CA fica no
+  idioma da mesma língua.
+- **Línguas que o jogo não tem.** Um telemóvel em alemão ou japonês fica em
+  inglês. Vale a primeira língua da lista do telemóvel que o jogo tenha: alemão
+  seguido de espanhol dá espanhol.
+
+**O que se decidiu:**
+- **O português é a referência.** O dicionário `pt.ts` dá o tipo `Textos`, e os
+  outros três têm de ter a mesma forma. Um texto que falte num idioma não
+  compila.
+- **Os textos com números são funções**, e não modelos com `{n}`. O plural, a
+  ordem das palavras e a concordância são de cada língua.
+- **A sessão não tem texto.** As medalhas e os capítulos ficam só com ids, e os
+  nomes vivem no dicionário.
+- **Mudar de idioma monta o ecrã outra vez**, já traduzido, em vez de
+  retraduzir cada elemento no sítio. Se o telemóvel mudar de idioma a meio de
+  uma partida, o jogo espera pelo próximo ecrã: montar o de jogo outra vez era
+  recomeçar a partida.
+- **O texto partilhado sai no idioma do jogo.** Os números e as datas seguem a
+  língua: «30 000» e «14 out», «30,000» e «14 Oct», «30.000» e «14 oct»,
+  «30 000» e «14 oct.».
+- **O francês leva o espaço fino antes de `: ; ! ?`.** Escreve-se com um espaço
+  normal, e uma função troca-o em todos os textos de uma vez.
+- **No iOS, o `Info.plist` declara as quatro línguas** (`CFBundleLocalizations`).
+  Sem isso, a WebView do iPhone reporta sempre o idioma de desenvolvimento, e um
+  iPhone em francês arrancava em inglês.
+- **Nomes dos modos:**
+  - inglês: Time Attack, Survival, Daily Challenge;
+  - espanhol: Contrarreloj, Supervivencia, Desafío diario;
+  - francês: Contre-la-montre, Survie, Défi du jour.
+- **O joker** é «comodín» em espanhol.
+
+**Os testes** (`idiomas.test.ts`) percorrem os quatro dicionários e chamam
+todos os textos com números. Falham:
+- num texto vazio, com «undefined» ou com «NaN»;
+- numa frase de três ou mais palavras igual à portuguesa, que é quase sempre
+  uma tradução que ficou por fazer.
+
+O código e a documentação continuam em português.
+
+---
+
 ## Decisões de arquitetura que não se leem no código
 
 - **A campanha não tem pontuação, tem um recorde de tempo.** A pontuação era

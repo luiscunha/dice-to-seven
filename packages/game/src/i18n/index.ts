@@ -14,6 +14,9 @@
  * ecrã montado num teste fala português sem ninguém o pedir.
  */
 
+import { EN } from "./en";
+import { ES } from "./es";
+import { FR } from "./fr";
 import type { Idioma } from "./idioma";
 import { PT } from "./pt";
 import type { Textos } from "./pt";
@@ -24,9 +27,9 @@ export { IDIOMAS, eIdioma, idiomaDoSistema, resolverIdioma } from "./idioma";
 
 const DICIONARIOS: Readonly<Record<Idioma, Textos>> = {
   "pt-PT": PT,
-  "en-GB": PT,
-  "es-ES": PT,
-  "fr-FR": PT,
+  "en-GB": EN,
+  "es-ES": ES,
+  "fr-FR": FR,
 };
 
 let idiomaAtual: Idioma = "pt-PT";
