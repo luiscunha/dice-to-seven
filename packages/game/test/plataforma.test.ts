@@ -12,6 +12,9 @@
  * testado, é a lista de chaves e a navegação para cima.
  */
 
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import { CHAVES, abrirArmazenamento } from "../src/plataforma/armazenamento";
@@ -29,6 +32,7 @@ import {
 import { PROFILE_KEY } from "../src/session/progress";
 import { CORRIDA_DESAFIO_KEY, CORRIDA_KEY } from "../src/session/corridaSurvival";
 import { DESAFIO_KEY } from "../src/session/desafio";
+import { MEDALHAS_KEY } from "../src/session/medalhas";
 import { SETTINGS_KEY } from "../src/session/settings";
 import type { Rota } from "../src/ui/rotas";
 import { rotaAcima, sentidoEntre } from "../src/ui/rotas";
@@ -64,8 +68,46 @@ describe("o armazenamento", () => {
      * jogador perdia esse progresso em silêncio.
      */
     expect([...CHAVES].sort()).toEqual(
-      [PROFILE_KEY, SETTINGS_KEY, CORRIDA_KEY, DESAFIO_KEY, CORRIDA_DESAFIO_KEY].sort(),
+      [
+        PROFILE_KEY,
+        SETTINGS_KEY,
+        CORRIDA_KEY,
+        DESAFIO_KEY,
+        CORRIDA_DESAFIO_KEY,
+        MEDALHAS_KEY,
+      ].sort(),
     );
+  });
+
+  /*
+   * O teste de cima tem a lista escrita à mão, e foi assim que a chave das
+   * medalhas escapou: entrou no código, não entrou na lista, e o teste — que
+   * só sabia das chaves de antes — continuou verde. No telemóvel, as medalhas
+   * gravavam-se e nunca se liam.
+   *
+   * Este não depende de ninguém se lembrar: procura no código do jogo todas as
+   * chaves `dicetoseven.*` escritas por extenso, e exige a lista igual.
+   */
+  it("**nenhuma chave do código fica fora da lista**, nem a lista tem chaves mortas", () => {
+    // `dirname` e não `url`: com o ambiente jsdom, o `import.meta.url` deixa de
+    // ser um caminho `file:`.
+    const raiz = join(import.meta.dirname, "../src");
+    const encontradas = new Set<string>();
+
+    const percorrer = (pasta: string): void => {
+      for (const entrada of readdirSync(pasta, { withFileTypes: true })) {
+        const caminho = join(pasta, entrada.name);
+        if (entrada.isDirectory()) percorrer(caminho);
+        else if (entrada.name.endsWith(".ts")) {
+          for (const m of readFileSync(caminho, "utf8").matchAll(/["'`](dicetoseven\.[a-z.]+)["'`]/g)) {
+            if (m[1] !== undefined) encontradas.add(m[1]);
+          }
+        }
+      }
+    };
+    percorrer(raiz);
+
+    expect([...encontradas].sort()).toEqual([...CHAVES].sort());
   });
 });
 

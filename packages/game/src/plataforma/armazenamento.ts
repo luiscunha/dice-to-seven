@@ -42,7 +42,11 @@ import type { ProfileStorage } from "../session/progress";
  *
  * A lista é explícita porque no arranque se lê tudo de uma vez, e só se pode
  * ler o que se conhece. Uma chave nova tem de entrar aqui — e um teste garante
- * que nenhuma se esquece.
+ * que nenhuma se esquece: procura no código todas as chaves `dicetoseven.*`, e
+ * falha se alguma não estiver na lista.
+ *
+ * Já se esqueceu uma. As medalhas gravavam-se mas não se liam, e no telemóvel
+ * voltavam todas a ser ganhas a cada arranque, com a data desse dia.
  */
 export const CHAVES = [
   "dicetoseven.profile",
@@ -50,6 +54,7 @@ export const CHAVES = [
   "dicetoseven.survival",
   "dicetoseven.desafio",
   "dicetoseven.desafio.survival",
+  "dicetoseven.medalhas",
 ] as const;
 
 /**
