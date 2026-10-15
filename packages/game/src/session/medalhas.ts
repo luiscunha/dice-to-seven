@@ -42,25 +42,6 @@ import type { Profile, ProfileStorage } from "./progress";
 export type FamiliaDaMedalha = "puzzle" | "tempo" | "survival" | "desafio";
 export type TipoDeMedalha = "normal" | "premium";
 
-/**
- * O desenho do emblema: a forma, e o que vai escrito nela.
- *
- * Vive no catálogo e não no ecrã para que acrescentar uma medalha seja
- * acrescentar uma entrada aqui, e mais nada.
- */
-export type FormaDoEmblema = "dado" | "relogio" | "poco" | "chama" | "calendario";
-
-export interface Emblema {
-  readonly forma: FormaDoEmblema;
-  /**
-   * O texto no emblema: «★», «5′». Ausente, é o alvo — o tamanho do capítulo,
-   * que não se sabe antes de ele montar.
-   */
-  readonly marca?: string;
-  /** Uma estrela na face do dado, no lugar das pintas: as de selo Perfeito. */
-  readonly estrela?: true;
-}
-
 export interface Progresso {
   readonly atual: number;
   readonly alvo: number;
@@ -86,7 +67,6 @@ export interface Medalha {
   readonly descricao: string;
   readonly familia: FamiliaDaMedalha;
   readonly tipo: TipoDeMedalha;
-  readonly emblema: Emblema;
   /**
    * O que se conta, no plural: «níveis», «pontos». Ausente nas medalhas de
    * sim-ou-não, que não têm contagem a mostrar.
@@ -197,7 +177,6 @@ const capitulo = (id: string, nome: string): Medalha => ({
   descricao: `Acabar todos os níveis do ${nome}.`,
   familia: "puzzle",
   tipo: "normal",
-  emblema: { forma: "dado" },
   unidade: "níveis",
   progresso: (ctx) => {
     const niveis = niveisDe(ctx, id);
@@ -217,7 +196,6 @@ export const MEDALHAS: readonly Medalha[] = [
     descricao: "Acabar um nível com selo Perfeito: sem desfazer, sem reiniciar e sem dicas.",
     familia: "puzzle",
     tipo: "normal",
-    emblema: { forma: "dado", marca: "★" },
     progresso: (ctx) => ate(perfeitos(ctx, todosOsNiveis(ctx)), 1),
   },
   {
@@ -226,7 +204,6 @@ export const MEDALHAS: readonly Medalha[] = [
     descricao: "Todos os níveis do Perito com selo Perfeito.",
     familia: "puzzle",
     tipo: "premium",
-    emblema: { forma: "dado", estrela: true },
     unidade: "perfeitos",
     progresso: (ctx) => {
       const niveis = niveisDe(ctx, "perito");
@@ -239,7 +216,6 @@ export const MEDALHAS: readonly Medalha[] = [
     descricao: "Todos os níveis da campanha com selo Perfeito.",
     familia: "puzzle",
     tipo: "premium",
-    emblema: { forma: "dado", estrela: true },
     unidade: "perfeitos",
     progresso: (ctx) => {
       const niveis = todosOsNiveis(ctx);
@@ -254,7 +230,6 @@ export const MEDALHAS: readonly Medalha[] = [
     descricao: `Limpar ${String(LIMIARES.maratona)} tabuleiros numa corrida do Contra-Relógio.`,
     familia: "tempo",
     tipo: "normal",
-    emblema: { forma: "relogio", marca: String(LIMIARES.maratona) },
     unidade: "tabuleiros",
     progresso: (ctx) => ate(melhorTabuleiros(ctx), LIMIARES.maratona),
   },
@@ -264,7 +239,6 @@ export const MEDALHAS: readonly Medalha[] = [
     descricao: `Fazer ${milhares(LIMIARES.recordista)} pontos numa corrida do Contra-Relógio.`,
     familia: "tempo",
     tipo: "premium",
-    emblema: { forma: "relogio", marca: `${String(LIMIARES.recordista / 1000)}k` },
     unidade: "pontos",
     progresso: (ctx) => ate(melhorPontuacao(ctx), LIMIARES.recordista),
   },
@@ -274,7 +248,6 @@ export const MEDALHAS: readonly Medalha[] = [
     descricao: `Limpar ${String(LIMIARES.ultramaratona)} tabuleiros numa corrida do Contra-Relógio.`,
     familia: "tempo",
     tipo: "premium",
-    emblema: { forma: "relogio", marca: String(LIMIARES.ultramaratona) },
     unidade: "tabuleiros",
     progresso: (ctx) => ate(melhorTabuleiros(ctx), LIMIARES.ultramaratona),
   },
@@ -286,7 +259,6 @@ export const MEDALHAS: readonly Medalha[] = [
     descricao: "Aguentar cinco minutos numa corrida do Survival.",
     familia: "survival",
     tipo: "normal",
-    emblema: { forma: "poco", marca: "5′" },
     formato: "tempo",
     progresso: (ctx) => ate(melhorSurvival(ctx), LIMIARES.cincoMinutosMs),
   },
@@ -296,7 +268,6 @@ export const MEDALHAS: readonly Medalha[] = [
     descricao: "Aguentar dez minutos numa corrida do Survival.",
     familia: "survival",
     tipo: "premium",
-    emblema: { forma: "poco", marca: "10′" },
     formato: "tempo",
     progresso: (ctx) => ate(melhorSurvival(ctx), LIMIARES.dezMinutosMs),
   },
@@ -306,7 +277,6 @@ export const MEDALHAS: readonly Medalha[] = [
     descricao: `Limpar o tabuleiro do Survival ${String(LIMIARES.limpezas)} vezes.`,
     familia: "survival",
     tipo: "premium",
-    emblema: { forma: "poco", marca: String(LIMIARES.limpezas) },
     unidade: "limpezas",
     progresso: (ctx) => ate(limpezas(ctx), LIMIARES.limpezas),
   },
@@ -318,7 +288,6 @@ export const MEDALHAS: readonly Medalha[] = [
     descricao: `Fazer o Desafio do Dia ${String(LIMIARES.semana)} dias seguidos.`,
     familia: "desafio",
     tipo: "normal",
-    emblema: { forma: "chama", marca: String(LIMIARES.semana) },
     unidade: "dias seguidos",
     progresso: (ctx) => ate(maiorSequencia(ctx.desafios), LIMIARES.semana),
   },
@@ -328,7 +297,6 @@ export const MEDALHAS: readonly Medalha[] = [
     descricao: "Fazer todos os desafios de um mês — a ★ no trilho dos meses.",
     familia: "desafio",
     tipo: "normal",
-    emblema: { forma: "calendario", marca: "★" },
     progresso: (ctx) => ate(mesesCompletos(ctx.desafios, ctx.hoje), 1),
   },
   {
@@ -337,7 +305,6 @@ export const MEDALHAS: readonly Medalha[] = [
     descricao: `Fazer o Desafio do Dia ${String(LIMIARES.trintaDias)} dias seguidos.`,
     familia: "desafio",
     tipo: "premium",
-    emblema: { forma: "chama", marca: String(LIMIARES.trintaDias) },
     unidade: "dias seguidos",
     progresso: (ctx) => ate(maiorSequencia(ctx.desafios), LIMIARES.trintaDias),
   },
@@ -347,7 +314,6 @@ export const MEDALHAS: readonly Medalha[] = [
     descricao: `Fazer o Desafio do Dia ${String(LIMIARES.cemDias)} dias seguidos.`,
     familia: "desafio",
     tipo: "premium",
-    emblema: { forma: "chama", marca: String(LIMIARES.cemDias) },
     unidade: "dias seguidos",
     progresso: (ctx) => ate(maiorSequencia(ctx.desafios), LIMIARES.cemDias),
   },

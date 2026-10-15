@@ -4957,8 +4957,8 @@ body::before {
 }
 
 /*
- * O cartão: o emblema, o nome, a pastilha. Por ganhar é cinzento e esmorecido,
- * com o cadeado; ganho, é menta e a cores. O premium ganho troca a menta por um
+ * O cartão: o emblema, o nome, a pastilha. Por ganhar é cinzento, com o
+ * cadeado; ganho, é menta, com luz por trás do emblema. O premium ganho troca a menta por um
  * degradê mais fundo e leva a moldura dupla de ouro — e o premium por ganhar
  * já tem um fio dourado, para se saber o que se está a perseguir.
  */
@@ -5032,16 +5032,21 @@ body::before {
 .emblema {
   display: block;
   width: 100%;
-  max-width: 132px;
+  max-width: 150px;
   height: auto;
-  aspect-ratio: 120 / 96;
+  aspect-ratio: 120 / 100;
   overflow: visible;
 }
 
+/*
+ * Por ganhar, o emblema mantém as cores — é a montra do que se pode ganhar, e
+ * um ouro cinzento não faz ninguém querer o ouro. Fica um pouco mais baço; quem
+ * diz «ainda não» é o cartão cinzento, o cadeado e a pastilha.
+ */
 .medalha[data-ganha="nao"] .emblema,
 .medalha-pormenor[data-ganha="nao"] .emblema {
-  filter: grayscale(1);
-  opacity: 0.42;
+  filter: saturate(0.8);
+  opacity: 0.88;
 }
 
 .medalha-nome {
@@ -5112,134 +5117,369 @@ body::before {
 
 /* ── O emblema ── */
 
-.emblema-dado-contorno {
-  fill: var(--dado-esquerda);
-  stroke: var(--dado-esquerda);
-  stroke-width: 7;
+/*
+ * A folha dos degradês: no documento, mas sem ocupar lugar. `display: none`
+ * não serve — num SVG escondido assim, alguns browsers deixam de resolver os
+ * degradês que os outros SVG vão lá buscar.
+ */
+.emblemas-definicoes {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+/* As paragens dos degradês. */
+.emb-ouro-1 { stop-color: var(--emb-ouro-1); }
+.emb-ouro-2 { stop-color: var(--emb-ouro-2); }
+.emb-ouro-3 { stop-color: var(--emb-ouro-3); }
+.emb-prata-1 { stop-color: var(--emb-prata-1); }
+.emb-prata-2 { stop-color: var(--emb-prata-2); }
+.emb-prata-3 { stop-color: var(--emb-prata-3); }
+.emb-escudo-1 { stop-color: var(--emb-escudo-1); }
+.emb-escudo-2 { stop-color: var(--emb-escudo-2); }
+.emb-folha-1 { stop-color: var(--emb-folha-1); }
+.emb-folha-2 { stop-color: var(--emb-folha-2); }
+.emb-fogo-1 { stop-color: var(--emb-fogo-1); }
+.emb-fogo-2 { stop-color: var(--emb-fogo-2); }
+.emb-fogo-3 { stop-color: var(--emb-fogo-3); }
+.emb-areia-1 { stop-color: var(--emb-areia-1); }
+.emb-areia-2 { stop-color: var(--emb-areia-2); }
+.emb-brilho-1 { stop-color: var(--emb-luz); stop-opacity: 0.7; }
+.emb-brilho-2 { stop-color: var(--emb-luz); stop-opacity: 0; }
+.emb-halo-1 { stop-color: var(--emb-luz); stop-opacity: 0.85; }
+.emb-halo-ouro-1 { stop-color: var(--emb-ouro-1); stop-opacity: 0.9; }
+.emb-halo-2 { stop-color: var(--emb-luz); stop-opacity: 0; }
+
+.emb-halo {
+  fill: url(#emb-halo);
+}
+
+.emb-halo-ouro {
+  fill: url(#emb-halo-ouro);
+}
+
+/*
+ * ── O dado ──
+ *
+ * Quatro paletas, e cada uma é só um jogo de variáveis: as regras das faces são
+ * as mesmas para todas. O contorno é da cor da aresta e mais grosso do que a
+ * face, e é ele que dá ao cubo o rebordo e os cantos redondos.
+ */
+.dado-marfim {
+  --d-topo: var(--emb-marfim-topo);
+  --d-esquerda: var(--emb-marfim-esquerda);
+  --d-direita: var(--emb-marfim-direita);
+  --d-pinta: var(--emb-marfim-pinta);
+  --d-aresta: var(--emb-marfim-aresta);
+}
+
+.dado-prata {
+  --d-topo: var(--emb-prata-1);
+  --d-esquerda: var(--emb-prata-2);
+  --d-direita: var(--emb-prata-3);
+  --d-pinta: var(--emb-prata-pinta);
+  --d-aresta: var(--emb-prata-aresta);
+}
+
+.dado-ouro {
+  --d-topo: var(--emb-ouro-1);
+  --d-esquerda: var(--emb-ouro-2);
+  --d-direita: var(--emb-ouro-3);
+  --d-pinta: var(--emb-ouro-pinta);
+  --d-aresta: var(--emb-ouro-aresta);
+}
+
+.dado-branco {
+  --d-topo: var(--emb-branco-topo);
+  --d-esquerda: var(--emb-branco-esquerda);
+  --d-direita: var(--emb-branco-direita);
+  --d-pinta: var(--emb-branco-pinta);
+  --d-aresta: var(--emb-branco-aresta);
+}
+
+.dado-contorno {
+  fill: var(--d-aresta);
+  stroke: var(--d-aresta);
   stroke-linejoin: round;
 }
 
-.emblema-dado-topo {
-  fill: var(--dado-topo);
+.dado-topo { fill: var(--d-topo); }
+.dado-esquerda { fill: var(--d-esquerda); }
+.dado-direita { fill: var(--d-direita); }
+
+.dado-brilho {
+  fill: url(#emb-brilho);
 }
 
-.emblema-dado-esquerda {
-  fill: var(--dado-esquerda);
-}
-
-.emblema-dado-direita {
-  fill: var(--dado-direita);
-}
-
-.emblema-dado-aresta {
+.dado-aresta {
   fill: none;
-  stroke: var(--dado-aresta);
+  stroke: var(--emb-luz);
+  stroke-opacity: 0.55;
+  stroke-linejoin: round;
+}
+
+.dado-pinta {
+  fill: var(--d-pinta);
+}
+
+.dado-estrela {
+  fill: var(--emb-ouro-2);
+  stroke: var(--emb-ouro-aresta);
+  stroke-width: 0.03;
+  stroke-linejoin: round;
+}
+
+/* ── O metal ── */
+
+.emb-ouro .emb-metal,
+.emb-metal.emb-ouro {
+  fill: url(#emb-ouro);
+  stroke: var(--emb-ouro-aresta);
   stroke-width: 1.2;
   stroke-linejoin: round;
 }
 
-.emblema-pinta,
-.emblema-marca {
-  fill: var(--dado-pinta);
+.emb-prata .emb-metal,
+.emb-metal.emb-prata {
+  fill: url(#emb-prata);
+  stroke: var(--emb-prata-aresta);
+  stroke-width: 1.2;
+  stroke-linejoin: round;
 }
 
-.emblema-marca {
+.emb-asa-pena {
+  fill: none;
+  stroke-width: 1.1;
+  stroke-linecap: round;
+}
+
+.emb-ouro .emb-asa-pena {
+  stroke: var(--emb-ouro-aresta);
+}
+
+.emb-prata .emb-asa-pena {
+  stroke: var(--emb-prata-aresta);
+}
+
+.emb-joia {
+  fill: var(--emb-joia);
+  stroke: var(--emb-ouro-aresta);
+  stroke-width: 0.8;
+}
+
+.emb-escudo {
+  fill: url(#emb-escudo);
+  stroke: url(#emb-ouro);
+  stroke-width: 4;
+  stroke-linejoin: round;
+}
+
+.emb-escudo-dourado {
+  fill: url(#emb-ouro);
+  stroke: var(--emb-ouro-aresta);
+}
+
+.emb-escudo-filete {
+  fill: none;
+  stroke: var(--emb-ouro-1);
+  stroke-opacity: 0.55;
+  stroke-width: 1.2;
+}
+
+.emb-estrela {
+  fill: url(#emb-ouro);
+  stroke: var(--emb-ouro-aresta);
+  stroke-width: 0.8;
+  stroke-linejoin: round;
+}
+
+.emb-estrela-prata {
+  fill: url(#emb-prata);
+  stroke: var(--emb-prata-aresta);
+}
+
+.emb-centelha {
+  fill: var(--emb-ouro-2);
+}
+
+.emb-centelha-clara {
+  fill: var(--emb-luz);
+}
+
+/* ── O louro e a fita ── */
+
+.emb-louro-folha .emb-folha {
+  fill: url(#emb-folha);
+}
+
+.emb-louro-folha .emb-louro-haste {
+  stroke: var(--emb-folha-2);
+}
+
+.emb-louro-ouro .emb-folha {
+  fill: url(#emb-ouro);
+}
+
+.emb-louro-ouro .emb-louro-haste {
+  stroke: var(--emb-ouro-3);
+}
+
+.emb-louro-haste {
+  fill: none;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+}
+
+.emb-folha-solta .emb-folha {
+  fill: url(#emb-folha);
+  stroke: var(--emb-folha-2);
+  stroke-width: 0.8;
+}
+
+.emb-folha-nervura {
+  fill: none;
+  stroke: var(--emb-folha-2);
+  stroke-width: 1;
+  stroke-linecap: round;
+}
+
+.emb-fita-ponta {
+  fill: var(--emb-ouro-3);
+  stroke: var(--emb-ouro-aresta);
+  stroke-width: 1;
+  stroke-linejoin: round;
+}
+
+/* ── O texto ── */
+
+.emb-marca,
+.emb-fita-texto,
+.emb-selo-texto {
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   font-weight: 800;
   letter-spacing: -0.02em;
 }
 
-.emblema-estrela {
-  fill: var(--ouro);
-  stroke: var(--ouro-escuro);
-  stroke-width: 1;
-  stroke-linejoin: round;
+.emb-marca {
+  fill: var(--emb-tinta);
 }
 
-.emblema-relogio-mostrador,
-.emblema-calendario-folha {
-  fill: var(--dado-topo);
-  stroke: var(--emblema-traco);
-  stroke-width: 6;
+.emb-fita-texto {
+  fill: var(--emb-ouro-pinta);
 }
 
-.emblema-relogio-coroa,
-.emblema-calendario-argola {
-  fill: var(--emblema-traco);
+.emb-selo-disco {
+  fill: var(--emb-selo);
+  stroke: var(--emb-luz);
+  stroke-width: 2.5;
 }
 
-.emblema-relogio-botao,
-.emblema-relogio-traco {
+.emb-selo-ouro .emb-selo-disco {
+  fill: url(#emb-ouro);
+  stroke: var(--emb-luz);
+}
+
+.emb-selo-texto {
+  fill: var(--emb-luz);
+}
+
+.emb-selo-ouro .emb-selo-texto {
+  fill: var(--emb-ouro-pinta);
+}
+
+/* ── O cronómetro e a ampulheta ── */
+
+.emb-mostrador {
+  fill: var(--emb-luz);
+}
+
+.emb-mostrador-traco,
+.emb-velocidade {
   fill: none;
-  stroke: var(--emblema-traco);
   stroke-linecap: round;
 }
 
-.emblema-relogio-botao {
-  stroke-width: 6;
+.emb-mostrador-traco {
+  stroke: var(--emb-tinta);
+  stroke-width: 2;
 }
 
-.emblema-relogio-traco {
+.emb-velocidade {
+  stroke: var(--emb-prata-3);
   stroke-width: 3;
 }
 
-.emblema-calendario-faixa {
-  fill: var(--accent);
+.emb-vidro {
+  fill: var(--emb-vidro);
+  stroke: var(--emb-vidro-borda);
+  stroke-width: 1.5;
 }
 
-.emblema-poco-fundo {
-  fill: var(--dado-topo);
+.emb-areia {
+  fill: url(#emb-areia);
 }
 
-.emblema-poco-parede {
+.emb-areia-fio {
   fill: none;
-  stroke: var(--emblema-traco);
-  stroke-width: 6;
+  stroke: var(--emb-areia-2);
+  stroke-width: 1.6;
+}
+
+.emb-poco-parede {
+  fill: none;
+  stroke: url(#emb-ouro);
+  stroke-width: 5;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 
-.emblema-peca.face-1 { fill: var(--face-1); }
-.emblema-peca.face-2 { fill: var(--face-2); }
-.emblema-peca.face-3 { fill: var(--face-3); }
-.emblema-peca.face-4 { fill: var(--face-4); }
-.emblema-peca.face-5 { fill: var(--face-5); }
-.emblema-peca.face-6 { fill: var(--face-6); }
-
-/* A chama do desafio é o fogo da sequência; nas premium, ouro. */
-.emblema-chama-fora {
-  fill: var(--fogo);
-}
-
-.emblema-chama-dentro {
-  fill: var(--fogo-quente);
-}
-
-[data-tipo="premium"] .emblema-chama-fora {
-  fill: var(--ouro);
-}
-
-[data-tipo="premium"] .emblema-chama-dentro {
-  fill: var(--ouro-claro);
-}
-
-.emblema-folha {
-  fill: var(--accent);
-}
-
-.emblema-louro-haste {
+.emb-poco-reflexo {
   fill: none;
-  stroke: var(--accent);
-  stroke-width: 2.2;
+  stroke: var(--emb-luz);
+  stroke-opacity: 0.8;
+  stroke-width: 3;
   stroke-linecap: round;
 }
 
-[data-tipo="premium"] .emblema-folha {
-  fill: var(--ouro);
+/* ── O desafio ── */
+
+.emb-chama {
+  fill: url(#emb-fogo);
 }
 
-[data-tipo="premium"] .emblema-louro-haste {
-  stroke: var(--ouro);
+.emb-chama-ouro {
+  fill: url(#emb-fogo-ouro);
+}
+
+.emb-calendario-folha {
+  fill: var(--emb-luz);
+  stroke: var(--emb-prata-3);
+  stroke-width: 2;
+}
+
+.emb-calendario-faixa {
+  fill: var(--emb-selo);
+}
+
+.emb-taca-asa {
+  fill: none;
+  stroke: url(#emb-ouro);
+  stroke-width: 4.5;
+  stroke-linecap: round;
+}
+
+.emb-taca-base {
+  fill: var(--emb-ouro-3);
+  stroke: var(--emb-ouro-aresta);
+  stroke-width: 1.2;
+}
+
+.emb-taca-estrela {
+  fill: var(--emb-luz);
+  stroke: var(--emb-ouro-aresta);
+  stroke-width: 0.8;
+  stroke-linejoin: round;
 }
 
 /* ─── Home num ecrã curto ─────────────────────────────────────────────────── */

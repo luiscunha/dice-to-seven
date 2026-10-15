@@ -1310,6 +1310,28 @@ percurso: acabar um capítulo, aguentar cinco minutos, trinta dias seguidos.
 premium são raras, com moldura dourada. **Nenhuma se compra** (plano §9.1): o
 que distingue as premium é a exigência.
 
+**Cada medalha tem a sua ilustração** (`ui/emblemas.ts`). O resto do jogo
+recusa ícones ilustrados, mas uma medalha é o prémio e tem de o parecer. Os
+elementos:
+
+- **O dado em perspetiva** — a peça do tabuleiro em objeto —, em quatro
+  madeiras: marfim, prata, ouro e branco.
+- **O que diz o tamanho da conquista à volta do dado:**
+  - uma folha a nascer no Iniciado;
+  - dois dados no Médio;
+  - asas no Avançado;
+  - escudo e coroa no Perito.
+- **Uma figura por modo:**
+  - o cronómetro no Contra-Relógio;
+  - a ampulheta no Survival;
+  - a chama da sequência no desafio.
+
+É SVG, e não imagem. As cores vêm de `theme.css` e são as mesmas nos dois
+temas. Os degradês vivem numa folha só no `body`, para os ids não se repetirem.
+**O emblema mantém as cores mesmo por ganhar**, porque é a montra do que se
+pode ganhar. Quem diz «ainda não» é o cartão cinzento, o cadeado e a pastilha.
+Um teste obriga cada medalha do catálogo a ter desenho próprio.
+
 | | Normais | Premium |
 |---|---|---|
 | Puzzles | Iniciado, Médio, Avançado, Perito (o capítulo todo); Perfeição (um nível Perfeito) | Perito perfeito; Campanha perfeita |

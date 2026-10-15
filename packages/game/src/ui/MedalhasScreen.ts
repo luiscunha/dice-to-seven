@@ -6,9 +6,10 @@
  * está a cumprir — a última coisa que se via, e quase sempre cinzenta. Numa
  * aba própria são um destino: o sítio onde se vai ver o que falta para o ouro.
  *
- * **Cada cartão diz o seu estado sem se tocar.** Ganha: a cores, com o louro à
- * volta do emblema e a pastilha escura. Por ganhar: esmorecida, com o cadeado
- * em cima, e a pastilha a dizer quanto falta — «2/40 níveis». Tocar abre o
+ * **Cada cartão diz o seu estado sem se tocar.** Ganha: o cartão menta, a luz
+ * por trás do emblema e a pastilha escura. Por ganhar: o cartão cinzento, o
+ * cadeado em cima, e a pastilha a dizer quanto falta — «2/40 níveis». O emblema
+ * mantém as cores nos dois: é a montra do que se pode ganhar. Tocar abre o
  * pormenor: o que pede a medalha, e quando se ganhou.
  *
  * As medalhas que o jogador ainda não tinha visto levam «Nova». A página abriu,
@@ -179,7 +180,7 @@ export class MedalhasScreen {
       cadeado.appendChild(iconeCadeado());
       figura.appendChild(cadeado);
     }
-    figura.appendChild(emblema(medalha.emblema, progresso.alvo, ganha));
+    figura.appendChild(emblema(medalha.id, ganha, medalha.tipo === "premium"));
 
     const pastilha = elemento("span", "medalha-pastilha", rotuloDaPastilha(medalha, progresso, ganha));
     if (ganha) {
@@ -221,7 +222,7 @@ export class MedalhasScreen {
     const conteudo = elemento("div", "medalha-pormenor");
     conteudo.dataset["tipo"] = medalha.tipo;
     conteudo.dataset["ganha"] = ganha ? "sim" : "nao";
-    conteudo.appendChild(emblema(medalha.emblema, progresso.alvo, ganha));
+    conteudo.appendChild(emblema(medalha.id, ganha, medalha.tipo === "premium"));
 
     const conta = medalha.unidade !== undefined || medalha.formato === "tempo";
     const estado =
