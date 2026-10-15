@@ -7,12 +7,13 @@
  * se lê; um aviso a meio da corrida tapava o tabuleiro no pior momento.
  */
 
+import { t } from "../i18n";
 import type { Medalha } from "../session/medalhas";
 import { elemento } from "./dom";
 import { iconeMedalha } from "./icones";
 
 /** O que o painel precisa de saber de uma medalha acabada de ganhar. */
-export type MedalhaGanha = Pick<Medalha, "nome" | "tipo">;
+export type MedalhaGanha = Pick<Medalha, "id" | "tipo">;
 
 /** A linha, ou `undefined` se a partida não deu medalha nenhuma. */
 export function linhaDeMedalhas(novas: readonly MedalhaGanha[]): HTMLElement | undefined {
@@ -21,10 +22,10 @@ export function linhaDeMedalhas(novas: readonly MedalhaGanha[]): HTMLElement | u
   const linha = elemento("p", "fim-medalhas");
   if (novas.some((m) => m.tipo === "premium")) linha.dataset["premium"] = "sim";
 
-  const nomes = novas.map((m) => m.nome).join(", ");
+  const nomes = novas.map((m) => t().medalhas.nomes[m.id]).join(", ");
   linha.append(
     iconeMedalha(),
-    elemento("span", undefined, novas.length === 1 ? "Nova medalha: " : "Novas medalhas: "),
+    elemento("span", undefined, t().paginaMedalhas.novas(novas.length)),
     elemento("b", undefined, nomes),
   );
 

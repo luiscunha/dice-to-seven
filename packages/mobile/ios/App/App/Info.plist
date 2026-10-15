@@ -6,6 +6,14 @@
 	<string>$(CAPACITOR_DEBUG)</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>pt</string>
+		<string>pt-PT</string>
+		<string>es</string>
+		<string>fr</string>
+	</array>
 	<key>CFBundleDisplayName</key>
         <string>DiceToSeven</string>
 	<key>CFBundleExecutable</key>

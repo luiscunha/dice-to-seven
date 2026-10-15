@@ -3474,6 +3474,16 @@ body::before {
   border-radius: 10px;
 }
 
+/*
+ * Os idiomas são cinco, e com os nomes inteiros não cabem numa fila a 320px.
+ * Em grelha, partem-se em linhas do mesmo tamanho em vez de encolher a letra.
+ */
+.segmentado.grelha-idiomas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
+  width: 100%;
+}
+
 /* A pista do segmentado leva 2px de cada lado: por dentro, o alvo inteiro. */
 .btn.segmento {
   border: 0;

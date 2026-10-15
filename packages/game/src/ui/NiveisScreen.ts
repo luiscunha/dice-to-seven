@@ -16,17 +16,16 @@
  */
 
 import type { Capitulo, NivelDoCapitulo } from "../capitulos";
+import { t } from "../i18n";
 import type { Profile } from "../session/progress";
 import type { Seal } from "../session/PuzzleSession";
 import { cabecalho, elemento } from "./dom";
 
 /** O selo em glifo. O texto completo fica na etiqueta de acessibilidade. */
-const SELO: Readonly<
-  Record<Seal, { readonly glifo: string; readonly nome: string }>
-> = {
-  perfect: { glifo: "★", nome: "perfeito" },
-  clean: { glifo: "◆", nome: "limpo" },
-  completed: { glifo: "●", nome: "concluído" },
+const GLIFO: Readonly<Record<Seal, string>> = {
+  perfect: "★",
+  clean: "◆",
+  completed: "●",
 };
 
 export interface OpcoesNiveis {
@@ -43,7 +42,7 @@ export class NiveisScreen {
   constructor(host: HTMLElement, opcoes: OpcoesNiveis) {
     this.raiz = elemento("div", "ecra");
 
-    const { el: topo } = cabecalho(opcoes.capitulo.nome, opcoes.aoVoltar);
+    const { el: topo } = cabecalho(t().capitulos[opcoes.capitulo.id].nome, opcoes.aoVoltar);
 
     /*
      * ── O nível a seguir ──
@@ -109,16 +108,17 @@ export class NiveisScreen {
     b.appendChild(elemento("span", "nivel-numero", numero));
 
     if (selo !== undefined) {
-      b.appendChild(elemento("span", "nivel-selo", SELO[selo].glifo));
+      b.appendChild(elemento("span", "nivel-selo", GLIFO[selo]));
     }
 
+    const n = t().niveis;
     b.setAttribute(
       "aria-label",
       selo !== undefined
-        ? `nível ${numero}, ${SELO[selo].nome}`
+        ? n.nivelComSelo(numero, n.selos[selo])
         : seguinte
-          ? `nível ${numero}, a seguir`
-          : `nível ${numero}, por jogar`,
+          ? n.nivelSeguinte(numero)
+          : n.nivelPorJogar(numero),
     );
 
     b.addEventListener("click", () => {

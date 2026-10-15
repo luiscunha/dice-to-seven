@@ -18,6 +18,7 @@
 import type { Cell } from "@dicetoseven/engine";
 import { JOKER } from "@dicetoseven/engine";
 
+import { t } from "../i18n";
 import { AVATARES, NOME_MAX, limparNome } from "../session/settings";
 import type { ModoFace } from "./dice";
 import { pecaDeAmostra } from "./dice";
@@ -35,7 +36,7 @@ export interface OpcoesPerfil {
 }
 
 const nomeDaFace = (v: Cell): string =>
-  v === JOKER ? "joker" : `face ${String(v)}`;
+  v === JOKER ? t().comum.joker : t().comum.face(v);
 
 export function abrirPerfil(
   host: HTMLElement,
@@ -45,14 +46,14 @@ export function abrirPerfil(
   d.className = "popup perfil";
 
   const corpo = elemento("div", "popup-corpo");
-  corpo.appendChild(elemento("h2", "popup-titulo", "Quem és?"));
+  corpo.appendChild(elemento("h2", "popup-titulo", t().perfil.quemEs));
 
   let avatar = opcoes.avatar;
 
   /* ─── O nome ──────────────────────────────────────────────────────────── */
 
   const campo = elemento("label", "perfil-campo");
-  campo.appendChild(elemento("span", "perfil-rotulo", "O teu nome"));
+  campo.appendChild(elemento("span", "perfil-rotulo", t().perfil.oTeuNome));
 
   const entrada = document.createElement("input");
   entrada.type = "text";
@@ -64,7 +65,7 @@ export function abrirPerfil(
    * textos diferentes para o mesmo estado obrigavam a perceber que são a mesma
    * coisa.
    */
-  entrada.placeholder = "Quem és?";
+  entrada.placeholder = t().perfil.quemEs;
   entrada.autocomplete = "off";
   entrada.spellcheck = false;
   /*
@@ -78,11 +79,11 @@ export function abrirPerfil(
 
   /* ─── O avatar ────────────────────────────────────────────────────────── */
 
-  corpo.appendChild(elemento("span", "perfil-rotulo", "O teu avatar"));
+  corpo.appendChild(elemento("span", "perfil-rotulo", t().perfil.oTeuAvatar));
 
   const grelha = elemento("div", "perfil-avatares");
   grelha.setAttribute("role", "radiogroup");
-  grelha.setAttribute("aria-label", "avatar");
+  grelha.setAttribute("aria-label", t().perfil.avatarAria);
 
   const opcoesAvatar = AVATARES.map((valor) => {
     const b = botao("", "avatar-opcao");
@@ -131,10 +132,10 @@ export function abrirPerfil(
 
   const acoes = elemento("div", "acoes");
   acoes.append(
-    botao("Cancelar", undefined, fechar),
-    botao("Guardar", "primario", guardar),
+    botao(t().comum.cancelar, undefined, fechar),
+    botao(t().comum.guardar, "primario", guardar),
   );
-  corpo.append(acoes, botaoRedondo(iconeFechar(), "fechar", fechar));
+  corpo.append(acoes, botaoRedondo(iconeFechar(), t().comum.fechar, fechar));
 
   // Tocar fora cancela: é o gesto de quem percebeu que se enganou.
   d.addEventListener("click", (e) => {

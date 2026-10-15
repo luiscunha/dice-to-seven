@@ -16,6 +16,8 @@
 
 import type { Cell } from "@dicetoseven/engine";
 
+import type { PreferenciaDeIdioma } from "../i18n/idioma";
+import { eIdioma } from "../i18n/idioma";
 import type { ProfileStorage } from "./progress";
 
 export const SETTINGS_VERSION = 1;
@@ -114,6 +116,13 @@ export interface Settings {
 
   /** O avatar: uma das sete faces (ver `AVATARES`). */
   readonly avatar: Cell;
+
+  /**
+   * O idioma. **`sistema` é a omissão**, como no tema: segue o telemóvel, e
+   * muda com ele. Escolher um dos quatro fixa-o, e o telemóvel deixa de mandar.
+   * Ver `i18n/idioma.ts`.
+   */
+  readonly idioma: PreferenciaDeIdioma;
 }
 
 export const defaultSettings = (): Settings => ({
@@ -123,6 +132,7 @@ export const defaultSettings = (): Settings => ({
   vibracao: true,
   nome: "",
   avatar: AVATAR_OMISSAO,
+  idioma: "sistema",
 });
 
 export const saveSettings = (
@@ -167,6 +177,8 @@ export function loadSettings(storage: ProfileStorage): Settings {
     avatar: AVATARES.includes(s.avatar as Cell)
       ? (s.avatar as Cell)
       : AVATAR_OMISSAO,
+    // Um ficheiro de antes dos idiomas não tem o campo, e segue o sistema.
+    idioma: eIdioma(s.idioma) ? s.idioma : "sistema",
   };
 }
 

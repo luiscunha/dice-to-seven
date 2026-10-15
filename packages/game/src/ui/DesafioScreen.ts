@@ -36,6 +36,7 @@
  * empurrar as casas de baixo, em vez de tapar as de cima.
  */
 
+import { t } from "../i18n";
 import { PATAMARES, proximoPatamar } from "../session/chaves";
 import type { ModoDoDesafio } from "../session/desafio";
 import { mesDe, numeroDoDia } from "../session/desafio";
@@ -52,12 +53,13 @@ import {
 } from "./icones";
 import type { DesfechoDaPartilha } from "./partilha";
 import {
-  NOME_DO_MODO,
   botaoPartilhar,
   dataCurta,
   dataPorExtenso,
   mesCurto,
   mesPorExtenso,
+  nomeDoMes,
+  nomeDoModo,
 } from "./partilha";
 
 /**
@@ -149,11 +151,7 @@ export interface OpcoesDesafio {
 }
 
 /** O que cada desafio é, numa linha. */
-export const LEGENDA_DO_MODO: Readonly<Record<ModoDoDesafio, string>> = {
-  puzzle: "Um tabuleiro, o mesmo para todos. Resolve-o.",
-  tempo: "Sessenta segundos, e os mesmos tabuleiros para todos.",
-  survival: "As mesmas linhas para todos. Limpa o tabuleiro antes que transborde.",
-};
+export const legendaDoModo = (modo: ModoDoDesafio): string => t().desafio.legendas[modo];
 
 /** O ícone do modo — o mesmo do cartão dele na Home. */
 export const iconeDoModo = (modo: ModoDoDesafio): SVGElement =>
@@ -171,20 +169,18 @@ export function sinalDaSequencia(sequencia: number): HTMLElement {
  * uma chave ainda a salva.
  */
 export function sinalDeRisco(sequencia: number): HTMLElement {
-  const el = elemento("span", "desafio-sequencia", `🔥 ${String(sequencia)} em risco`);
+  const el = elemento("span", "desafio-sequencia", `🔥 ${String(sequencia)} ${t().desafio.emRisco}`);
   el.dataset["risco"] = "";
-  el.setAttribute("aria-label", `${diasSeguidos(sequencia)}, em risco`);
+  el.setAttribute("aria-label", t().desafio.diasEmRisco(sequencia));
   return el;
 }
 
 /** As chaves na carteira, num rótulo curto. */
 export const sinalDasChaves = (chaves: number): string => `🔑 ${String(chaves)}`;
 
-const diasSeguidos = (n: number): string =>
-  n === 1 ? "1 dia seguido" : `${String(n)} dias seguidos`;
+const diasSeguidos = (n: number): string => t().desafio.diasSeguidos(n);
 
-const chavesPorExtenso = (n: number): string =>
-  n === 1 ? "1 chave" : `${String(n)} chaves`;
+const chavesPorExtenso = (n: number): string => t().comum.chaves(n);
 
 /**
  * Um mês na linha dos meses: antes do primeiro que se pode ver, sem desafio;
@@ -207,36 +203,31 @@ const desvio = (numero: number): number =>
 
 /** Quando é o dia, visto de hoje: «Hoje», «Amanhã», «Há 3 dias». */
 function quando(numero: number, hoje: number): string {
-  const n = numero - hoje;
-  if (n === 0) return "Hoje";
-  if (n === 1) return "Amanhã";
-  if (n === -1) return "Ontem";
-  return n > 0 ? `Daqui a ${String(n)} dias` : `Há ${String(-n)} dias`;
+  return t().desafio.quando(numero - hoje);
 }
 
 /** O estado do dia em palavras, para o nome acessível da casa. */
 function estadoEmPalavras(e: EstadoNoTrilho): string {
+  const p = t().desafio.estados;
   switch (e.tipo) {
     case "por-jogar":
-      return "por jogar";
+      return p.porJogar;
     case "a-meio":
-      return "a meio";
+      return p.aMeio;
     case "feito":
-      return `feito, ${e.texto}`;
+      return p.feito(e.texto);
     case "interrompido":
-      return "interrompido";
+      return p.interrompido;
     case "perdido":
-      return "ficou por jogar";
+      return p.perdido;
     case "futuro":
-      return "ainda não abriu";
+      return p.futuro;
   }
 }
 
 /** `2026-10-07` → `7`. */
 const diaDoMes = (data: string): string => String(Number(data.slice(8)));
 
-/** O nome do mês sozinho: `2026-10` → `outubro`. */
-const nomeDoMes = (mes: string): string => mesPorExtenso(mes).split(" de ")[0] ?? "";
 
 const NS = "http://www.w3.org/2000/svg";
 
@@ -271,27 +262,27 @@ export class DesafioScreen {
   private selecionado: string | undefined;
 
   constructor(host: HTMLElement, opcoes: OpcoesDesafio) {
-    const t = opcoes.trilho;
+    const tri = opcoes.trilho;
     this.host = host;
-    this.trilho = t;
-    this.mes = mesDe(t.foco ?? t.hoje);
+    this.trilho = tri;
+    this.mes = mesDe(tri.foco ?? tri.hoje);
     this.ano = Number(this.mes.slice(0, 4));
     this.raiz = elemento("div", "ecra desafio");
 
     /* ── o topo: a seta, o título, a série e as chaves — sempre à vista ── */
-    const { el: topo } = cabecalho("Desafio do dia", opcoes.aoVoltar);
+    const { el: topo } = cabecalho(t().modos.desafio, opcoes.aoVoltar);
     // O risco passa à frente da série, como no cartão da Home: com hoje já
     // feito, a série é 1, mas o que está em jogo são os dias de antes de ontem.
     const meta = elemento("div", "meta");
-    if (t.protecao !== undefined) meta.appendChild(sinalDeRisco(t.protecao.sequencia));
-    else if (t.sequencia > 0) meta.appendChild(sinalDaSequencia(t.sequencia));
+    if (tri.protecao !== undefined) meta.appendChild(sinalDeRisco(tri.protecao.sequencia));
+    else if (tri.sequencia > 0) meta.appendChild(sinalDaSequencia(tri.sequencia));
 
     // A pastilha é pequena, e o botão à volta dela tem o alvo de toque inteiro.
     const chaves = botao("", "desafio-chaves-botao", () => {
       this.explicarChaves();
     });
-    chaves.appendChild(elemento("span", "desafio-chaves", sinalDasChaves(t.chaves)));
-    chaves.setAttribute("aria-label", `${chavesPorExtenso(t.chaves)}. Para que servem?`);
+    chaves.appendChild(elemento("span", "desafio-chaves", sinalDasChaves(tri.chaves)));
+    chaves.setAttribute("aria-label", t().desafio.chavesAria(tri.chaves));
     meta.appendChild(chaves);
     topo.appendChild(meta);
 
@@ -300,20 +291,20 @@ export class DesafioScreen {
     this.rolo.appendChild(this.corpo);
 
     this.elMeses = elemento("footer", "desafio-meses");
-    this.elMeses.setAttribute("aria-label", "Os meses");
+    this.elMeses.setAttribute("aria-label", t().desafio.meses);
 
     this.raiz.append(topo, this.rolo, this.elMeses);
     host.replaceChildren(this.raiz);
 
-    this.mostrarMes(this.mes, t.foco);
+    this.mostrarMes(this.mes, tri.foco);
 
     /*
      * Ao abrir, uma coisa de cada vez: as chaves que acabaram de chegar, ou a
      * sequência que está para acabar. Na prática nunca são as duas — um prémio
      * só chega com ontem feito, e o risco só existe com ontem por jogar.
      */
-    if (t.premio !== undefined) this.celebrar(t.premio);
-    else if (t.protecao?.perguntar === true) this.proporProtecao(t.protecao);
+    if (tri.premio !== undefined) this.celebrar(tri.premio);
+    else if (tri.protecao?.perguntar === true) this.proporProtecao(tri.protecao);
 
     /*
      * O caminho volta a desenhar-se quando muda de tamanho: a letra que chega
@@ -372,7 +363,7 @@ export class DesafioScreen {
       elemento(
         "p",
         "desafio-nota",
-        "Um desafio por dia, à vez: Puzzle, Contra-Relógio e Survival. Conta a primeira tentativa; depois é treino. Muda à meia-noite. A sequência dá chaves, que abrem os dias que ficaram por jogar.",
+        t().desafio.nota,
       ),
     );
     this.pintarMeses();
@@ -398,7 +389,7 @@ export class DesafioScreen {
       elemento(
         "span",
         "desafio-mes-conta",
-        `${String(c.feitos)} de ${String(c.jogaveis)} feitos`,
+        t().desafio.feitosDe(c.feitos, c.jogaveis),
       ),
     );
 
@@ -416,12 +407,12 @@ export class DesafioScreen {
 
     const cabeca = elemento("div", "desafio-meses-cabeca");
     if (esteAno > primeiroAno) {
-      const anterior = botaoRedondo(iconeVoltar(), "ano anterior", () => {
+      const anterior = botaoRedondo(iconeVoltar(), t().desafio.anoAnterior, () => {
         this.ano -= 1;
         this.pintarMeses();
       });
       anterior.disabled = this.ano <= primeiroAno;
-      const seguinte = botaoRedondo(iconeSeguir(), "ano seguinte", () => {
+      const seguinte = botaoRedondo(iconeSeguir(), t().desafio.anoSeguinte, () => {
         this.ano += 1;
         this.pintarMeses();
       });
@@ -474,17 +465,17 @@ export class DesafioScreen {
       li.dataset["completo"] = String(completo);
       if (estado === "passado") no.appendChild(completo ? document.createTextNode("★") : iconeVisto());
       conta.textContent = `${String(c.feitos)}/${String(c.jogaveis)}`;
-      rotulo += `${String(c.feitos)} de ${String(c.jogaveis)} feitos${completo ? ", completo" : ""}`;
+      rotulo += t().desafio.feitosDe(c.feitos, c.jogaveis) + (completo ? t().desafio.completo : "");
       b.addEventListener("click", () => {
         if (mes !== this.mes) this.mostrarMes(mes);
       });
     } else if (estado === "futuro") {
       no.appendChild(iconeCadeado());
       b.disabled = true;
-      rotulo += "ainda não começou";
+      rotulo += t().desafio.mesFuturo;
     } else {
       b.disabled = true;
-      rotulo += "sem desafio";
+      rotulo += t().desafio.mesSemDesafio;
     }
 
     b.setAttribute("aria-label", rotulo);
@@ -507,7 +498,7 @@ export class DesafioScreen {
     svg.setAttribute("aria-hidden", "true");
 
     const lista = elemento("ol", "trilho-dias");
-    lista.setAttribute("aria-label", `Os desafios de ${mesPorExtenso(this.mes)}, do fim para o início`);
+    lista.setAttribute("aria-label", t().desafio.listaDoMes(mesPorExtenso(this.mes)));
 
     lista.appendChild(this.marcoDoFim());
     for (const dia of [...this.dias].reverse()) lista.appendChild(this.casa(dia));
@@ -535,8 +526,8 @@ export class DesafioScreen {
       "fim",
       "🏆",
       acabou || faltam <= 0
-        ? `Fim de ${nomeDoMes(this.mes)}`
-        : `Fim de ${nomeDoMes(this.mes)} · ${faltam === 1 ? "falta 1 dia" : `faltam ${String(faltam)} dias`}`,
+        ? t().desafio.fimDoMes(nomeDoMes(this.mes))
+        : `${t().desafio.fimDoMes(nomeDoMes(this.mes))} · ${t().desafio.faltamDias(faltam)}`,
       acabou,
     );
   }
@@ -548,7 +539,7 @@ export class DesafioScreen {
    */
   private marcoDoInicio(): HTMLLIElement {
     const doPrimeiro = this.dias[0]?.numero === 1;
-    return this.marco("inicio", "🏁", doPrimeiro ? "Início do desafio" : "Início", true);
+    return this.marco("inicio", "🏁", doPrimeiro ? t().desafio.inicioDoDesafio : t().desafio.inicio, true);
   }
 
   private marco(qual: "inicio" | "fim", simbolo: string, texto: string, aceso: boolean): HTMLLIElement {
@@ -586,7 +577,7 @@ export class DesafioScreen {
     } else {
       no.appendChild(iconeDoModo(dia.modo));
     }
-    if (hoje) no.appendChild(elemento("span", "trilho-no-hoje", "Hoje"));
+    if (hoje) no.appendChild(elemento("span", "trilho-no-hoje", t().desafio.quando(0)));
     if (dia.estado.tipo === "futuro") {
       const cadeado = elemento("span", "trilho-cadeado");
       cadeado.appendChild(iconeCadeado());
@@ -605,18 +596,18 @@ export class DesafioScreen {
     }
 
     const extras = [
-      ...(dia.protegido === true ? ["sequência salva com uma chave"] : []),
-      ...(dia.desbloqueado === true ? ["aberto com uma chave"] : []),
-      ...(dia.premio !== undefined ? [`ganhou ${chavesPorExtenso(dia.premio)}`] : []),
+      ...(dia.protegido === true ? [t().desafio.ariaSalvo] : []),
+      ...(dia.desbloqueado === true ? [t().desafio.ariaAberto] : []),
+      ...(dia.premio !== undefined ? [t().desafio.ariaGanhou(chavesPorExtenso(dia.premio))] : []),
     ];
     no.setAttribute(
       "aria-label",
-      `${dataPorExtenso(dia.data)}${hoje ? ", hoje" : ""}: ${NOME_DO_MODO[dia.modo]}, ${[estadoEmPalavras(dia.estado), ...extras].join(", ")}`,
+      `${dataPorExtenso(dia.data)}${hoje ? t().desafio.ariaHoje : ""}: ${nomeDoModo(dia.modo)}, ${[estadoEmPalavras(dia.estado), ...extras].join(", ")}`,
     );
 
     li.append(
       no,
-      elemento("span", "trilho-rotulo", `${dataCurta(dia.data)} · ${NOME_DO_MODO[dia.modo]}`),
+      elemento("span", "trilho-rotulo", `${dataCurta(dia.data)} · ${nomeDoModo(dia.modo)}`),
     );
 
     this.casas.set(dia.data, li);
@@ -671,27 +662,27 @@ export class DesafioScreen {
    * chave.
    */
   private conteudoDoBalao(dia: DiaNoTrilho): HTMLElement {
-    const t = this.trilho;
-    const deHoje = dia.data === t.hoje;
+    const tri = this.trilho;
+    const deHoje = dia.data === tri.hoje;
     const jogavel = deHoje || dia.desbloqueado === true;
-    const numeroDeHoje = numeroDoDia(t.hoje);
+    const numeroDeHoje = numeroDoDia(tri.hoje);
     const e = dia.estado;
 
     const el = elemento("div", "trilho-balao");
     el.dataset["estado"] = e.tipo;
     el.setAttribute("role", "group");
-    el.setAttribute("aria-label", `Desafio número ${String(dia.numero)}, ${dataPorExtenso(dia.data)}`);
+    el.setAttribute("aria-label", t().desafio.ariaBalao(dia.numero, dataPorExtenso(dia.data)));
 
     /* ── a cabeça: quando, e o estado de hoje ── */
     const estadoDeHoje =
       e.tipo === "por-jogar"
-        ? "por jogar"
+        ? t().desafio.estados.porJogar
         : e.tipo === "a-meio"
-          ? `a meio · ${e.texto}`
+          ? `${t().desafio.estados.aMeio} · ${e.texto}`
           : e.tipo === "feito"
-            ? "feito"
+            ? t().desafio.estados.feitoCurto
             : e.tipo === "interrompido"
-              ? "interrompido"
+              ? t().desafio.estados.interrompido
               : undefined;
 
     const cabeca = elemento("div", "trilho-balao-cabeca");
@@ -700,14 +691,14 @@ export class DesafioScreen {
         "span",
         "trilho-balao-quando",
         deHoje && estadoDeHoje !== undefined
-          ? `Hoje · ${estadoDeHoje}`
+          ? `${t().desafio.quando(0)} · ${estadoDeHoje}`
           : `${quando(dia.numero, numeroDeHoje)} · #${String(dia.numero)}`,
       ),
     );
     // Fazer o de hoje é o que faz a série crescer: o prémio é esse — e as
     // chaves, se a série chegar hoje a um patamar.
     if (deHoje && (e.tipo === "por-jogar" || e.tipo === "a-meio")) {
-      const chaves = t.premioDeHoje ?? 0;
+      const chaves = tri.premioDeHoje ?? 0;
       const premio = elemento(
         "span",
         "trilho-balao-premio",
@@ -715,7 +706,7 @@ export class DesafioScreen {
       );
       premio.setAttribute(
         "aria-label",
-        chaves > 0 ? `mais um dia na série, e ${chavesPorExtenso(chaves)}` : "mais um dia na série",
+        t().desafio.ariaPremioDeHoje(chaves),
       );
       cabeca.appendChild(premio);
     }
@@ -726,8 +717,8 @@ export class DesafioScreen {
 
     const texto = elemento("span", "desafio-modo-texto");
     texto.append(
-      elemento("span", "desafio-modo-nome", NOME_DO_MODO[dia.modo]),
-      elemento("span", "desafio-modo-legenda", LEGENDA_DO_MODO[dia.modo]),
+      elemento("span", "desafio-modo-nome", nomeDoModo(dia.modo)),
+      elemento("span", "desafio-modo-legenda", legendaDoModo(dia.modo)),
     );
 
     const corpo = elemento("div", "trilho-balao-corpo");
@@ -738,50 +729,50 @@ export class DesafioScreen {
     const resultado = (frase: string): HTMLElement => elemento("p", "desafio-resultado", frase);
     const nota = (frase: string): HTMLElement => elemento("p", "desafio-nota-chave", frase);
     const jogar = (): void => {
-      t.aoJogar(dia.data);
+      tri.aoJogar(dia.data);
     };
     const treinar = (): HTMLButtonElement => {
-      const b = botao("Treinar", "com-icone", jogar);
+      const b = botao(t().desafio.treinar, "com-icone", jogar);
       b.prepend(iconeReiniciar());
       return b;
     };
 
     switch (e.tipo) {
       case "por-jogar":
-        corpo.appendChild(botao("Jogar", "primario trilho-jogar", jogar));
+        corpo.appendChild(botao(t().comum.jogar, "primario trilho-jogar", jogar));
         break;
 
       case "a-meio":
-        corpo.appendChild(botao("Continuar", "primario trilho-jogar", jogar));
+        corpo.appendChild(botao(t().desafio.continuar, "primario trilho-jogar", jogar));
         break;
 
       case "feito": {
         el.appendChild(resultado(`✓ ${e.texto}`));
         if (dia.premio !== undefined) {
-          el.appendChild(nota(`🔑 +${String(dia.premio)}: a sequência chegou a um patamar.`));
+          el.appendChild(nota(t().desafio.notaPatamar(dia.premio)));
         }
         if (dia.desbloqueado === true) {
-          el.appendChild(nota("Jogado depois, com uma chave: conta para o mês, não para a sequência."));
+          el.appendChild(nota(t().desafio.notaJogadoDepois));
         }
         if (!jogavel) break;
 
         const acoes = elemento("div", "acoes desafio-acoes");
         acoes.appendChild(treinar());
-        if (deHoje && t.aoPartilhar !== undefined) acoes.appendChild(botaoPartilhar(t.aoPartilhar));
+        if (deHoje && tri.aoPartilhar !== undefined) acoes.appendChild(botaoPartilhar(tri.aoPartilhar));
         el.appendChild(acoes);
         break;
       }
 
       case "interrompido":
         el.append(
-          resultado(deHoje ? "Não conta, e o resto do dia é treino." : "Não conta: daqui em diante é treino."),
+          resultado(deHoje ? t().desafio.naoContaHoje : t().desafio.naoConta),
           treinar(),
         );
         break;
 
       case "perdido":
-        el.appendChild(resultado("Ficou por jogar."));
-        if (dia.protegido === true) el.appendChild(nota("🔑 Uma chave salvou a sequência."));
+        el.appendChild(resultado(t().desafio.ficouPorJogar));
+        if (dia.protegido === true) el.appendChild(nota(t().desafio.notaSalva));
         this.acoesDasChaves(el, dia);
         break;
 
@@ -789,8 +780,8 @@ export class DesafioScreen {
         el.appendChild(
           resultado(
             dia.numero - numeroDeHoje === 1
-              ? "Abre à meia-noite."
-              : `Abre no dia ${diaDoMes(dia.data)}.`,
+              ? t().desafio.abreAMeiaNoite
+              : t().desafio.abreNoDia(diaDoMes(dia.data)),
           ),
         );
         break;
@@ -807,16 +798,16 @@ export class DesafioScreen {
    * abrir fica à vista mas apagado — é assim que se descobre que existem.
    */
   private acoesDasChaves(el: HTMLElement, dia: DiaNoTrilho): void {
-    const t = this.trilho;
-    const protecao = t.protecao?.data === dia.data ? t.protecao : undefined;
-    const aoDesbloquear = dia.desbloqueavel === true ? t.aoDesbloquear : undefined;
+    const tri = this.trilho;
+    const protecao = tri.protecao?.data === dia.data ? tri.protecao : undefined;
+    const aoDesbloquear = dia.desbloqueavel === true ? tri.aoDesbloquear : undefined;
     if (protecao === undefined && aoDesbloquear === undefined) return;
 
     const acoes = elemento("div", "acoes desafio-acoes");
 
     if (protecao !== undefined) {
       acoes.appendChild(
-        botao("Salvar a sequência", "primario", () => {
+        botao(t().desafio.salvar, "primario", () => {
           this.proporProtecao(protecao);
         }),
       );
@@ -824,18 +815,18 @@ export class DesafioScreen {
 
     if (aoDesbloquear !== undefined) {
       const abrir = botao(
-        `Desbloquear · ${sinalDasChaves(1)}`,
+        `${t().desafio.desbloquear} · ${sinalDasChaves(1)}`,
         protecao === undefined ? "primario" : undefined,
         () => {
           this.confirmarDesbloqueio(dia, aoDesbloquear);
         },
       );
-      abrir.disabled = t.chaves < 1;
+      abrir.disabled = tri.chaves < 1;
       acoes.appendChild(abrir);
     }
 
     el.appendChild(acoes);
-    if (t.chaves < 1) el.appendChild(this.notaSemChaves());
+    if (tri.chaves < 1) el.appendChild(this.notaSemChaves());
   }
 
   private notaSemChaves(): HTMLElement {
@@ -843,20 +834,17 @@ export class DesafioScreen {
     return elemento(
       "p",
       "desafio-nota-chave",
-      `Sem chaves. A próxima chega aos ${String(p.dias)} dias seguidos.`,
+      t().desafio.semChaves(p.dias),
     );
   }
 
   /** A pergunta de quem falhou ontem: gastar uma chave para não perder a sequência. */
   private proporProtecao(p: ProtecaoNoTrilho): void {
     confirmar(this.host, {
-      titulo: "A tua sequência está em risco",
-      texto:
-        `Ontem ficou por jogar, e a tua sequência de ${p.sequencia === 1 ? "1 dia" : `${String(p.sequencia)} dias`} acaba aí. ` +
-        "Uma chave salva-a: ontem não soma, mas a sequência continua. " +
-        `Tens ${chavesPorExtenso(this.trilho.chaves)}.`,
-      confirmar: `Usar ${sinalDasChaves(1)}`,
-      cancelar: "Agora não",
+      titulo: t().desafio.riscoTitulo,
+      texto: t().desafio.riscoTexto(p.sequencia, chavesPorExtenso(this.trilho.chaves)),
+      confirmar: `${t().desafio.usar} ${sinalDasChaves(1)}`,
+      cancelar: t().desafio.agoraNao,
       realcarConfirmar: true,
       aoConfirmar: p.aoProteger,
       aoCancelar: p.aoRecusar,
@@ -865,12 +853,13 @@ export class DesafioScreen {
 
   private confirmarDesbloqueio(dia: DiaNoTrilho, aoDesbloquear: (data: string) => void): void {
     confirmar(this.host, {
-      titulo: `Desbloquear o desafio #${String(dia.numero)}?`,
-      texto:
-        `Gastas uma chave e jogas o ${NOME_DO_MODO[dia.modo]} de ${dataPorExtenso(dia.data)}. ` +
-        "Conta a primeira tentativa: para o mês, mas não para a sequência. " +
-        `Tens ${chavesPorExtenso(this.trilho.chaves)}.`,
-      confirmar: "Desbloquear e jogar",
+      titulo: t().desafio.desbloquearTitulo(dia.numero),
+      texto: t().desafio.desbloquearTexto(
+        nomeDoModo(dia.modo),
+        dataPorExtenso(dia.data),
+        chavesPorExtenso(this.trilho.chaves),
+      ),
+      confirmar: t().desafio.desbloquearEJogar,
       aoConfirmar: () => {
         aoDesbloquear(dia.data);
       },
@@ -881,49 +870,44 @@ export class DesafioScreen {
   private celebrar(premio: { readonly chaves: number; readonly dias: number }): void {
     avisar(this.host, {
       titulo: `🔑 +${String(premio.chaves)}`,
-      texto:
-        `${diasSeguidos(premio.dias)}! Ganhaste ${chavesPorExtenso(premio.chaves)}: ` +
-        "abre um desafio que ficou por jogar, ou salva a sequência no dia em que falhares.",
-      fechar: "Boa!",
+      texto: t().desafio.premioTexto(diasSeguidos(premio.dias), chavesPorExtenso(premio.chaves)),
+      fechar: t().desafio.boa,
       classe: "chaves-premio",
     });
   }
 
   /** O que são as chaves, como se ganham, e quando chega a próxima. */
   private explicarChaves(): void {
-    const t = this.trilho;
+    const tri = this.trilho;
 
     const lista = elemento("ol", "chaves-patamares");
     for (const p of PATAMARES) {
       const li = document.createElement("li");
       li.append(
-        elemento("span", undefined, `${String(p.dias)} dias seguidos`),
+        elemento("span", undefined, diasSeguidos(p.dias)),
         elemento("b", undefined, `+${String(p.chaves)} 🔑`),
       );
       lista.appendChild(li);
     }
 
-    const proximo = proximoPatamar(t.sequencia);
-    const faltam = proximo.dias - t.sequencia;
+    const proximo = proximoPatamar(tri.sequencia);
+    const faltam = proximo.dias - tri.sequencia;
     const conteudo = elemento("div", "chaves-ganhar");
     conteudo.append(
-      elemento("p", "popup-texto", "Ganham-se com a sequência:"),
+      elemento("p", "popup-texto", t().desafio.ganhamSe),
       lista,
       elemento(
         "p",
         "popup-texto",
-        `Depois dos 30, o ciclo recomeça. A próxima: aos ${String(proximo.dias)} dias, ` +
-          `+${String(proximo.chaves)} 🔑 — ${faltam === 1 ? "falta 1 dia" : `faltam ${String(faltam)} dias`}.`,
+        t().desafio.proximoPatamar(proximo.dias, proximo.chaves, faltam),
       ),
     );
 
     avisar(this.host, {
-      titulo: `As chaves · ${sinalDasChaves(t.chaves)}`,
-      texto:
-        "Uma chave abre um desafio que ficou por jogar — conta para o mês, mas não para " +
-        "a sequência — ou salva a sequência quando falhas um dia.",
+      titulo: `${t().desafio.asChaves} · ${sinalDasChaves(tri.chaves)}`,
+      texto: t().desafio.chavesTexto,
       conteudo,
-      fechar: "Percebi",
+      fechar: t().desafio.percebi,
       classe: "chaves-explicacao",
     });
   }
@@ -1002,7 +986,7 @@ export class DesafioScreen {
       item.dataset["modo"] = modo;
       const icone = elemento("span", "desafio-legenda-icone");
       icone.appendChild(iconeDoModo(modo));
-      item.append(icone, NOME_DO_MODO[modo]);
+      item.append(icone, nomeDoModo(modo));
       el.appendChild(item);
     }
 

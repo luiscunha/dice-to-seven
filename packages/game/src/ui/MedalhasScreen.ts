@@ -16,12 +16,12 @@
  * portanto da próxima vez já não — quem decide isso é o `main.ts`, que grava.
  */
 
+import { t } from "../i18n";
 import type { Medalha, Progresso, TipoDeMedalha } from "../session/medalhas";
-import { milhares } from "../session/medalhas";
 import { avisar, cabecalho, elemento } from "./dom";
 import { emblema } from "./emblemas";
 import { iconeCadeado, iconeVisto } from "./icones";
-import { dataPorExtenso } from "./partilha";
+import { dataCompleta, dataPorExtenso } from "./partilha";
 
 export interface MedalhaNoEcra {
   readonly medalha: Medalha;
@@ -37,10 +37,7 @@ export interface OpcoesMedalhas {
   readonly aoVoltar: () => void;
 }
 
-const ABAS: readonly { readonly tipo: TipoDeMedalha; readonly rotulo: string }[] = [
-  { tipo: "normal", rotulo: "Normais" },
-  { tipo: "premium", rotulo: "Premium" },
-];
+const ABAS: readonly TipoDeMedalha[] = ["normal", "premium"];
 
 /** `305000` → `5:05`. Os segundos inteiros: as medalhas contam minutos. */
 const minutos = (ms: number): string => {
@@ -49,7 +46,7 @@ const minutos = (ms: number): string => {
 };
 
 const numero = (m: Medalha, n: number): string =>
-  m.formato === "tempo" ? minutos(n) : milhares(n);
+  m.formato === "tempo" ? minutos(n) : t().formato.milhares(n);
 
 /**
  * O texto da pastilha.
@@ -62,15 +59,21 @@ export function rotuloDaPastilha(m: Medalha, p: Progresso, ganha: boolean): stri
   const conta = m.unidade !== undefined || m.formato === "tempo";
 
   if (ganha) {
-    if (!conta) return "Conquistada";
-    if (m.formato === "tempo") return `${String(Math.round(p.alvo / 60_000))} minutos`;
-    return `${numero(m, p.alvo)} ${m.unidade ?? ""}`.trim();
+    if (!conta) return t().paginaMedalhas.conquistada;
+    if (m.formato === "tempo") return t().paginaMedalhas.minutos(Math.round(p.alvo / 60_000));
+    return `${numero(m, p.alvo)} ${unidade(m)}`.trim();
   }
 
-  if (!conta) return "Por conquistar";
+  if (!conta) return t().paginaMedalhas.porConquistar;
   const fracao = `${numero(m, p.atual)}/${numero(m, p.alvo)}`;
-  return m.unidade === undefined ? fracao : `${fracao} ${m.unidade}`;
+  return m.unidade === undefined ? fracao : `${fracao} ${unidade(m)}`;
 }
+
+const unidade = (m: Medalha): string =>
+  m.unidade === undefined ? "" : t().medalhas.unidades[m.unidade];
+
+/** O nome da medalha, no idioma do jogo. */
+export const nomeDaMedalha = (m: Pick<Medalha, "id">): string => t().medalhas.nomes[m.id];
 
 export class MedalhasScreen {
   private readonly raiz: HTMLElement;
@@ -83,7 +86,7 @@ export class MedalhasScreen {
     this.opcoes = opcoes;
     this.raiz = elemento("div", "ecra medalhas");
 
-    const { el: topo } = cabecalho("Medalhas", opcoes.aoVoltar);
+    const { el: topo } = cabecalho(t().paginaMedalhas.titulo, opcoes.aoVoltar);
 
     /*
      * Abre na aba das normais — a não ser que as novas sejam todas premium: quem
@@ -95,9 +98,11 @@ export class MedalhasScreen {
 
     const lista = elemento("div", "medalhas-abas");
     lista.setAttribute("role", "tablist");
-    lista.setAttribute("aria-label", "tipo de medalha");
-    for (const { tipo, rotulo } of ABAS) {
-      lista.appendChild(this.botaoDaAba(tipo, rotulo));
+    lista.setAttribute("aria-label", t().paginaMedalhas.tipos);
+    for (const tipo of ABAS) {
+      lista.appendChild(
+        this.botaoDaAba(tipo, tipo === "premium" ? t().paginaMedalhas.premium : t().paginaMedalhas.normais),
+      );
     }
 
     this.painel = elemento("div", "medalhas-painel");
@@ -136,7 +141,7 @@ export class MedalhasScreen {
       elemento("span", "medalhas-aba-nome", rotulo),
       elemento("span", "medalhas-aba-conta", `${String(ganhas)}/${String(todas.length)}`),
     );
-    b.setAttribute("aria-label", `${rotulo}: ${String(ganhas)} de ${String(todas.length)}`);
+    b.setAttribute("aria-label", t().paginaMedalhas.contaDaAba(rotulo, ganhas, todas.length));
 
     b.addEventListener("click", () => {
       this.mostrarAba(tipo);
@@ -191,17 +196,19 @@ export class MedalhasScreen {
       );
     }
 
-    b.append(figura, elemento("span", "medalha-nome", medalha.nome), pastilha);
-    if (m.nova === true) b.appendChild(elemento("span", "medalha-nova", "Nova"));
+    b.append(figura, elemento("span", "medalha-nome", nomeDaMedalha(medalha)), pastilha);
+    if (m.nova === true) b.appendChild(elemento("span", "medalha-nova", t().paginaMedalhas.nova));
 
     b.setAttribute(
       "aria-label",
       [
-        medalha.nome,
-        medalha.tipo === "premium" ? "medalha premium" : undefined,
-        ganha ? `conquistada a ${dataPorExtenso(m.ganhaEm ?? "")}` : "por conquistar",
+        nomeDaMedalha(medalha),
+        medalha.tipo === "premium" ? t().paginaMedalhas.ariaPremium : undefined,
+        ganha
+          ? t().paginaMedalhas.ariaConquistada(dataPorExtenso(m.ganhaEm ?? ""))
+          : t().paginaMedalhas.ariaPorConquistar,
         ganha ? undefined : rotuloDaPastilha(medalha, progresso, false),
-        m.nova === true ? "nova" : undefined,
+        m.nova === true ? t().paginaMedalhas.ariaNova : undefined,
       ]
         .filter((s) => s !== undefined)
         .join(", "),
@@ -227,17 +234,17 @@ export class MedalhasScreen {
     const conta = medalha.unidade !== undefined || medalha.formato === "tempo";
     const estado =
       m.ganhaEm !== undefined
-        ? `Conquistada a ${dataPorExtenso(m.ganhaEm)} de ${m.ganhaEm.slice(0, 4)}.`
+        ? t().paginaMedalhas.estadoGanha(dataCompleta(m.ganhaEm))
         : conta && progresso.atual > 0
-          ? `Vais em ${rotuloDaPastilha(medalha, progresso, false)}.`
-          : "Ainda por conquistar.";
+          ? t().paginaMedalhas.estadoProgresso(rotuloDaPastilha(medalha, progresso, false))
+          : t().paginaMedalhas.estadoPorGanhar;
     conteudo.appendChild(elemento("p", "medalha-pormenor-estado", estado));
 
     avisar(this.raiz, {
-      titulo: medalha.nome,
-      texto: medalha.descricao,
+      titulo: nomeDaMedalha(medalha),
+      texto: t().medalhas.descricoes[medalha.id],
       conteudo,
-      fechar: "Fechar",
+      fechar: t().paginaMedalhas.fechar,
       classe: "medalha-caixa",
     });
   }

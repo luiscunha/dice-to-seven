@@ -13,6 +13,8 @@
 import type { Cell } from "@dicetoseven/engine";
 import { JOKER } from "@dicetoseven/engine";
 
+import { t } from "../i18n";
+
 export type ModoFace = "pintas" | "digitos";
 
 /**
@@ -48,7 +50,7 @@ export function criarPeca(valor: Cell, modo: ModoFace): HTMLElement {
   el.setAttribute("role", "gridcell");
   el.setAttribute(
     "aria-label",
-    valor === JOKER ? "joker" : `face ${String(valor)}`,
+    valor === JOKER ? t().comum.joker : t().comum.face(valor),
   );
 
   desenharFace(el, valor, modo);

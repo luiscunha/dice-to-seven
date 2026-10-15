@@ -270,13 +270,13 @@ describe("a linha do painel de fim", () => {
   });
 
   it("diz uma, ou várias, e marca as premium", () => {
-    expect(linhaDeMedalhas([{ nome: "Perito", tipo: "normal" }])?.textContent).toBe(
+    expect(linhaDeMedalhas([{ id: "perito", tipo: "normal" }])?.textContent).toBe(
       "Nova medalha: Perito",
     );
 
     const varias = linhaDeMedalhas([
-      { nome: "Maratona", tipo: "normal" },
-      { nome: "Recordista", tipo: "premium" },
+      { id: "maratona", tipo: "normal" },
+      { id: "recordista", tipo: "premium" },
     ]);
     expect(varias?.textContent).toBe("Novas medalhas: Maratona, Recordista");
     expect(varias?.dataset["premium"]).toBe("sim");
@@ -308,7 +308,7 @@ describe("a linha do painel de fim", () => {
 
   it("**o fim de um nível anuncia a medalha que ele deu**, antes dos botões", async () => {
     const ecra = new PuzzleScreen(host, NIVEL, {
-      aoTerminar: () => [{ nome: "Iniciado", tipo: "normal" }],
+      aoTerminar: () => [{ id: "iniciado", tipo: "normal" }],
     });
     await acabar();
 

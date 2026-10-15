@@ -33,6 +33,7 @@ import {
   width,
 } from "@dicetoseven/engine";
 
+import { t } from "../i18n";
 import type { PieceMove } from "../session/transition";
 import { midpointOf, transition } from "../session/transition";
 import type { ModoFace } from "./dice";
@@ -85,7 +86,8 @@ const MARGEM_DA_QUEDA = 60;
 let idsDePeca = 0;
 
 /** O que o leitor de ecrã acrescenta ao nome de uma peça com bomba. */
-const SUFIXO_BOMBA = ", bomba";
+/** O que se acrescenta ao nome de uma peça armada. Lê-se no idioma de agora. */
+const sufixoBomba = (): string => t().tabuleiro.sufixoBomba;
 
 /**
  * O pavio da bomba: um mostrador redondo no canto da peça, que se esvazia.
@@ -320,7 +322,7 @@ export class BoardView {
     this.grelha = document.createElement("div");
     this.grelha.className = "tabuleiro";
     this.grelha.setAttribute("role", "grid");
-    this.grelha.setAttribute("aria-label", "tabuleiro");
+    this.grelha.setAttribute("aria-label", t().comum.tabuleiro);
     /*
      * ── O tabuleiro joga-se por teclado ──
      *
@@ -784,15 +786,15 @@ export class BoardView {
         antiga.classList.remove("bomba", "a-rebentar");
         antiga.style.removeProperty("--pavio");
         const nome = antiga.getAttribute("aria-label") ?? "";
-        if (nome.endsWith(SUFIXO_BOMBA)) {
-          antiga.setAttribute("aria-label", nome.slice(0, -SUFIXO_BOMBA.length));
+        if (nome.endsWith(sufixoBomba())) {
+          antiga.setAttribute("aria-label", nome.slice(0, -sufixoBomba().length));
         }
       }
       this.pavio?.remove();
       this.pecaBomba = el;
 
       if (el !== undefined) {
-        el.setAttribute("aria-label", `${el.getAttribute("aria-label") ?? ""}${SUFIXO_BOMBA}`);
+        el.setAttribute("aria-label", `${el.getAttribute("aria-label") ?? ""}${sufixoBomba()}`);
       }
     }
 
@@ -868,7 +870,7 @@ export class BoardView {
       if (el === undefined || valor === undefined) continue;
 
       el.dataset["valor"] = String(valor);
-      el.setAttribute("aria-label", `face ${String(valor)}`);
+      el.setAttribute("aria-label", t().comum.face(valor));
       desenharFace(el, valor, this.modo);
       efeito(el, "aquecida");
     }

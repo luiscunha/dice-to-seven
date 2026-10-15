@@ -12,6 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Level } from "@dicetoseven/engine";
 
+import { t } from "../src/i18n";
 import type { NivelDoCapitulo } from "../src/capitulos";
 import {
   CADENCIA_JOKER,
@@ -449,7 +450,7 @@ describe("capítulos", () => {
 
   it("são quatro, e nenhum se chama como uma banda de joker", () => {
     expect(CAPITULOS).toHaveLength(4);
-    expect(CAPITULOS.map((c) => c.nome)).toEqual([
+    expect(CAPITULOS.map((c) => t().capitulos[c.id].nome)).toEqual([
       "Iniciado",
       "Médio",
       "Avançado",

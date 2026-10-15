@@ -24,6 +24,7 @@ import type {
   TimeAttackConfig,
   TimeAttackState,
 } from "../session/TimeAttackSession";
+import { t } from "../i18n";
 import type { TapRejection } from "../session/GameSession";
 import { isBlocked } from "../session/GameSession";
 import {
@@ -70,13 +71,10 @@ const segundos = (ms: number): string => `${(ms / 1000).toFixed(1)}s`;
  * fim, como se tivesse falhado nela.
  */
 function detalheDoFim(s: TimeAttackState): string {
-  const limpos =
-    s.boardsCleared === 1
-      ? "1 tabuleiro limpo"
-      : `${String(s.boardsCleared)} tabuleiros limpos`;
+  const limpos = t().tempo.limpos(s.boardsCleared);
 
   if (s.saltados === 0) return limpos;
-  return `${limpos} · ${String(s.saltados)} ${s.saltados === 1 ? "saltado" : "saltados"}`;
+  return `${limpos} · ${t().tempo.saltados(s.saltados)}`;
 }
 
 export interface OpcoesTimeAttack {
@@ -228,7 +226,7 @@ export class TimeAttackScreen {
     /* ── topo: o relógio manda ── */
     const topo = elemento("header", "topo tempo-topo");
 
-    const sair = botaoRedondo(iconeVoltar(), "sair da corrida", () => {
+    const sair = botaoRedondo(iconeVoltar(), t().tempo.sairDaCorrida, () => {
       this.pedirParaSair();
     });
 
@@ -375,13 +373,10 @@ export class TimeAttackScreen {
     }
 
     confirmar(this.raiz, {
-      titulo: "Sair da corrida?",
+      titulo: t().tempo.sairTitulo,
       // Na tentativa do Desafio do Dia, sair é ficar com o resultado que há.
-      texto:
-        this.opcoes.aoComecar === undefined
-          ? "O relógio não pára: a corrida acaba aqui."
-          : "O relógio não pára: a corrida acaba aqui, e é esta a que conta para o desafio.",
-      confirmar: "Sair",
+      texto: this.opcoes.aoComecar === undefined ? t().tempo.sairTexto : t().tempo.sairTextoDesafio,
+      confirmar: t().comum.sair,
       aoConfirmar: () => {
         this.terminar();
         this.opcoes.aoSair();
@@ -541,9 +536,9 @@ export class TimeAttackScreen {
   private avisarGelo(rejeicao: TapRejection | undefined, p: Packed): void {
     const texto =
       rejeicao === "gelo-so-a-par"
-        ? "❄ só sai a par"
+        ? t().tempo.geloSoAPar
         : rejeicao === "gelo-com-gelo"
-          ? "❄ não sai com gelo"
+          ? t().tempo.geloComGelo
           : undefined;
     if (texto === undefined) return;
 
@@ -584,7 +579,7 @@ export class TimeAttackScreen {
   private esperarPeloArranque(aoComecar: () => void): void {
     this.palco.classList.add("a-espera");
 
-    const comecar = botao("Começar", "primario", () => {
+    const comecar = botao(t().tempo.comecar, "primario", () => {
       this.palco.classList.remove("a-espera");
       this.elFim.hidden = true;
       this.elFim.replaceChildren();
@@ -596,20 +591,16 @@ export class TimeAttackScreen {
 
     const acoes = elemento("div", "acoes fim-acoes");
     acoes.append(
-      botao("Voltar", undefined, () => {
+      botao(t().tempo.voltar, undefined, () => {
         this.opcoes.aoSair();
       }),
       comecar,
     );
 
     this.elFim.replaceChildren(
-      elemento("div", "selo", this.opcoes.desafio?.etiqueta ?? "Contra-Relógio"),
-      elemento("div", "fim-tempo", `${String(this.opcoes.tempoInicial)} segundos`),
-      elemento(
-        "div",
-        "detalhe",
-        "Os mesmos tabuleiros para toda a gente. Só esta tentativa conta: depois de começar, sair acaba a corrida.",
-      ),
+      elemento("div", "selo", this.opcoes.desafio?.etiqueta ?? t().modos.tempo),
+      elemento("div", "fim-tempo", t().tempo.segundos(this.opcoes.tempoInicial)),
+      elemento("div", "detalhe", t().tempo.arranqueDesafio),
       acoes,
     );
     this.elFim.hidden = false;
@@ -668,8 +659,8 @@ export class TimeAttackScreen {
      * corrigido na contagem de peças.
      */
     this.elMeta.replaceChildren(
-      elemento("span", undefined, `${String(this.estado.score)} pontos`),
-      elemento("span", undefined, `${String(this.estado.boardsCleared)} tabuleiros`),
+      elemento("span", undefined, t().tempo.pontosNoTopo(this.estado.score)),
+      elemento("span", undefined, t().tempo.tabuleirosNoTopo(this.estado.boardsCleared)),
     );
 
     const jogo = this.estado.game;
@@ -701,20 +692,13 @@ export class TimeAttackScreen {
     const estado = pode || this.terminado ? "aberto" : "fechado";
     if (estado !== this.estadoSalto) {
       const custo = `−${String(this.config.saltarMs / 1000)}s`;
-      const ordinal = `${String(this.config.saltoDesde + 1)}.º`;
 
       if (estado === "aberto") {
-        this.btSaltar.replaceChildren(iconeSaltar(), `Saltar (${custo})`);
-        this.btSaltar.setAttribute(
-          "aria-label",
-          `saltar o tabuleiro, custa ${String(this.config.saltarMs / 1000)} segundos`,
-        );
+        this.btSaltar.replaceChildren(iconeSaltar(), t().tempo.saltar(custo));
+        this.btSaltar.setAttribute("aria-label", t().tempo.saltarAria(this.config.saltarMs / 1000));
       } else {
-        this.btSaltar.replaceChildren(iconeCadeado(), "Saltar tabuleiro");
-        this.btSaltar.setAttribute(
-          "aria-label",
-          `saltar o tabuleiro: disponível a partir do ${ordinal} tabuleiro`,
-        );
+        this.btSaltar.replaceChildren(iconeCadeado(), t().tempo.saltarTabuleiro);
+        this.btSaltar.setAttribute("aria-label", t().tempo.saltarFechadoAria(this.config.saltoDesde + 1));
       }
 
       this.btSaltar.dataset["salto"] = estado;
@@ -737,7 +721,7 @@ export class TimeAttackScreen {
 
     const restantes = this.estado.game.board.reduce((n, col) => n + col.length, 0);
     const saltar = botao(
-      `Saltar (−${String(this.config.saltarMs / 1000)}s)`,
+      t().tempo.saltar(`−${String(this.config.saltarMs / 1000)}s`),
       "primario com-icone",
       () => {
         this.saltar();
@@ -746,13 +730,11 @@ export class TimeAttackScreen {
     saltar.prepend(iconeSaltar());
 
     this.elPreso.replaceChildren(
-      elemento("div", "selo", "Sem jogadas"),
+      elemento("div", "selo", t().tempo.semJogadas),
       elemento(
         "div",
         "detalhe",
-        restantes === 1
-          ? "Sobrou 1 peça, e nenhum grupo soma 7."
-          : `Sobraram ${String(restantes)} peças, e nenhum grupo soma 7.`,
+        t().tempo.semJogadasTexto(restantes),
       ),
       saltar,
     );
@@ -822,7 +804,7 @@ export class TimeAttackScreen {
 
     const acoes = elemento("div", "acoes fim-acoes");
     acoes.appendChild(
-      botao("Sair", undefined, () => {
+      botao(t().comum.sair, undefined, () => {
         this.opcoes.aoSair();
       }),
     );
@@ -835,7 +817,7 @@ export class TimeAttackScreen {
     const aoRecomecar = this.opcoes.aoRecomecar;
     if (aoRecomecar !== undefined) {
       const outra = botao(
-        desafio === undefined ? "Jogar outra vez" : "Treinar outra vez",
+        desafio === undefined ? t().comum.jogarOutraVez : t().comum.treinarOutraVez,
         aoPartilhar === undefined ? "primario com-icone" : "com-icone",
         aoRecomecar,
       );
@@ -858,9 +840,9 @@ export class TimeAttackScreen {
       elemento(
         "div",
         "selo",
-        desafio?.etiqueta ?? (recorde ? "Novo recorde" : "Acabou o tempo"),
+        desafio?.etiqueta ?? (recorde ? t().tempo.novoRecorde : t().tempo.acabouOTempo),
       ),
-      elemento("div", "fim-tempo", `${String(this.estado.score)} pontos`),
+      elemento("div", "fim-tempo", t().tempo.pontosNoFim(this.estado.score)),
       elemento("div", "detalhe", detalheDoFim(this.estado)),
       ...(linha === undefined ? [] : [linha]),
       acoes,
