@@ -1492,6 +1492,14 @@ Duas ressalvas honestas:
   deliberadamente inválidos.
 - **Os Workers não herdam o loader do pai.** O `worker.ts` precisa de
   `execArgv: ["--import", "tsx"]` ou não resolve os módulos sob o Vitest.
+- **Uma chave nova no armazenamento tem de entrar em `CHAVES`**
+  (`plataforma/armazenamento.ts`). No telemóvel, o jogo lê no arranque só as
+  chaves dessa lista. Uma chave que falte grava-se e nunca se lê, e no browser
+  tudo funciona, porque aí o `localStorage` lê-se diretamente.
+  - Aconteceu com as medalhas: na app, voltavam a ser ganhas a cada arranque,
+    com a data do dia.
+  - Agora há um teste (`plataforma.test.ts`) que procura no código todas as
+    chaves `dicetoseven.*` e falha se alguma faltar na lista.
 - ~~O git avisa LF→CRLF em cada commit.~~ Resolvido: o `.gitattributes` fixa
   `* text=auto eol=lf`, portanto o comportamento é do repositório e não do
   `core.autocrlf` de cada máquina. Índice e cópia de trabalho em LF nos 59
