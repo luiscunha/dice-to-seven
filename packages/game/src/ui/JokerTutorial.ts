@@ -21,6 +21,7 @@
 import type { Packed } from "@dicetoseven/engine";
 import { JOKER, cellAt, hasAnyGroup, totalSum } from "@dicetoseven/engine";
 
+import { t } from "../i18n";
 import type { GameState, JokerValue } from "../session/GameSession";
 import { isFinished, restart, startGame, tap } from "../session/GameSession";
 import { NIVEL_TUTORIAL_JOKER, contaDoJoker } from "../session/tutorial";
@@ -64,7 +65,7 @@ export class JokerTutorial {
     this.raiz.className = "tutorial";
     this.raiz.setAttribute("role", "dialog");
     this.raiz.setAttribute("aria-modal", "true");
-    this.raiz.setAttribute("aria-label", "como funciona o joker");
+    this.raiz.setAttribute("aria-label", t().puzzle.ajudaJoker);
 
     const caixa = document.createElement("div");
     caixa.className = "tutorial-caixa";
@@ -120,12 +121,10 @@ export class JokerTutorial {
     el.className = "tutorial-cabecalho";
 
     const h = document.createElement("h2");
-    h.textContent = "O joker";
+    h.textContent = t().comoJogar.joker;
 
     const p = document.createElement("p");
-    p.textContent =
-      "A soma de qualquer tabuleiro é sempre múltipla de 7. " +
-      "O joker vale exatamente o que falta — e só esse valor esvazia o tabuleiro.";
+    p.textContent = t().tutorialJoker.regra;
 
     el.append(h, p);
     return el;
@@ -137,11 +136,11 @@ export class JokerTutorial {
     el.className = "tutorial-conta";
 
     const passos: readonly (readonly [string, readonly (string | Node)[]])[] = [
-      ["as faces somam", [String(CONTA.faces)]],
-      [`faltam ${String(CONTA.joker)} para`, [String(CONTA.total)]],
+      [t().tutorialJoker.facesSomam, [String(CONTA.faces)]],
+      [t().tutorialJoker.faltamPara(CONTA.joker), [String(CONTA.total)]],
       [
-        `que é 7 × ${String(CONTA.jogadas)}`,
-        [simboloJoker("joker"), ` = ${String(CONTA.joker)}`],
+        t().tutorialJoker.queE(CONTA.jogadas),
+        [simboloJoker(t().comum.joker), ` = ${String(CONTA.joker)}`],
       ],
     ];
 
@@ -235,36 +234,28 @@ export class JokerTutorial {
     const restante = totalSum(this.jogo.board);
 
     if (fase === "morto") {
-      return (
-        `Sobram ${String(restante)}. Não é múltiplo de 7, e já não há joker ` +
-        "para corrigir. O jogo deixou-te gastá-lo no valor errado e não te avisou " +
-        "— nos níveis a sério faz exatamente o mesmo."
-      );
+      return t().tutorialJoker.morto(restante);
     }
 
     if (fase === "limpo") {
-      return (
-        "Limpo. Repara no que o jogo te deixava fazer: gastar o joker noutro " +
-        "valor era permitido, e o tabuleiro morria em silêncio. A conta acima " +
-        "acompanha-te nos três primeiros níveis com joker; a partir daí fá-la tu."
-      );
+      return t().tutorialJoker.limpo;
     }
 
-    return "Toca no joker para lhe dares um valor. Depois soma 7, como em qualquer jogada.";
+    return t().tutorialJoker.aJogar;
   }
 
   private botoes(fase: Fase): readonly HTMLElement[] {
     const fora: HTMLElement[] = [];
 
     if (fase === "morto") {
-      fora.push(this.botao("Tentar outra vez", () => {
+      fora.push(this.botao(t().comum.tentarOutraVez, () => {
         this.recomecar();
       }));
     }
 
     if (fase === "limpo") {
       fora.push(
-        this.botao("E se eu escolher outro valor?", () => {
+        this.botao(t().tutorialJoker.outroValor, () => {
           this.recomecar();
         }),
       );
@@ -274,7 +265,7 @@ export class JokerTutorial {
     // onde o jogador já passou por aqui e está a reler por vontade própria.
     if (fase === "limpo" || this.opcoes.revisao === true) {
       const sair = this.botao(
-        fase === "limpo" ? "Já percebi" : "Fechar",
+        fase === "limpo" ? t().tutorialJoker.jaPercebi : t().paginaMedalhas.fechar,
         () => {
           this.opcoes.aoFechar();
         },

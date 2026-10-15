@@ -29,10 +29,11 @@ import { cabeNoEcra } from "./levels";
 /** Um em cada três níveis do capítulo vem da banda com joker. */
 export const CADENCIA_JOKER = 3;
 
+/** Os capítulos. O nome e a descrição estão no dicionário de cada idioma. */
+export type IdDoCapitulo = "iniciado" | "medio" | "avancado" | "perito";
+
 export interface Capitulo {
-  readonly id: string;
-  readonly nome: string;
-  readonly descricao: string;
+  readonly id: IdDoCapitulo;
   /** A banda que dá o corpo do capítulo. */
   readonly base: string;
   /** A banda com joker que se intercala, se houver. */
@@ -58,33 +59,10 @@ export interface Capitulo {
  * (desenho §8, passo 10).
  */
 export const CAPITULOS: readonly Capitulo[] = [
-  {
-    id: "iniciado",
-    nome: "Iniciado",
-    descricao: "Pares e trios, sem pressa",
-    base: "inicio",
-    niveisComSoma: 3,
-  },
-  {
-    id: "medio",
-    nome: "Médio",
-    descricao: "Grupos até quatro, e o joker a aparecer",
-    base: "meio",
-    joker: "meio-joker",
-  },
-  {
-    id: "avancado",
-    nome: "Avançado",
-    descricao: "Faces altas, poucos parceiros",
-    base: "avancado",
-    joker: "denso",
-  },
-  {
-    id: "perito",
-    nome: "Perito",
-    descricao: "Tabuleiros grandes, margem nenhuma",
-    base: "perito",
-  },
+  { id: "iniciado", base: "inicio", niveisComSoma: 3 },
+  { id: "medio", base: "meio", joker: "meio-joker" },
+  { id: "avancado", base: "avancado", joker: "denso" },
+  { id: "perito", base: "perito" },
 ];
 
 /**

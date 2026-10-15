@@ -27,6 +27,7 @@ import {
   totalSum,
 } from "@dicetoseven/engine";
 
+import { t } from "../i18n";
 import type { PuzzleState } from "../session/PuzzleSession";
 import {
   restartPuzzle,
@@ -65,11 +66,8 @@ import { linhaDeMedalhas } from "./medalhaNova";
 import type { DesafioNoEcra } from "./partilha";
 import { botaoPartilhar } from "./partilha";
 
-const SELO_TEXTO: Readonly<Record<string, string>> = {
-  perfect: "Perfeito",
-  clean: "Limpo",
-  completed: "Concluído",
-};
+const seloEmTexto = (selo: string): string =>
+  selo === "perfect" || selo === "clean" || selo === "completed" ? t().puzzle.selos[selo] : selo;
 
 /**
  * O glifo do selo — o mesmo da grelha de níveis.
@@ -252,7 +250,7 @@ export class PuzzleScreen {
 
     if (opcoes.aoVoltar !== undefined) {
       topo.appendChild(
-        botaoRedondo(iconeVoltar(), "voltar à lista", () => {
+        botaoRedondo(iconeVoltar(), t().puzzle.voltarALista, () => {
           this.pedirParaSair();
         }),
       );
@@ -262,7 +260,7 @@ export class PuzzleScreen {
 
     if (opcoes.aoPedirAjuda !== undefined) {
       const ajuda = botao("?", "redondo");
-      ajuda.setAttribute("aria-label", "como funciona o joker");
+      ajuda.setAttribute("aria-label", t().puzzle.ajudaJoker);
       ajuda.addEventListener("click", () => {
         opcoes.aoPedirAjuda?.();
       });
@@ -319,9 +317,9 @@ export class PuzzleScreen {
     const acoes = document.createElement("div");
     acoes.className = "acoes acoes-jogo";
 
-    this.btDesfazer = botaoIcone(iconeDesfazer(), "Desfazer");
-    this.btReiniciar = botaoIcone(iconeReiniciar(), "Reiniciar");
-    this.btDica = botao("Dica", "com-icone");
+    this.btDesfazer = botaoIcone(iconeDesfazer(), t().puzzle.desfazer);
+    this.btReiniciar = botaoIcone(iconeReiniciar(), t().comum.reiniciar);
+    this.btDica = botao(t().puzzle.dica, "com-icone");
 
     const corrigir = document.createElement("div");
     corrigir.className = "grupo-acoes";
@@ -388,9 +386,9 @@ export class PuzzleScreen {
       }
 
       confirmar(this.raiz, {
-        titulo: "Reiniciar o nível?",
-        texto: "As jogadas feitas até aqui perdem-se.",
-        confirmar: "Reiniciar",
+        titulo: t().puzzle.reiniciarTitulo,
+        texto: t().puzzle.jogadasPerdemSe,
+        confirmar: t().comum.reiniciar,
         aoConfirmar: () => {
           this.reiniciar();
         },
@@ -487,9 +485,9 @@ export class PuzzleScreen {
     }
 
     confirmar(this.raiz, {
-      titulo: "Sair do nível?",
-      texto: "As jogadas feitas até aqui perdem-se.",
-      confirmar: "Sair",
+      titulo: t().puzzle.sairTitulo,
+      texto: t().puzzle.jogadasPerdemSe,
+      confirmar: t().comum.sair,
       aoConfirmar: sair,
     });
   }
@@ -572,11 +570,11 @@ export class PuzzleScreen {
     if (anterior === 0 || agora < anterior) {
       linha.dataset["novo"] = "sim";
       linha.textContent =
-        anterior === 0 ? "primeiro tempo" : `novo recorde, era ${relogio(anterior)}`;
+        anterior === 0 ? t().puzzle.primeiroTempo : t().puzzle.novoRecorde(relogio(anterior));
       return linha;
     }
 
-    linha.textContent = `o teu recorde é ${relogio(anterior)}`;
+    linha.textContent = t().puzzle.oTeuRecorde(relogio(anterior));
     return linha;
   }
 
@@ -720,7 +718,7 @@ export class PuzzleScreen {
      */
     this.elMeta.replaceChildren(
       ...this.andaime(),
-      spanMeta(`${String(restantes)}/${String(total)} peças`),
+      spanMeta(t().puzzle.pecas(restantes, total)),
     );
 
     this.pintarRelogio();
@@ -753,7 +751,7 @@ export class PuzzleScreen {
 
     this.btDica.replaceChildren(
       iconeDica(),
-      texto("Dica"),
+      texto(t().puzzle.dica),
       spanContador(String(this.estado.hintsLeft)),
     );
 
@@ -776,7 +774,7 @@ export class PuzzleScreen {
     const { board } = this.estado.game;
     if (jokerAt(board) === undefined) return [];
 
-    return [spanMeta(`faces somam ${String(totalSum(board))}`)];
+    return [spanMeta(t().puzzle.facesSomam(totalSum(board)))];
   }
 
   private pintarSelecao(): void {
@@ -795,7 +793,7 @@ export class PuzzleScreen {
     }
 
     if (jogo.selection.length === 0) {
-      this.elSoma.replaceChildren(texto("Toca nas peças para somar 7"));
+      this.elSoma.replaceChildren(texto(t().puzzle.convite));
       this.elSoma.classList.add("vazia");
       this.elAviso.replaceChildren();
       return;
@@ -810,7 +808,7 @@ export class PuzzleScreen {
       // O joker mostra-se pelo valor que o jogador lhe deu: é isso que conta
       // para a soma, e é isso que ele precisa de reler.
       if (v === JOKER) {
-        parcelas.push(simboloJoker("joker"));
+        parcelas.push(simboloJoker(t().comum.joker));
         if (jogo.jokerAs !== undefined) parcelas.push(String(jogo.jokerAs));
       } else {
         parcelas.push(String(v ?? "?"));
@@ -848,7 +846,7 @@ export class PuzzleScreen {
 
     if (jogo.rejection === "over-target") {
       this.elAviso.dataset["tipo"] = "erro";
-      this.elAviso.replaceChildren(marca("⚠"), texto("essa peça passava de 7"));
+      this.elAviso.replaceChildren(marca("⚠"), texto(t().puzzle.passavaDe7));
       this.recusou();
       return;
     }
@@ -862,7 +860,7 @@ export class PuzzleScreen {
       this.elAviso.dataset["tipo"] = "erro";
       this.elAviso.replaceChildren(
         marca("❄"),
-        texto("uma peça gelada só sai com uma peça"),
+        texto(t().puzzle.geloSoAPar),
       );
       this.recusou();
       return;
@@ -874,7 +872,7 @@ export class PuzzleScreen {
       this.elAviso.dataset["tipo"] = "erro";
       this.elAviso.replaceChildren(
         marca("❄"),
-        texto("duas peças geladas não saem juntas"),
+        texto(t().puzzle.geloComGelo),
       );
       this.recusou();
       return;
@@ -894,7 +892,7 @@ export class PuzzleScreen {
 
     if (falta > 0) {
       this.elAviso.dataset["tipo"] = "convite";
-      this.elAviso.replaceChildren(texto(`faltam ${String(falta)}`));
+      this.elAviso.replaceChildren(texto(t().puzzle.faltam(falta)));
       return;
     }
 
@@ -977,7 +975,7 @@ export class PuzzleScreen {
 
     const titulo = document.createElement("div");
     titulo.className = "selo";
-    titulo.textContent = SELO_TEXTO[selo] ?? selo;
+    titulo.textContent = seloEmTexto(selo);
 
     cabeca.append(glifo, titulo);
 
@@ -993,16 +991,16 @@ export class PuzzleScreen {
     const detalhe = document.createElement("div");
     detalhe.className = "detalhe fim-numeros";
     detalhe.append(
-      numeroFim(jogo.moves, "jogadas"),
-      numeroFim(jogo.undos, "desfeitas"),
-      numeroFim(jogo.hints, "dicas"),
+      numeroFim(jogo.moves, t().puzzle.jogadas),
+      numeroFim(jogo.undos, t().puzzle.desfeitas),
+      numeroFim(jogo.hints, t().puzzle.dicas),
     );
 
     const acoes = document.createElement("div");
     acoes.className = "acoes fim-acoes";
 
     const desafio = this.opcoes.desafio;
-    const repetir = botao(desafio === undefined ? "Repetir" : "Treinar outra vez", "com-icone");
+    const repetir = botao(desafio === undefined ? t().comum.repetir : t().comum.treinarOutraVez, "com-icone");
     repetir.prepend(iconeReiniciar());
     repetir.addEventListener("click", () => {
       this.novaTentativa();
@@ -1012,7 +1010,7 @@ export class PuzzleScreen {
     let principal: HTMLButtonElement = repetir;
 
     if (this.opcoes.aoPedirSeguinte !== undefined) {
-      const seguinte = botao("Nível seguinte", "primario com-icone");
+      const seguinte = botao(t().puzzle.nivelSeguinte, "primario com-icone");
       seguinte.appendChild(iconeSeguir());
       seguinte.addEventListener("click", () => {
         this.opcoes.aoPedirSeguinte?.();
@@ -1090,20 +1088,18 @@ export class PuzzleScreen {
     const jogo = this.estado.game;
     const restantes = jogo.board.reduce((n, col) => n + col.length, 0);
 
-    const fechar = botaoRedondo(iconeFechar(), "ver o tabuleiro", () => {
+    const fechar = botaoRedondo(iconeFechar(), t().puzzle.verTabuleiro, () => {
       this.esconderBeco();
     });
 
     const titulo = document.createElement("h2");
     titulo.className = "popup-titulo";
-    titulo.textContent = "Ups! Beco sem saída!";
+    titulo.textContent = t().puzzle.becoTitulo;
 
     const detalhe = document.createElement("p");
     detalhe.className = "popup-texto";
     detalhe.textContent =
-      restantes === 1
-        ? "Sobrou 1 peça, e já não há nenhum grupo que some 7."
-        : `Sobraram ${String(restantes)} peças, e já não há nenhum grupo que some 7.`;
+      t().puzzle.becoTexto(restantes);
 
     /*
      * O conteúdo vive num invólucro para que o clique no escurecimento seja
@@ -1120,7 +1116,7 @@ export class PuzzleScreen {
     if (jogo.level.joker !== undefined) {
       const nota = document.createElement("p");
       nota.className = "popup-texto";
-      nota.textContent = "Com o joker, a jogada fatal costuma estar umas atrás.";
+      nota.textContent = t().puzzle.becoJoker;
       corpo.appendChild(nota);
     }
 
@@ -1130,7 +1126,7 @@ export class PuzzleScreen {
     // Um tabuleiro sem histórico começou encravado, o que seria um defeito de
     // geração. Não se promete um desfazer que não existe.
     if (jogo.history.length > 0) {
-      const desfazer = botao("Desfazer", "primario");
+      const desfazer = botao(t().puzzle.desfazer, "primario");
       desfazer.addEventListener("click", () => {
         this.esconderBeco();
         this.desfazer();
@@ -1139,7 +1135,7 @@ export class PuzzleScreen {
     }
 
     const reiniciar = botao(
-      "Reiniciar",
+      t().comum.reiniciar,
       jogo.history.length > 0 ? undefined : "primario",
     );
     reiniciar.addEventListener("click", () => {

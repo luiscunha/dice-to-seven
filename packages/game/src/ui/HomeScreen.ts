@@ -48,6 +48,7 @@
 
 import type { Cell } from "@dicetoseven/engine";
 
+import { t } from "../i18n";
 import type { ModoDoDesafio } from "../session/desafio";
 import type { Profile } from "../session/progress";
 import type { ModoFace } from "./dice";
@@ -64,7 +65,7 @@ import {
 } from "./icones";
 import type { EstadoNoCartao } from "./DesafioScreen";
 import { iconeDoModo, sinalDaSequencia, sinalDasChaves, sinalDeRisco } from "./DesafioScreen";
-import { NOME_DO_MODO } from "./partilha";
+import { nomeDoModo } from "./partilha";
 
 /**
  * O cartão do Desafio do Dia na Home: só o de hoje. O trilho dos dias vive
@@ -139,12 +140,12 @@ export class HomeScreen {
     this.raiz = elemento("div", "ecra home");
 
     const modos = elemento("nav", "home-modos");
-    modos.setAttribute("aria-label", "modos de jogo");
+    modos.setAttribute("aria-label", t().home.modosAria);
     modos.append(
       this.cartaoLargo({
         icone: iconePuzzles(),
-        titulo: "Puzzles",
-        legenda: "A campanha, capítulo a capítulo",
+        titulo: t().modos.puzzles,
+        legenda: t().home.legendaPuzzles,
         estado: this.estadoPuzzles(opcoes),
         aoClicar: opcoes.aoEscolherNiveis,
       }),
@@ -153,8 +154,8 @@ export class HomeScreen {
 
     const lema = elemento("p", "home-lema");
     lema.append(
-      elemento("b", "home-lema-forte", "O teu objetivo é simples: Somar 7."),
-      " A execução é o verdadeiro desafio.",
+      elemento("b", "home-lema-forte", t().home.lemaForte),
+      t().home.lema,
     );
 
     /*
@@ -170,7 +171,7 @@ export class HomeScreen {
 
     // Com o desafio, os modos ganham um nome: são duas secções, e não uma lista.
     if (opcoes.desafio !== undefined) {
-      modos.prepend(elemento("h2", "home-seccao", "Modos de jogo"));
+      modos.prepend(elemento("h2", "home-seccao", t().home.modos));
     }
 
     this.raiz.append(
@@ -207,7 +208,7 @@ export class HomeScreen {
 
     barra.append(
       marca,
-      botaoRedondo(iconeDefinicoes(), "Definições", opcoes.aoEscolherDefinicoes),
+      botaoRedondo(iconeDefinicoes(), t().definicoes.titulo, opcoes.aoEscolherDefinicoes),
     );
 
     return barra;
@@ -283,7 +284,7 @@ export class HomeScreen {
     b.append(iconeMedalha(), elemento("span", "home-medalhas-conta", conta));
     b.setAttribute(
       "aria-label",
-      `Medalhas: ${String(m.ganhas)} de ${String(m.total)}${m.novas ? ", com novas por ver" : ""}`,
+      t().paginaMedalhas.ariaEntrada(m.ganhas, m.total, m.novas),
     );
 
     return b;
@@ -305,7 +306,7 @@ export class HomeScreen {
     const b = botao("", "home-jogador", opcoes.aoEditarPerfil);
     b.setAttribute(
       "aria-label",
-      nome === "" ? "escolher nome e avatar" : `${nome} — mudar nome e avatar`,
+      nome === "" ? t().home.escolherPerfil : t().home.mudarPerfil(nome),
     );
 
     const avatar = elemento("span", "home-avatar");
@@ -319,7 +320,7 @@ export class HomeScreen {
     const etiqueta = elemento(
       "span",
       "home-jogador-nome",
-      nome === "" ? "Quem és?" : nome,
+      nome === "" ? t().perfil.quemEs : nome,
     );
     if (nome === "") etiqueta.dataset["convite"] = "sim";
 
@@ -396,17 +397,17 @@ export class HomeScreen {
       this.mosaicoDeModo({
         cor: "tempo",
         icone: iconeCronometro(),
-        titulo: "Contra-Relógio",
+        titulo: t().modos.tempo,
         estado:
           opcoes.perfil.bestTimeAttackScore > 0
-            ? `Recorde ${String(opcoes.perfil.bestTimeAttackScore)}`
+            ? t().home.recorde(opcoes.perfil.bestTimeAttackScore)
             : undefined,
         aoClicar: opcoes.aoEscolherTempo,
       }),
       this.mosaicoDeModo({
         cor: "survival",
         icone: iconeSurvival(),
-        titulo: "Survival",
+        titulo: t().modos.survival,
         ...this.estadoSurvival(opcoes),
         aoClicar: opcoes.aoEscolherSurvival,
       }),
@@ -494,7 +495,7 @@ export class HomeScreen {
     readonly aoMeio?: boolean;
   } {
     if (opcoes.corridaAMeio !== undefined) {
-      return { estado: `A meio · ${opcoes.corridaAMeio}`, aoMeio: true };
+      return { estado: t().home.aMeio(opcoes.corridaAMeio), aoMeio: true };
     }
 
     /*
@@ -503,7 +504,7 @@ export class HomeScreen {
      * `recordSurvival`.
      */
     if (opcoes.perfil.bestSurvivalMs > 0) {
-      return { estado: `Melhor ${opcoes.melhorTempoSurvival}` };
+      return { estado: t().home.melhor(opcoes.melhorTempoSurvival) };
     }
 
     return { estado: undefined };
@@ -526,7 +527,7 @@ export class HomeScreen {
     b.addEventListener("click", d.aoAbrir);
 
     const rotulo = elemento("span", "home-desafio-rotulo");
-    rotulo.append(iconeCalendario(), "Desafio do dia");
+    rotulo.append(iconeCalendario(), t().modos.desafio);
 
     // A série e as chaves, do lado de lá do rótulo. Só o que há: zero dias e
     // zero chaves não são notícia.
@@ -535,7 +536,7 @@ export class HomeScreen {
     else if (d.sequencia > 0) sinais.appendChild(sinalDaSequencia(d.sequencia));
     if (d.chaves > 0) {
       const chaves = elemento("span", "desafio-chaves", sinalDasChaves(d.chaves));
-      chaves.setAttribute("aria-label", d.chaves === 1 ? "1 chave" : `${String(d.chaves)} chaves`);
+      chaves.setAttribute("aria-label", t().comum.chaves(d.chaves));
       sinais.appendChild(chaves);
     }
 
@@ -546,7 +547,7 @@ export class HomeScreen {
     const icone = elemento("span", "desafio-modo-icone");
     icone.appendChild(iconeDoModo(d.modo));
 
-    const nome = NOME_DO_MODO[d.modo];
+    const nome = nomeDoModo(d.modo);
     const texto = elemento("span", "home-desafio-texto");
     texto.append(
       elemento("span", "home-desafio-nome", nome),
@@ -557,12 +558,12 @@ export class HomeScreen {
     const e = d.estado;
     const estado =
       e.tipo === "por-jogar"
-        ? "Jogar"
+        ? t().comum.jogar
         : e.tipo === "a-meio"
-          ? "Continuar"
+          ? t().desafio.continuar
           : e.tipo === "feito"
             ? `✓ ${e.texto}`
-            : "Interrompido";
+            : t().home.interrompido;
 
     const linha = elemento("span", "home-desafio-linha");
     linha.append(icone, texto, elemento("span", "desafio-modo-estado", estado), iconeSeguir());
@@ -570,9 +571,7 @@ export class HomeScreen {
     b.append(cabeca, linha);
     b.setAttribute(
       "aria-label",
-      `Desafio do dia, número ${String(d.numero)}, ${d.data}: ${nome}, ${estado}.` +
-        (d.emRisco === undefined ? "" : ` Sequência de ${String(d.emRisco)} em risco.`) +
-        " Abrir.",
+      t().home.ariaDesafio(d.numero, d.data, nome, estado, d.emRisco),
     );
 
     return b;
@@ -591,7 +590,7 @@ export class HomeScreen {
    */
   private ajuda(opcoes: OpcoesHome): HTMLElement {
     const el = elemento("section", "home-ajuda");
-    el.setAttribute("aria-label", "Como jogar");
+    el.setAttribute("aria-label", t().comoJogar.titulo);
 
     const face = opcoes.modoFace ?? "pintas";
     const conta = elemento("span", "home-ajuda-conta");
@@ -606,8 +605,8 @@ export class HomeScreen {
 
     const texto = elemento("span", "home-ajuda-texto");
     texto.append(
-      elemento("span", "home-ajuda-titulo", "Como jogar?"),
-      elemento("span", "home-ajuda-legenda", "Junta peças encostadas até somarem 7."),
+      elemento("span", "home-ajuda-titulo", t().home.comoJogar),
+      elemento("span", "home-ajuda-legenda", t().home.comoJogarLegenda),
     );
 
     const b = botao("", "home-ajuda-faixa", opcoes.aoEscolherComoJogar);

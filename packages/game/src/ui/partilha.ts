@@ -11,85 +11,76 @@
  *   🔥 3 dias seguidos
  */
 
+import { t } from "../i18n";
 import type { DiaDeDesafio, ModoDoDesafio } from "../session/desafio";
 import { modoDoDia, numeroDoDia } from "../session/desafio";
 import { botao } from "./dom";
 import { iconePartilhar } from "./icones";
 import { relogio } from "./tempo";
 
-const MESES = [
-  "jan", "fev", "mar", "abr", "mai", "jun",
-  "jul", "ago", "set", "out", "nov", "dez",
-] as const;
-
-const MESES_POR_EXTENSO = [
-  "janeiro", "fevereiro", "março", "abril", "maio", "junho",
-  "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
-] as const;
-
-/** O selo do puzzle, com o glifo da grelha de níveis. */
-const SELO_PARTILHADO = {
-  perfect: "★ perfeito",
-  clean: "◆ limpo",
-  completed: "concluído",
-} as const;
-
-/** `2026-10-14` → `14 out`. */
-export function dataCurta(data: string): string {
-  const [, mes, dia] = data.split("-").map(Number);
-  return `${String(dia ?? 1)} ${MESES[(mes ?? 1) - 1] ?? ""}`;
-}
-
 const partes = (data: string): readonly [number, number, number] => {
   const [ano, mes, dia] = data.split("-").map(Number);
   return [ano ?? 1970, mes ?? 1, dia ?? 1];
 };
 
+/** `2026-10-14` → `14 out`, no idioma do jogo. */
+export function dataCurta(data: string): string {
+  const [, mes, dia] = partes(data);
+  return t().formato.dataCurta(dia, mes);
+}
+
 /** `2026-10-14` → `14 de outubro`. */
 export function dataPorExtenso(data: string): string {
   const [, mes, dia] = partes(data);
-  return `${String(dia)} de ${MESES_POR_EXTENSO[mes - 1] ?? ""}`;
+  return t().formato.dataPorExtenso(dia, mes);
+}
+
+/** `2026-10-14` → `14 de outubro de 2026`. */
+export function dataCompleta(data: string): string {
+  const [ano, mes, dia] = partes(data);
+  return t().formato.dataCompleta(dia, mes, ano);
 }
 
 /** `2026-10` (ou uma data desse mês) → `out`. */
 export function mesCurto(mes: string): string {
   const [, m] = partes(mes);
-  return MESES[m - 1] ?? "";
+  return t().formato.mesCurto(m);
 }
 
 /** `2026-10` (ou uma data desse mês) → `outubro de 2026`. */
 export function mesPorExtenso(mes: string): string {
   const [ano, m] = partes(mes);
-  return `${MESES_POR_EXTENSO[m - 1] ?? ""} de ${String(ano)}`;
+  return t().formato.mesPorExtenso(m, ano);
 }
 
+/** `2026-10` (ou uma data desse mês) → `outubro`. */
+export function nomeDoMes(mes: string): string {
+  const [, m] = partes(mes);
+  return t().formato.nomeDoMes(m);
+}
 
 /** O nome de cada modo, como os ecrãs do desafio o escrevem. */
-export const NOME_DO_MODO: Readonly<Record<ModoDoDesafio, string>> = {
-  puzzle: "Puzzle",
-  tempo: "Contra-Relógio",
-  survival: "Survival",
-};
-
-const plural = (n: number, um: string, varios: string): string =>
-  `${String(n)} ${n === 1 ? um : varios}`;
+export const nomeDoModo = (modo: ModoDoDesafio): string => t().modos[modo];
 
 /**
  * O texto a partilhar: o desafio do dia e o resultado, se houver — um «por
  * jogar» numa conversa não diz nada a ninguém —, e a sequência só a partir de
  * dois dias, que é quando já é uma sequência.
+ *
+ * **Sai no idioma do jogo**: é quem partilha que escolhe com quem fala.
  */
 export function textoDoDesafio(
   data: string,
   dia: DiaDeDesafio,
   sequencia: number,
 ): string {
-  const linhas = [`DiceToSeven · Desafio #${String(numeroDoDia(data))} · ${dataCurta(data)}`];
+  const p = t().partilha;
+  const linhas = [p.cabeca(numeroDoDia(data), dataCurta(data))];
 
   const resultado = linhaDoResultado(modoDoDia(data), dia);
   if (resultado !== undefined) linhas.push(resultado);
 
-  if (sequencia >= 2) linhas.push(`🔥 ${String(sequencia)} dias seguidos`);
+  if (sequencia >= 2) linhas.push(p.sequencia(sequencia));
 
   return linhas.join("\n");
 }
@@ -99,23 +90,24 @@ export function textoDoDesafio(
  * quando havia três desafios pode ter os outros guardados, e não contam.
  */
 function linhaDoResultado(modo: ModoDoDesafio, dia: DiaDeDesafio): string | undefined {
+  const p = t().partilha;
+
   if (modo === "puzzle") {
     const e = dia.puzzle;
     if (e?.estado !== "feito") return undefined;
-    return `🧩 Puzzle: ${relogio(e.resultado.tempoMs)} · ${SELO_PARTILHADO[e.resultado.selo]}`;
+    return p.puzzle(relogio(e.resultado.tempoMs), p.selos[e.resultado.selo]);
   }
 
   if (modo === "tempo") {
     const e = dia.tempo;
     if (e?.estado !== "feito") return undefined;
-    const r = e.resultado;
-    return `⏱️ Contra-Relógio: ${plural(r.pontos, "ponto", "pontos")} · ${plural(r.tabuleiros, "tabuleiro", "tabuleiros")}`;
+    return p.tempo(e.resultado.pontos, e.resultado.tabuleiros);
   }
 
   // Feito é sempre limpo: transbordar não fecha o Survival do Dia.
   const e = dia.survival;
   if (e?.estado !== "feito") return undefined;
-  return `🧱 Survival: limpo em ${relogio(e.resultado.tempoMs)}`;
+  return p.survival(relogio(e.resultado.tempoMs));
 }
 
 export type DesfechoDaPartilha = "partilhado" | "copiado" | "cancelado" | "falhou";
@@ -201,7 +193,7 @@ export function botaoPartilhar(
   classe = "primario com-icone",
   compacto = false,
 ): HTMLButtonElement {
-  const NOME = "Partilhar o resultado de hoje";
+  const NOME = t().comum.partilharResultado;
 
   const repor = (): void => {
     if (compacto) {
@@ -209,7 +201,7 @@ export function botaoPartilhar(
       b.setAttribute("aria-label", NOME);
       return;
     }
-    b.replaceChildren(iconePartilhar(), "Partilhar");
+    b.replaceChildren(iconePartilhar(), t().comum.partilhar);
   };
 
   const b = botao("", classe, () => {
@@ -219,9 +211,9 @@ export function botaoPartilhar(
 
       if (compacto) {
         b.replaceChildren(copiado ? "✓" : "✕");
-        b.setAttribute("aria-label", copiado ? "Copiado" : "Não deu para copiar");
+        b.setAttribute("aria-label", copiado ? t().comum.copiado : t().comum.naoDeuParaCopiar);
       } else {
-        b.replaceChildren(copiado ? "Copiado ✓" : "Não deu para copiar");
+        b.replaceChildren(copiado ? t().comum.copiadoComVisto : t().comum.naoDeuParaCopiar);
       }
       b.dataset["desfecho"] = desfecho;
       setTimeout(() => {

@@ -19,6 +19,7 @@
  * resposta, e a resposta é o puzzle.
  */
 
+import { t } from "../i18n";
 import type { JokerValue } from "../session/GameSession";
 import { JOKER_VALUES } from "../session/GameSession";
 import { criarPeca } from "./dice";
@@ -49,7 +50,7 @@ export class JokerPicker {
     this.el = document.createElement("div");
     this.el.className = "joker-picker";
     this.el.setAttribute("role", "menu");
-    this.el.setAttribute("aria-label", "quanto vale o joker nesta jogada");
+    this.el.setAttribute("aria-label", t().joker.seletorAria);
     this.el.hidden = true;
     host.appendChild(this.el);
 
@@ -136,7 +137,7 @@ export class JokerPicker {
   private desenhar(atual?: JokerValue): void {
     const titulo = document.createElement("p");
     titulo.className = "joker-picker-titulo";
-    titulo.textContent = "o joker vale";
+    titulo.textContent = t().joker.seletorTitulo;
 
     const grelha = document.createElement("div");
     grelha.className = "joker-picker-grelha";

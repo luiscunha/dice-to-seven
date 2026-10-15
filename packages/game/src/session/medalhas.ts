@@ -61,17 +61,46 @@ export interface ContextoDasMedalhas {
   readonly hoje: string;
 }
 
+/**
+ * Os ids das medalhas. São a identidade de cada uma — no registo gravado, no
+ * desenho do emblema e nos textos, que vivem no dicionário de cada idioma
+ * (`i18n/`). **A sessão não tem texto nenhum**: diz que medalha é e quanto
+ * falta, e o ecrã diz-o na língua de quem joga.
+ */
+export const IDS_DAS_MEDALHAS = [
+  "iniciado",
+  "medio",
+  "avancado",
+  "perito",
+  "primeiro-perfeito",
+  "perito-perfeito",
+  "campanha-perfeita",
+  "maratona",
+  "recordista",
+  "ultramaratona",
+  "cinco-minutos",
+  "dez-minutos",
+  "dez-limpezas",
+  "semana",
+  "mes-completo",
+  "trinta-dias",
+  "cem-dias",
+] as const;
+
+export type IdDaMedalha = (typeof IDS_DAS_MEDALHAS)[number];
+
+/** O que uma medalha conta. O nome, em cada língua, está no dicionário. */
+export type UnidadeDaMedalha = "niveis" | "perfeitos" | "tabuleiros" | "pontos" | "limpezas" | "dias";
+
 export interface Medalha {
-  readonly id: string;
-  readonly nome: string;
-  readonly descricao: string;
+  readonly id: IdDaMedalha;
   readonly familia: FamiliaDaMedalha;
   readonly tipo: TipoDeMedalha;
   /**
-   * O que se conta, no plural: «níveis», «pontos». Ausente nas medalhas de
-   * sim-ou-não, que não têm contagem a mostrar.
+   * O que se conta: níveis, pontos. Ausente nas medalhas de sim-ou-não, que não
+   * têm contagem a mostrar.
    */
-  readonly unidade?: string;
+  readonly unidade?: UnidadeDaMedalha;
   /** Como se escreve o progresso: um número, ou um tempo em `m:ss`. */
   readonly formato?: "tempo";
   readonly progresso: (ctx: ContextoDasMedalhas) => Progresso;
@@ -155,15 +184,6 @@ const limpezas = (ctx: ContextoDasMedalhas): number =>
 
 const ate = (atual: number, alvo: number): Progresso => ({ atual: Math.min(atual, alvo), alvo });
 
-/**
- * `30000` → `30 000`, com um espaço fino que não parte a linha. O
- * `toLocaleString("pt-PT")` não agrupa números de quatro algarismos, e a
- * página dizia «3747 / 30 000» — dois números do mesmo tipo escritos de duas
- * maneiras.
- */
-export const milhares = (n: number): string =>
-  String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-
 /* ─── O catálogo ──────────────────────────────────────────────────────────── */
 
 /**
@@ -171,13 +191,11 @@ export const milhares = (n: number): string =>
  * número escrito aqui: o capítulo é o que `montarCapitulo` disser, e um pack
  * novo muda-o sem ninguém ter de se lembrar desta lista.
  */
-const capitulo = (id: string, nome: string): Medalha => ({
+const capitulo = (id: "iniciado" | "medio" | "avancado" | "perito"): Medalha => ({
   id,
-  nome,
-  descricao: `Acabar todos os níveis do ${nome}.`,
   familia: "puzzle",
   tipo: "normal",
-  unidade: "níveis",
+  unidade: "niveis",
   progresso: (ctx) => {
     const niveis = niveisDe(ctx, id);
     return ate(feitos(ctx, niveis), niveis.length);
@@ -186,22 +204,18 @@ const capitulo = (id: string, nome: string): Medalha => ({
 
 export const MEDALHAS: readonly Medalha[] = [
   /* ── Puzzles ── */
-  capitulo("iniciado", "Iniciado"),
-  capitulo("medio", "Médio"),
-  capitulo("avancado", "Avançado"),
-  capitulo("perito", "Perito"),
+  capitulo("iniciado"),
+  capitulo("medio"),
+  capitulo("avancado"),
+  capitulo("perito"),
   {
     id: "primeiro-perfeito",
-    nome: "Perfeição",
-    descricao: "Acabar um nível com selo Perfeito: sem desfazer, sem reiniciar e sem dicas.",
     familia: "puzzle",
     tipo: "normal",
     progresso: (ctx) => ate(perfeitos(ctx, todosOsNiveis(ctx)), 1),
   },
   {
     id: "perito-perfeito",
-    nome: "Perito perfeito",
-    descricao: "Todos os níveis do Perito com selo Perfeito.",
     familia: "puzzle",
     tipo: "premium",
     unidade: "perfeitos",
@@ -212,8 +226,6 @@ export const MEDALHAS: readonly Medalha[] = [
   },
   {
     id: "campanha-perfeita",
-    nome: "Campanha perfeita",
-    descricao: "Todos os níveis da campanha com selo Perfeito.",
     familia: "puzzle",
     tipo: "premium",
     unidade: "perfeitos",
@@ -226,8 +238,6 @@ export const MEDALHAS: readonly Medalha[] = [
   /* ── Contra-Relógio ── */
   {
     id: "maratona",
-    nome: "Maratona",
-    descricao: `Limpar ${String(LIMIARES.maratona)} tabuleiros numa corrida do Contra-Relógio.`,
     familia: "tempo",
     tipo: "normal",
     unidade: "tabuleiros",
@@ -235,8 +245,6 @@ export const MEDALHAS: readonly Medalha[] = [
   },
   {
     id: "recordista",
-    nome: "Recordista",
-    descricao: `Fazer ${milhares(LIMIARES.recordista)} pontos numa corrida do Contra-Relógio.`,
     familia: "tempo",
     tipo: "premium",
     unidade: "pontos",
@@ -244,8 +252,6 @@ export const MEDALHAS: readonly Medalha[] = [
   },
   {
     id: "ultramaratona",
-    nome: "Ultramaratona",
-    descricao: `Limpar ${String(LIMIARES.ultramaratona)} tabuleiros numa corrida do Contra-Relógio.`,
     familia: "tempo",
     tipo: "premium",
     unidade: "tabuleiros",
@@ -255,8 +261,6 @@ export const MEDALHAS: readonly Medalha[] = [
   /* ── Survival ── */
   {
     id: "cinco-minutos",
-    nome: "Cinco minutos",
-    descricao: "Aguentar cinco minutos numa corrida do Survival.",
     familia: "survival",
     tipo: "normal",
     formato: "tempo",
@@ -264,8 +268,6 @@ export const MEDALHAS: readonly Medalha[] = [
   },
   {
     id: "dez-minutos",
-    nome: "Dez minutos",
-    descricao: "Aguentar dez minutos numa corrida do Survival.",
     familia: "survival",
     tipo: "premium",
     formato: "tempo",
@@ -273,8 +275,6 @@ export const MEDALHAS: readonly Medalha[] = [
   },
   {
     id: "dez-limpezas",
-    nome: "Dez limpezas",
-    descricao: `Limpar o tabuleiro do Survival ${String(LIMIARES.limpezas)} vezes.`,
     familia: "survival",
     tipo: "premium",
     unidade: "limpezas",
@@ -284,37 +284,29 @@ export const MEDALHAS: readonly Medalha[] = [
   /* ── Desafio do Dia ── */
   {
     id: "semana",
-    nome: "Uma semana",
-    descricao: `Fazer o Desafio do Dia ${String(LIMIARES.semana)} dias seguidos.`,
     familia: "desafio",
     tipo: "normal",
-    unidade: "dias seguidos",
+    unidade: "dias",
     progresso: (ctx) => ate(maiorSequencia(ctx.desafios), LIMIARES.semana),
   },
   {
     id: "mes-completo",
-    nome: "Mês completo",
-    descricao: "Fazer todos os desafios de um mês — a ★ no trilho dos meses.",
     familia: "desafio",
     tipo: "normal",
     progresso: (ctx) => ate(mesesCompletos(ctx.desafios, ctx.hoje), 1),
   },
   {
     id: "trinta-dias",
-    nome: "Imparável",
-    descricao: `Fazer o Desafio do Dia ${String(LIMIARES.trintaDias)} dias seguidos.`,
     familia: "desafio",
     tipo: "premium",
-    unidade: "dias seguidos",
+    unidade: "dias",
     progresso: (ctx) => ate(maiorSequencia(ctx.desafios), LIMIARES.trintaDias),
   },
   {
     id: "cem-dias",
-    nome: "Centenário",
-    descricao: `Fazer o Desafio do Dia ${String(LIMIARES.cemDias)} dias seguidos.`,
     familia: "desafio",
     tipo: "premium",
-    unidade: "dias seguidos",
+    unidade: "dias",
     progresso: (ctx) => ate(maiorSequencia(ctx.desafios), LIMIARES.cemDias),
   },
 ];

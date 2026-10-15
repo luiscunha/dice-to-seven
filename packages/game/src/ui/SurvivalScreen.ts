@@ -36,6 +36,7 @@
 import type { Board, Cell, Packed } from "@dicetoseven/engine";
 import { JOKER, cellAt } from "@dicetoseven/engine";
 
+import { t } from "../i18n";
 import type { JokerValue } from "../session/GameSession";
 import type {
   SurvivalConfig,
@@ -190,7 +191,7 @@ export class SurvivalScreen {
      * guardada e retoma-se onde ficou. Confirmar aqui era pedir uma decisão
      * sobre uma consequência que não existe.
      */
-    const sair = botaoRedondo(iconeVoltar(), "sair da corrida", () => {
+    const sair = botaoRedondo(iconeVoltar(), t().tempo.sairDaCorrida, () => {
       this.guardar();
       opcoes.aoSair();
     });
@@ -202,7 +203,7 @@ topo.append(sair, this.elRelogio);
 
     /* ── a próxima linha, entre o topo e o tabuleiro: é de lá que ela cai ── */
     this.elFila = elemento("div", "fila");
-    this.elFila.setAttribute("aria-label", "próxima linha");
+    this.elFila.setAttribute("aria-label", t().survival.proximaLinha);
     this.elFila.setAttribute("role", "timer");
 
     const palco = elemento("div", "palco");
@@ -221,10 +222,10 @@ topo.append(sair, this.elRelogio);
      * tabuleiro.
      */
     const acoes = elemento("div", "acoes");
-    this.btPuxar = botao("Puxar linha", "primario", () => {
+    this.btPuxar = botao(t().survival.puxarLinha, "primario", () => {
       void this.puxar();
     });
-    this.btRecomecar = botao("Recomeçar", "com-icone", () => {
+    this.btRecomecar = botao(t().survival.recomecar, "com-icone", () => {
       this.pedirParaRecomecar();
     });
     this.btRecomecar.prepend(iconeReiniciar());
@@ -424,7 +425,7 @@ topo.append(sair, this.elRelogio);
       anunciar(
         this.palco,
         tabuleiro === null ? [] : [tabuleiro.getBoundingClientRect()],
-        "sem jogadas",
+        t().survival.semJogadas,
         "perda",
       );
     }
@@ -575,9 +576,9 @@ topo.append(sair, this.elRelogio);
     }
 
     confirmar(this.raiz, {
-      titulo: "Recomeçar?",
-      texto: "Esta corrida e o tempo perdem-se. O tabuleiro volta ao início.",
-      confirmar: "Recomeçar",
+      titulo: t().survival.recomecarTitulo,
+      texto: t().survival.recomecarTexto,
+      confirmar: t().survival.recomecar,
       aoConfirmar: () => {
         this.terminado = true;
         this.parar();
@@ -636,7 +637,7 @@ topo.append(sair, this.elRelogio);
    */
   private rebentar(at: Packed, aquecidas: readonly Packed[], depois: Board): void {
     const caixa = this.view.caixaDe(at);
-    anunciar(this.palco, caixa === undefined ? [] : [caixa], "+1 linha", "perda grande");
+    anunciar(this.palco, caixa === undefined ? [] : [caixa], t().survival.maisUmaLinha, "perda grande");
     this.view.rebentarBomba(at);
     this.view.aquecerPecas(depois, aquecidas);
     vibrarExplosao();
@@ -723,15 +724,15 @@ topo.append(sair, this.elRelogio);
       elemento(
         "h2",
         "popup-titulo",
-        limpou ? "Tabuleiro limpo!" : "O tabuleiro transbordou",
+        limpou ? t().survival.limpoTitulo : t().survival.transbordouTitulo,
       ),
       marca,
       elemento(
         "p",
         "popup-texto",
         limpou
-          ? `Limpo, com ${String(this.estado.linhasInjetadas)} linhas aguentadas`
-          : `${String(this.estado.linhasInjetadas)} linhas aguentadas`,
+          ? t().survival.limpoLinhas(this.estado.linhasInjetadas)
+          : t().survival.linhasAguentadas(this.estado.linhasInjetadas),
       ),
     );
 
@@ -745,7 +746,7 @@ topo.append(sair, this.elRelogio);
         elemento(
           "p",
           "popup-texto",
-          "O desafio fica feito quando limpares o tabuleiro. As linhas são as mesmas: tenta outra vez.",
+          t().survival.porLimpar,
         ),
       );
     }
@@ -762,7 +763,7 @@ topo.append(sair, this.elRelogio);
     }
 
     acoes.appendChild(
-      botao("Outra corrida", "primario", () => {
+      botao(t().survival.outraCorrida, "primario", () => {
         this.opcoes.aoRecomecar(novaSeed());
       }),
     );
@@ -777,14 +778,14 @@ topo.append(sair, this.elRelogio);
      */
     if (!limpou) {
       acoes.appendChild(
-        botao("Repetir esta", undefined, () => {
+        botao(t().survival.repetirEsta, undefined, () => {
           this.opcoes.aoRecomecar(this.estado.seed);
         }),
       );
     }
 
     acoes.appendChild(
-      botao("Sair", undefined, () => {
+      botao(t().comum.sair, undefined, () => {
         this.opcoes.aoSair();
       }),
     );
@@ -806,10 +807,10 @@ topo.append(sair, this.elRelogio);
   private acoesDoDesafio(acoes: HTMLElement, desafio: DesafioNoEcra, porLimpar: boolean): void {
     if (porLimpar) {
       acoes.append(
-        botao("Tentar outra vez", "primario", () => {
+        botao(t().comum.tentarOutraVez, "primario", () => {
           this.opcoes.aoRecomecar(this.estado.seed);
         }),
-        botao("Sair", undefined, () => {
+        botao(t().comum.sair, undefined, () => {
           this.opcoes.aoSair();
         }),
       );
@@ -821,13 +822,13 @@ topo.append(sair, this.elRelogio);
 
     acoes.append(
       botao(
-        "Treinar outra vez",
+        t().comum.treinarOutraVez,
         aoPartilhar === undefined ? "primario" : undefined,
         () => {
           this.opcoes.aoRecomecar(this.estado.seed);
         },
       ),
-      botao("Sair", undefined, () => {
+      botao(t().comum.sair, undefined, () => {
         this.opcoes.aoSair();
       }),
     );
@@ -921,14 +922,11 @@ topo.append(sair, this.elRelogio);
     if (segundos !== this.ultimoSegundo) {
       this.ultimoSegundo = segundos;
       const bomba = bombaEnterradaNaFila(this.estado, this.config)
-        ? ", acende uma bomba na pilha"
+        ? t().survival.bombaEnterrada
         : bombaNaFila(this.estado, this.config) === undefined
           ? ""
-          : ", com bomba";
-      this.elFila.setAttribute(
-        "aria-label",
-        `próxima linha em ${String(segundos)} segundos${bomba}`,
-      );
+          : t().survival.comBomba;
+      this.elFila.setAttribute("aria-label", t().survival.proximaLinhaEm(segundos, bomba));
     }
   }
 
@@ -984,7 +982,7 @@ topo.append(sair, this.elRelogio);
 function avisoNaPilha(): HTMLElement {
   const aviso = elemento("span", "bomba-pilha");
   aviso.setAttribute("aria-hidden", "true");
-  aviso.append(elemento("span", "pavio"), "na pilha");
+  aviso.append(elemento("span", "pavio"), t().survival.naPilha);
   return aviso;
 }
 

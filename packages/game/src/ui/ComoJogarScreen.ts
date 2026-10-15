@@ -28,6 +28,7 @@
 
 import type { Cell } from "@dicetoseven/engine";
 
+import { t } from "../i18n";
 import { DEFAULT_TIME_ATTACK } from "../session/TimeAttackSession";
 import type { ModoFace } from "./dice";
 import { pecaDeAmostra, simboloJoker } from "./dice";
@@ -61,28 +62,15 @@ const soldadaBaixo = (valor: Cell): Casa => ({ valor, marcas: ["soldada-baixo"] 
  */
 const CASTIGO_BOMBA_S = DEFAULT_TIME_ATTACK.bomba.penalizacaoMs / 1000;
 
-/** Os três selos, na ordem em que valem. */
-const SELOS: readonly {
-  readonly glifo: string;
-  readonly nome: string;
-  readonly texto: string;
-}[] = [
-  {
-    glifo: "★",
-    nome: "Perfeito",
-    texto: "Limpaste o nível sem desfazer, sem reiniciar e sem pedir dicas.",
-  },
-  {
-    glifo: "◆",
-    nome: "Limpo",
-    texto: "Limpaste o nível de uma assentada, mas com uma ou mais dicas.",
-  },
-  {
-    glifo: "●",
-    nome: "Concluído",
-    texto: "Limpaste o nível, com desfazer ou depois de reiniciar.",
-  },
-];
+/** O que custa saltar um tabuleiro no Contra-Relógio, pela mesma razão. */
+const SALTAR_S = DEFAULT_TIME_ATTACK.saltarMs / 1000;
+
+/** Os três selos, na ordem em que valem. Os textos estão no dicionário. */
+const SELOS = [
+  { glifo: "★", selo: "perfect" },
+  { glifo: "◆", selo: "clean" },
+  { glifo: "●", selo: "completed" },
+] as const;
 
 export class ComoJogarScreen {
   private readonly raiz: HTMLElement;
@@ -92,7 +80,7 @@ export class ComoJogarScreen {
     this.modo = opcoes.modoFace ?? "pintas";
     this.raiz = elemento("div", "ecra");
 
-    const { el: topo } = cabecalho("Como jogar", opcoes.aoVoltar);
+    const { el: topo } = cabecalho(t().comoJogar.titulo, opcoes.aoVoltar);
 
     const rolo = elemento("div", "rolo");
     const corpo = elemento("div", "regras");
@@ -128,37 +116,19 @@ export class ComoJogarScreen {
    * seguir passa a ser resposta a uma pergunta que ele já tem.
    */
   private objetivo(): HTMLElement {
-    const el = this.seccao("O objetivo", "Esvaziar o tabuleiro.");
-    el.appendChild(
-      this.paragrafo(
-        "Não há pontos a fazer nem tempo a bater nos Puzzles: um nível acaba " +
-          "quando não sobra uma peça. E todos os níveis que o jogo publica têm " +
-          "solução — se ficaste encravado, foi de um caminho, não do nível.",
-      ),
-    );
+    const r = t().comoJogar;
+    const el = this.seccao(r.objetivo, r.objetivoChamada);
+    el.appendChild(this.paragrafo(r.objetivoTexto));
     return el;
   }
 
   private jogada(): HTMLElement {
-    const el = this.seccao(
-      "Uma jogada",
-      "Toca em peças encostadas até somarem exatamente 7.",
-    );
+    const r = t().comoJogar;
+    const el = this.seccao(r.jogada, r.jogadaChamada);
 
     el.appendChild(this.conta([3, 4]));
-    el.appendChild(
-      this.paragrafo(
-        "As peças que tocas ficam marcadas. Quando somarem 7, saem sozinhas. " +
-          "Se passares de 7 a jogada não entra — e tocar outra vez numa peça " +
-          "já escolhida tira-a da conta.",
-      ),
-    );
-    el.appendChild(
-      this.paragrafo(
-        "Um grupo tem no máximo sete peças, que é o que dá juntar sete faces " +
-          "de 1.",
-      ),
-    );
+    el.appendChild(this.paragrafo(r.jogadaTexto));
+    el.appendChild(this.paragrafo(r.jogadaMaximo));
 
     return el;
   }
@@ -168,94 +138,55 @@ export class ComoJogarScreen {
    * lado a lado — a diagonal explica-se pior em palavras do que em duas peças.
    */
   private ligadas(): HTMLElement {
-    const el = this.seccao(
-      "Encostadas, não em diagonal",
-      "Duas peças estão ligadas se partilham um lado.",
-    );
+    const r = t().comoJogar;
+    const el = this.seccao(r.ligadas, r.ligadasChamada);
 
     const exemplos = elemento("div", "regras-exemplos");
     exemplos.append(
-      this.exemplo("vale", "Vale: partilham um lado", [
+      this.exemplo("vale", r.ligadasVale, [
         [undefined, undefined],
         [2, 5],
       ]),
-      this.exemplo("nao", "Não vale: só se tocam no canto", [
+      this.exemplo("nao", r.ligadasNaoVale, [
         [undefined, 5],
         [2, undefined],
       ]),
     );
 
     el.appendChild(exemplos);
-    el.appendChild(
-      this.paragrafo(
-        "O grupo todo tem de estar ligado — cada peça encostada a outra do " +
-          "grupo. Em L, em T ou em linha: a forma não interessa, a ligação sim.",
-      ),
-    );
+    el.appendChild(this.paragrafo(r.ligadasTexto));
 
     return el;
   }
 
   private depois(): HTMLElement {
-    const el = this.seccao(
-      "O que acontece a seguir",
-      "As peças de cima descem, e as colunas vazias desaparecem.",
-    );
+    const r = t().comoJogar;
+    const el = this.seccao(r.depois, r.depoisChamada);
 
-    el.appendChild(
-      this.paragrafo(
-        "As colunas que ficam vazias fecham-se para a esquerda, e as que " +
-          "estavam de cada lado passam a ser vizinhas. É aqui que nascem " +
-          "quase todos os grupos que não estavam lá antes.",
-      ),
-    );
-    el.appendChild(
-      this.paragrafo(
-        "Grupos novos que se formem ficam disponíveis, mas não saem sozinhos: " +
-          "só desaparecem se os escolheres. O jogo nunca joga por ti — seguir " +
-          "um caminho que não escolheste podia deixar o tabuleiro sem saída.",
-      ),
-    );
+    el.appendChild(this.paragrafo(r.depoisColunas));
+    el.appendChild(this.paragrafo(r.depoisGrupos));
 
     return el;
   }
 
   private joker(opcoes: OpcoesComoJogar): HTMLElement {
-    const el = this.seccao("O joker", [
-      "A peça cinzenta com um ",
-      simboloJoker("asterisco verde"),
-      ". Há no máximo uma por tabuleiro.",
+    const r = t().comoJogar;
+    const el = this.seccao(r.joker, [
+      r.jokerChamadaAntes,
+      simboloJoker(r.jokerSimbolo),
+      r.jokerChamadaDepois,
     ]);
 
     const linha = elemento("p", "regras-conta");
     linha.appendChild(pecaDeAmostra(0, this.modo));
-    linha.appendChild(
-      elemento(
-        "span",
-        "regras-conta-nota",
-        "Toca nele para lhe dares um valor de 1 a 6.",
-      ),
-    );
+    linha.appendChild(elemento("span", "regras-conta-nota", r.jokerNota));
     el.appendChild(linha);
 
-    el.appendChild(
-      this.paragrafo(
-        "O joker nunca forma grupo sozinho: entra sempre com peças fixas, e " +
-          "vale o que falta para elas chegarem a 7.",
-      ),
-    );
-    el.appendChild(
-      this.paragrafo(
-        "Só um dos seis valores esvazia o tabuleiro, e o jogo deixa-te " +
-          "escolher outro sem avisar. O tabuleiro não morre logo — falha no " +
-          "fim, com peças a sobrar.",
-      ),
-    );
+    el.appendChild(this.paragrafo(r.jokerSozinho));
+    el.appendChild(this.paragrafo(r.jokerValor));
 
     if (opcoes.aoVerTutorialDoJoker !== undefined) {
-      el.appendChild(
-        botao("Ver o tutorial do joker", undefined, opcoes.aoVerTutorialDoJoker),
-      );
+      el.appendChild(botao(r.jokerTutorial, undefined, opcoes.aoVerTutorialDoJoker));
     }
 
     return el;
@@ -266,66 +197,46 @@ export class ComoJogarScreen {
    * mesma — que grupos valem —, e a resposta lê-se melhor em peças.
    */
   private soldas(): HTMLElement {
-    const el = this.seccao(
-      "As soldas",
-      "Duas peças unidas por um grampo saem juntas, ou não sai nenhuma.",
-    );
+    const r = t().comoJogar;
+    const el = this.seccao(r.soldas, r.soldasChamada);
 
     const exemplos = elemento("div", "regras-exemplos");
     exemplos.append(
-      this.exemplo("vale", "Vale: 2 + 1 + 4, o par todo", [
+      this.exemplo("vale", r.soldasVale, [
         [soldadaCima(2), undefined],
         [soldadaBaixo(1), 4],
       ]),
-      this.exemplo("nao", "Não vale: 2 + 5 deixa o 1 para trás", [
+      this.exemplo("nao", r.soldasNaoVale, [
         [soldadaCima(2), 5],
         [soldadaBaixo(1), undefined],
       ]),
     );
 
     el.appendChild(exemplos);
-    el.appendChild(
-      this.paragrafo(
-        "As duas peças contam na soma. Uma solda nunca se parte: o par desce " +
-          "junto até sair. Aparecem nos Puzzles, a partir do Avançado.",
-      ),
-    );
+    el.appendChild(this.paragrafo(r.soldasTexto));
 
     return el;
   }
 
   private gelo(): HTMLElement {
-    const el = this.seccao(
-      "O gelo",
-      "Uma peça gelada só sai a par: com uma única peça, que não esteja gelada.",
-    );
+    const r = t().comoJogar;
+    const el = this.seccao(r.gelo, r.geloChamada);
 
     const exemplos = elemento("div", "regras-exemplos");
     exemplos.append(
-      this.exemplo("vale", "Vale: 5 + 2, a par", [
+      this.exemplo("vale", r.geloVale, [
         [undefined, undefined],
         [gelada(5), 2],
       ]),
-      this.exemplo("nao", "Não vale: 5 + 1 + 1", [
+      this.exemplo("nao", r.geloNaoVale, [
         [1, undefined],
         [gelada(5), 1],
       ]),
     );
 
     el.appendChild(exemplos);
-    el.appendChild(
-      this.paragrafo(
-        "Duas peças geladas também não saem juntas, mesmo que somem 7. O gelo " +
-          "não derrete: a peça que solta a gelada vale ouro, e gastá-la noutra " +
-          "jogada pode deixar a gelada presa.",
-      ),
-    );
-    el.appendChild(
-      this.paragrafo(
-        "Aparece nos Puzzles Perito e no Contra-Relógio, a partir do sétimo " +
-          "tabuleiro.",
-      ),
-    );
+    el.appendChild(this.paragrafo(r.geloTexto));
+    el.appendChild(this.paragrafo(r.geloOnde));
 
     return el;
   }
@@ -336,52 +247,24 @@ export class ComoJogarScreen {
    * de deixar o jogador descobri-lo a perder.
    */
   private bomba(): HTMLElement {
-    const el = this.seccao(
-      "A bomba",
-      "Uma peça com pavio. Tira-a numa jogada antes de ele acabar.",
-    );
+    const r = t().comoJogar;
+    const el = this.seccao(r.bomba, r.bombaChamada);
 
     const linha = elemento("p", "regras-conta regras-bomba");
     linha.appendChild(this.pecaComBomba(4));
-    linha.appendChild(
-      elemento(
-        "span",
-        "regras-conta-nota",
-        "O número no pavio são os segundos que faltam.",
-      ),
-    );
+    linha.appendChild(elemento("span", "regras-conta-nota", r.bombaNota));
     el.appendChild(linha);
 
-    el.appendChild(
-      this.paragrafo(
-        "Para a desarmar, basta que ela entre num grupo de 7, como qualquer " +
-          "outra peça. Se o pavio acabar, rebenta — e a peça fica no tabuleiro.",
-      ),
-    );
-    el.appendChild(
-      this.paragrafo(
-        `No Contra-Relógio, rebentar custa ${String(CASTIGO_BOMBA_S)} segundos. ` +
-          "No Survival, cai mais uma linha, e as peças encostadas à bomba " +
-          "sobem um ponto: um 1 passa a 2, e um 6 fica 6.",
-      ),
-    );
-    el.appendChild(
-      this.paragrafo(
-        "Há uma bomba de cada vez. No Contra-Relógio pode aparecer a partir do " +
-          "quarto tabuleiro. No Survival vês na linha seguinte se ela traz " +
-          "bomba — e mais à frente há bombas que se acendem numa peça que já " +
-          "está na pilha.",
-      ),
-    );
+    el.appendChild(this.paragrafo(r.bombaDesarmar));
+    el.appendChild(this.paragrafo(r.bombaCastigo(CASTIGO_BOMBA_S)));
+    el.appendChild(this.paragrafo(r.bombaQuando));
 
     return el;
   }
 
   private selos(): HTMLElement {
-    const el = this.seccao(
-      "Os selos",
-      "Cada nível guarda o melhor selo que já lhe deste.",
-    );
+    const r = t().comoJogar;
+    const el = this.seccao(r.selos, r.selosChamada);
 
     const lista = elemento("ul", "regras-selos");
     for (const selo of SELOS) {
@@ -390,8 +273,8 @@ export class ComoJogarScreen {
 
       const texto = elemento("div");
       texto.append(
-        elemento("b", undefined, selo.nome),
-        elemento("span", "regras-selo-texto", selo.texto),
+        elemento("b", undefined, t().puzzle.selos[selo.selo]),
+        elemento("span", "regras-selo-texto", r.selosTextos[selo.selo]),
       );
 
       li.appendChild(texto);
@@ -399,36 +282,22 @@ export class ComoJogarScreen {
     }
 
     el.appendChild(lista);
-    el.appendChild(
-      this.paragrafo(
-        "Um selo nunca desce: voltar a um nível só pode melhorá-lo.",
-      ),
-    );
+    el.appendChild(this.paragrafo(r.selosNuncaDescem));
 
     return el;
   }
 
   private modos(): HTMLElement {
-    const el = this.seccao("Os modos");
+    const r = t().comoJogar;
+    const el = this.seccao(r.modos);
 
     const lista = elemento("ul", "regras-modos");
+    const m = t().modos;
     const entradas: readonly (readonly [string, string])[] = [
-      [
-        "Puzzles",
-        "A campanha. Tabuleiros feitos à mão pelo gerador, sempre com solução, do mais fácil ao mais difícil.",
-      ],
-      [
-        "Contra-Relógio",
-        "Um relógio só, que nunca pára. Cada tabuleiro limpo dá tempo de volta, mas cada vez menos, e os tabuleiros vão crescendo. Uma peça que passe de 7 custa tempo. E cuidado com as bombas: tira-as antes de o pavio acabar. Do sétimo tabuleiro em diante, um tabuleiro pode ficar sem jogadas: aí salta-o, por 10 segundos. E aparecem peças geladas, que só saem a par com uma peça que não esteja gelada.",
-      ],
-      [
-        "Survival",
-        "De vez em quando cai uma linha nova por cima. Vês qual é antes de ela cair; acaba quando a pilha chega ao teto. Se ficares sem jogadas, a linha cai logo; se passares de 7, chega 3 segundos mais cedo. Algumas linhas trazem uma bomba: tira-a antes de o pavio acabar, ou cai mais uma linha e as peças à volta dela sobem um ponto. Mais à frente, há bombas que se acendem numa peça já na pilha: desenterra-a a tempo.",
-      ],
-      [
-        "Desafio do dia",
-        "Todos os dias, um desafio igual para toda a gente: um Puzzle, um Contra-Relógio ou um Survival, à vez. O trilho mostra o caminho — o que já fizeste e o que vem. O Puzzle e o Survival ficam feitos quando limpas o tabuleiro, e podes tentar até lá; no Contra-Relógio, conta a primeira corrida. Depois é treino, com os mesmos tabuleiros. No fim, partilha o resultado — e não deixes partir a sequência de dias. A sequência dá chaves (aos 3, 7, 14 e 30 dias): uma chave abre um desafio que ficou por jogar, ou salva a sequência se falhares um dia.",
-      ],
+      [m.puzzles, r.modoPuzzles],
+      [m.tempo, r.modoTempo(SALTAR_S)],
+      [m.survival, r.modoSurvival],
+      [m.desafio, r.modoDesafio],
     ];
 
     for (const [nome, texto] of entradas) {

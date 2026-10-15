@@ -6,6 +6,7 @@
  * na Fase 7.
  */
 
+import { t } from "../i18n";
 import { iconeVoltar } from "./icones";
 
 export const texto = (s: string): Text => document.createTextNode(s);
@@ -68,7 +69,7 @@ export function cabecalho(
 ): { readonly el: HTMLElement; readonly elTitulo: HTMLElement } {
   const el = elemento("header", "topo");
 
-  const voltar = botaoRedondo(iconeVoltar(), "voltar", aoVoltar);
+  const voltar = botaoRedondo(iconeVoltar(), t().comum.voltar, aoVoltar);
 
   const elTitulo = elemento("h1", undefined, titulo);
 
@@ -143,7 +144,7 @@ export function confirmar(
 
   const acoes = elemento("div", "acoes");
   acoes.append(
-    botao(opcoes.cancelar ?? "Cancelar", realce ? undefined : "primario", fechar),
+    botao(opcoes.cancelar ?? t().comum.cancelar, realce ? undefined : "primario", fechar),
     botao(opcoes.confirmar, realce ? "primario" : undefined, () => {
       confirmado = true;
       fechar();

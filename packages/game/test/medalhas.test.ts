@@ -30,8 +30,8 @@ import {
   guardarMedalhas,
   lerMedalhas,
   marcarVistas,
-  milhares,
 } from "../src/session/medalhas";
+import { t } from "../src/i18n";
 import type { LevelProgress, Profile, ProfileStorage } from "../src/session/progress";
 import { emptyProfile } from "../src/session/progress";
 
@@ -102,8 +102,8 @@ describe("o catálogo", () => {
     const ids = MEDALHAS.map((m) => m.id);
     expect(new Set(ids).size).toBe(ids.length);
     for (const m of MEDALHAS) {
-      expect(m.nome.length).toBeGreaterThan(0);
-      expect(m.descricao.length).toBeGreaterThan(0);
+      expect(t().medalhas.nomes[m.id].length).toBeGreaterThan(0);
+      expect(t().medalhas.descricoes[m.id].length).toBeGreaterThan(0);
     }
   });
 
@@ -122,6 +122,7 @@ describe("o catálogo", () => {
   });
 
   it("os números escrevem-se com espaço nos milhares, também com quatro algarismos", () => {
+    const { milhares } = t().formato;
     expect(milhares(30_000)).toBe("30 000");
     expect(milhares(3747)).toBe("3 747");
     expect(milhares(999)).toBe("999");

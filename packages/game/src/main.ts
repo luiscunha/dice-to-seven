@@ -12,6 +12,9 @@
 
 import type { Level } from "@dicetoseven/engine";
 
+import type { PreferenciaDeIdioma } from "./i18n";
+import { definirIdioma, idioma, resolverIdioma, t } from "./i18n";
+
 import type { Capitulo, NivelDoCapitulo } from "./capitulos";
 import { CAPITULOS, capituloDaBanda, capituloPorId, montarCapitulo } from "./capitulos";
 import type { BandaNoIndice } from "./levels";
@@ -255,6 +258,41 @@ const guardarPreferencias = (): void => {
 };
 
 /*
+ * ── O idioma ──
+ *
+ * «Sistema» segue o telemóvel, pela lista de idiomas que o browser expõe; um
+ * idioma escolhido nas Definições fixa-se. O `lang` do documento acompanha,
+ * para o leitor de ecrã ler na voz certa e o browser hifenizar na língua certa.
+ */
+const idiomasDoSistema = (): readonly string[] =>
+  navigator.languages.length > 0 ? navigator.languages : [navigator.language];
+
+function aplicarIdioma(): void {
+  definirIdioma(resolverIdioma(preferencias.idioma, idiomasDoSistema()));
+  document.documentElement.lang = t().lang;
+}
+
+/**
+ * O telemóvel mudou de idioma com o jogo aberto. Com «Sistema», o jogo muda
+ * com ele — mas **não a meio de uma partida**: montar o ecrã outra vez era
+ * recomeçá-la. O ecrã de jogo fica como está, e o idioma novo entra no
+ * próximo ecrã que se abrir.
+ */
+window.addEventListener("languagechange", () => {
+  if (preferencias.idioma !== "sistema") return;
+
+  const antes = idioma();
+  aplicarIdioma();
+  if (idioma() === antes) return;
+
+  const rota = deHash(location.hash);
+  const aJogar =
+    rota.ecra === "jogo" || rota.ecra === "tempo" || rota.ecra === "survival" ||
+    (rota.ecra === "desafio" && rota.modo !== undefined);
+  if (!aJogar) void mostrar(rota);
+});
+
+/*
  * ── As medalhas ──
  *
  * Deduzem-se do perfil e dos desafios (`session/medalhas.ts`); o registo guarda
@@ -451,6 +489,14 @@ async function montar(rota: Rota): Promise<void> {
 
     case "definicoes":
       atual = new DefinicoesScreen(app as HTMLElement, {
+        idioma: preferencias.idioma,
+        aoMudarIdioma: (escolha: PreferenciaDeIdioma) => {
+          preferencias = { ...preferencias, idioma: escolha };
+          guardarPreferencias();
+          aplicarIdioma();
+          // O ecrã monta-se outra vez, já no idioma novo — ver `i18n/index.ts`.
+          void mostrar({ ecra: "definicoes" });
+        },
         tema: preferencias.tema,
         aoMudarTema: (tema: Tema) => {
           preferencias = { ...preferencias, tema };
@@ -605,7 +651,7 @@ async function mostrarJogo(id: string, indice: number): Promise<void> {
      * ao passar do nível 9 para o 10.
      */
     ...(capitulo !== undefined && posicao >= 0
-      ? { titulo: `${capitulo.nome} ${String(posicao + 1).padStart(2, "0")}` }
+      ? { titulo: `${t().capitulos[capitulo.id].nome} ${String(posicao + 1).padStart(2, "0")}` }
       : {}),
 
     // A linha da soma é andaime dos primeiros níveis do Iniciado, e só de lá —
@@ -867,7 +913,7 @@ function estadoNoCartao(data: string, modo: ModoDoDesafio): EstadoNoCartao {
     if (e === undefined) return { tipo: "por-jogar" };
     if (e.estado === "feito") {
       const p = e.resultado.pontos;
-      return { tipo: "feito", texto: p === 1 ? "1 ponto" : `${String(p)} pontos` };
+      return { tipo: "feito", texto: t().comum.pontos(p) };
     }
     return { tipo: "interrompido" };
   }
@@ -878,7 +924,7 @@ function estadoNoCartao(data: string, modo: ModoDoDesafio): EstadoNoCartao {
    * jogar outra vez, do princípio.
    */
   const e = estadoDoModo(desafios, data, "survival");
-  if (e?.estado === "feito") return { tipo: "feito", texto: `limpo · ${relogio(e.resultado.tempoMs)}` };
+  if (e?.estado === "feito") return { tipo: "feito", texto: t().desafio.survivalLimpo(relogio(e.resultado.tempoMs)) };
   if (e?.estado === "a-jogar" && corridaDesafio?.estado.seed === seedDoDia(data, "survival")) {
     return { tipo: "a-meio", texto: relogio(corridaDesafio.decorridoMs) };
   }
@@ -1067,9 +1113,9 @@ async function mostrarDesafio(modo: ModoDoDesafio, dataPedida?: string): Promise
    */
   if (modo !== "tempo") marcarTentativa();
 
-  const etiqueta = `Desafio #${String(numeroDoDia(data))}`;
+  const etiqueta = t().desafio.etiqueta(numeroDoDia(data));
   const desafio: DesafioNoEcra = !oficial
-    ? { etiqueta: `${etiqueta} · treino` }
+    ? { etiqueta: t().desafio.etiquetaTreino(etiqueta) }
     : passado
       ? { etiqueta, oficial: true }
       : { etiqueta, oficial: true, aoPartilhar: () => partilharDia(data) };
@@ -1253,6 +1299,7 @@ async function arrancar(): Promise<void> {
     medalhas = lerMedalhas(armazenamento);
   }
 
+  aplicarIdioma();
   aplicarTema(document.documentElement, preferencias.tema);
   sincronizarCromado();
   definirVibracao(preferencias.vibracao);
@@ -1288,7 +1335,7 @@ async function arrancar(): Promise<void> {
     resolver();
   } catch (erro) {
     mostrarMensagem(
-      erro instanceof Error ? erro.message : "não consegui carregar os níveis",
+      erro instanceof Error ? erro.message : t().comum.semNiveis,
     );
   } finally {
     /*

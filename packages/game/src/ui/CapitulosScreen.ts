@@ -14,6 +14,7 @@
  */
 
 import type { Capitulo, NivelDoCapitulo } from "../capitulos";
+import { t } from "../i18n";
 import type { Profile } from "../session/progress";
 import { cabecalho, elemento } from "./dom";
 import { iconeSeguir } from "./icones";
@@ -36,7 +37,7 @@ export class CapitulosScreen {
   constructor(host: HTMLElement, opcoes: OpcoesCapitulos) {
     this.raiz = elemento("div", "ecra");
 
-    const { el: topo } = cabecalho("Puzzles", opcoes.aoVoltar);
+    const { el: topo } = cabecalho(t().modos.puzzles, opcoes.aoVoltar);
 
     const lista = elemento("div", "bandas");
     for (const entrada of opcoes.capitulos) {
@@ -83,8 +84,8 @@ export class CapitulosScreen {
 
     const texto = elemento("span", "banda-texto");
     texto.append(
-      elemento("span", "banda-nome", entrada.capitulo.nome),
-      elemento("span", "banda-descricao", entrada.capitulo.descricao),
+      elemento("span", "banda-nome", t().capitulos[entrada.capitulo.id].nome),
+      elemento("span", "banda-descricao", t().capitulos[entrada.capitulo.id].descricao),
     );
 
     const conta = elemento(

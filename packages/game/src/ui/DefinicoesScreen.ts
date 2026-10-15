@@ -16,19 +16,21 @@
  * o que vai acontecer.
  */
 
+import type { PreferenciaDeIdioma } from "../i18n";
+import { IDIOMAS, t } from "../i18n";
 import type { Tema, TempoInicial } from "../session/settings";
 import { emTelemovel } from "../plataforma/nativo";
 import { botao, cabecalho, elemento } from "./dom";
 
-const TEMAS: readonly { readonly valor: Tema; readonly rotulo: string }[] = [
-  { valor: "sistema", rotulo: "Sistema" },
-  { valor: "claro", rotulo: "Claro" },
-  { valor: "escuro", rotulo: "Escuro" },
-];
+const TEMAS: readonly Tema[] = ["sistema", "claro", "escuro"];
 
 const TEMPOS: readonly TempoInicial[] = [30, 60, 90];
 
 export interface OpcoesDefinicoes {
+  /** «Sistema», que segue o telemóvel, ou um dos quatro idiomas. */
+  readonly idioma: PreferenciaDeIdioma;
+  /** Quem chama muda o idioma e monta o ecrã outra vez, já traduzido. */
+  readonly aoMudarIdioma: (idioma: PreferenciaDeIdioma) => void;
   readonly tema: Tema;
   readonly aoMudarTema: (tema: Tema) => void;
   readonly tempoInicial: TempoInicial;
@@ -48,10 +50,10 @@ export class DefinicoesScreen {
     this.opcoes = opcoes;
     this.raiz = elemento("div", "ecra");
 
-    const { el: topo } = cabecalho("Definições", opcoes.aoVoltar);
+    const { el: topo } = cabecalho(t().definicoes.titulo, opcoes.aoVoltar);
 
     const rolo = elemento("div", "rolo");
-    rolo.append(this.seccaoTema(), this.seccaoContraRelogio());
+    rolo.append(this.seccaoIdioma(), this.seccaoTema(), this.seccaoContraRelogio());
 
     /*
      * A vibração só aparece onde existe. Na web não há telemóvel para vibrar, e
@@ -77,17 +79,57 @@ export class DefinicoesScreen {
     return el;
   }
 
+  /**
+   * O idioma: «Sistema» e os quatro, **cada um com o nome na própria língua**.
+   * Quem tem o jogo numa língua que não lê tem de encontrar a sua sem a saber
+   * ler na dos outros.
+   *
+   * Cinco opções não cabem numa fila a 320px, e por isso o segmentado aqui é
+   * uma grelha. «Sistema» vem primeiro, como no tema: é a omissão.
+   */
+  private seccaoIdioma(): HTMLElement {
+    const d = t().definicoes;
+    const el = this.seccao(d.idioma, d.notaIdioma);
+
+    const grupo = elemento("div", "segmentado grelha-idiomas");
+    grupo.setAttribute("role", "radiogroup");
+    grupo.setAttribute("aria-label", d.idiomaAria);
+
+    const opcoes: readonly { readonly valor: PreferenciaDeIdioma; readonly rotulo: string }[] = [
+      { valor: "sistema", rotulo: d.sistema },
+      ...IDIOMAS.map((i) => ({ valor: i.idioma, rotulo: i.nome })),
+    ];
+
+    for (const { valor, rotulo } of opcoes) {
+      const b = botao(rotulo, "segmento", () => {
+        for (const outro of grupo.querySelectorAll("[role=radio]")) {
+          outro.setAttribute("aria-checked", String(outro === b));
+        }
+        this.opcoes.aoMudarIdioma(valor);
+      });
+
+      b.setAttribute("role", "radio");
+      b.setAttribute("aria-checked", String(valor === this.opcoes.idioma));
+      // O nome de cada idioma lê-se na sua língua, também para quem ouve o ecrã.
+      const lang = IDIOMAS.find((i) => i.idioma === valor)?.idioma;
+      if (lang !== undefined) b.lang = lang;
+      grupo.appendChild(b);
+    }
+
+    el.appendChild(grupo);
+    return el;
+  }
+
   private seccaoTema(): HTMLElement {
-    const el = this.seccao(
-      "Tema",
-      "As faces não mudam de tema — uma peça é a mesma peça nos dois fundos.",
-    );
+    const d = t().definicoes;
+    const el = this.seccao(d.tema, d.notaTema);
 
     const grupo = elemento("div", "segmentado");
     grupo.setAttribute("role", "radiogroup");
-    grupo.setAttribute("aria-label", "tema");
+    grupo.setAttribute("aria-label", d.temaAria);
 
-    for (const { valor, rotulo } of TEMAS) {
+    for (const valor of TEMAS) {
+      const rotulo = valor === "sistema" ? d.sistema : valor === "claro" ? d.claro : d.escuro;
       const b = botao(rotulo, "segmento", () => {
         this.opcoes.aoMudarTema(valor);
         for (const outro of grupo.querySelectorAll("[role=radio]")) {
@@ -115,17 +157,15 @@ export class DefinicoesScreen {
    * ler a posição de um botão.
    */
   private seccaoVibracao(): HTMLElement {
-    const el = this.seccao(
-      "Vibração",
-      "Um toque no dedo a cada jogada, e um aviso quando a jogada não entra.",
-    );
+    const d = t().definicoes;
+    const el = this.seccao(d.vibracao, d.notaVibracao);
 
     const grupo = elemento("div", "segmentado");
     grupo.setAttribute("role", "radiogroup");
-    grupo.setAttribute("aria-label", "vibração");
+    grupo.setAttribute("aria-label", d.vibracaoAria);
 
     for (const ligada of [true, false]) {
-      const b = botao(ligada ? "Ligada" : "Desligada", "segmento", () => {
+      const b = botao(ligada ? d.ligada : d.desligada, "segmento", () => {
         this.opcoes.aoMudarVibracao(ligada);
         for (const outro of grupo.querySelectorAll("[role=radio]")) {
           outro.setAttribute("aria-checked", String(outro === b));
@@ -149,14 +189,12 @@ export class DefinicoesScreen {
    * sem sair dela.
    */
   private seccaoContraRelogio(): HTMLElement {
-    const el = this.seccao(
-      "Contra-Relógio",
-      "Tempo de arranque. Cada tabuleiro limpo acrescenta ao mesmo relógio.",
-    );
+    const d = t().definicoes;
+    const el = this.seccao(t().modos.tempo, d.notaTempo);
 
     const grupo = elemento("div", "segmentado");
     grupo.setAttribute("role", "radiogroup");
-    grupo.setAttribute("aria-label", "tempo de arranque");
+    grupo.setAttribute("aria-label", d.tempoAria);
 
     for (const segundos of TEMPOS) {
       const b = botao(`${String(segundos)}s`, "segmento", () => {
@@ -176,23 +214,21 @@ export class DefinicoesScreen {
   }
 
   private seccaoProgresso(): HTMLElement {
-    const el = this.seccao(
-      "Progresso",
-      "Apaga os selos, os melhores resultados e os recordes do Contra-Relógio. Não tem volta.",
-    );
+    const d = t().definicoes;
+    const el = this.seccao(d.progresso, d.notaProgresso);
 
-    const b = botao("Apagar o progresso", "perigo");
+    const b = botao(d.apagar, "perigo");
 
     b.addEventListener("click", () => {
       if (!this.armado) {
         this.armado = true;
-        b.textContent = "Carrega outra vez para apagar tudo";
+        b.textContent = d.apagarConfirmar;
         return;
       }
 
       this.opcoes.aoApagarProgresso();
       this.armado = false;
-      b.textContent = "Progresso apagado";
+      b.textContent = d.apagado;
       b.disabled = true;
     });
 
