@@ -209,9 +209,6 @@
    * As premium têm o ouro: a moldura, o louro e a chama. É o único sítio do
    * jogo onde o dourado é prémio e não chave, e é da mesma família de tons
    * que o das chaves para os dois não se lerem como duas paletas.
-   *
-   * O dado do emblema é a peça vista de lado: a face de cima clara, as duas de
-   * lado em dois tons de sombra, e as pintas da cor da tinta.
    */
   --medalha-fundo: #d3eee3;
   --medalha-fundo-bloqueada: #e3e8e6;
@@ -224,12 +221,51 @@
   --ouro-claro: #f6d673;
   --ouro-escuro: #9c7600;
   --ouro-veu: rgb(201 146 0 / 0.35);
-  --dado-topo: #ffffff;
-  --dado-esquerda: #e2e8e6;
-  --dado-direita: #c7d2cf;
-  --dado-aresta: rgb(18 63 58 / 0.22);
-  --dado-pinta: #123f3a;
-  --emblema-traco: #123f3a;
+  /*
+   * ─── As ilustrações das medalhas ───────────────────────────────────────
+   *
+   * Os metais, o dado em quatro madeiras, e o resto das figuras. **Iguais nos
+   * dois temas**, como as faces: uma medalha de ouro é de ouro em qualquer
+   * fundo, e é o cartão à volta que muda com o tema.
+   *
+   * Cada metal são três tons — a luz, o corpo e a sombra — e uma aresta, mais
+   * escura, que lhe desenha o contorno.
+   */
+  --emb-ouro-1: #fff0b3;
+  --emb-ouro-2: #f4c23d;
+  --emb-ouro-3: #cf8c0a;
+  --emb-ouro-aresta: #8f5c00;
+  --emb-ouro-pinta: #5a3600;
+  --emb-prata-1: #ffffff;
+  --emb-prata-2: #d2dbe1;
+  --emb-prata-3: #94a3ad;
+  --emb-prata-aresta: #5e6c76;
+  --emb-prata-pinta: #33414c;
+  --emb-marfim-topo: #e8e8bb;
+  --emb-marfim-esquerda: #e2b27c;
+  --emb-marfim-direita: #c58b55;
+  --emb-marfim-aresta: #8a5a2e;
+  --emb-marfim-pinta: #4a2f17;
+  --emb-branco-topo: #ffffff;
+  --emb-branco-esquerda: #e6ecef;
+  --emb-branco-direita: #c4cfd5;
+  --emb-branco-aresta: #7f9199;
+  --emb-branco-pinta: #123f3a;
+  --emb-escudo-1: #3d67b4;
+  --emb-escudo-2: #1a2f61;
+  --emb-folha-1: #9ad86f;
+  --emb-folha-2: #3c8a37;
+  --emb-fogo-1: #ffe27a;
+  --emb-fogo-2: #ff8a2b;
+  --emb-fogo-3: #d93a16;
+  --emb-areia-1: #ffe6a6;
+  --emb-areia-2: #e3a73d;
+  --emb-vidro: rgb(206 234 248 / 0.75);
+  --emb-vidro-borda: #8fbfd6;
+  --emb-joia: #e2453a;
+  --emb-selo: #1b6b62;
+  --emb-tinta: #123f3a;
+  --emb-luz: #ffffff;
   /*
    * O laser do teto, no Survival: o núcleo do feixe e a passagem para o
    * laranja. Iguais nos dois temas — é luz, e a luz não muda com o fundo; o
@@ -424,11 +460,6 @@
     --ouro-claro: #ffe08a;
     --ouro-escuro: #c99a1c;
     --ouro-veu: rgb(255 199 64 / 0.3);
-    --dado-topo: #eef4f2;
-    --dado-esquerda: #c3d0cc;
-    --dado-direita: #9fb1ac;
-    --dado-aresta: rgb(13 25 23 / 0.3);
-    --emblema-traco: #e3edea;
     --sombra: 0 1px 2px rgb(0 0 0 / 0.5), 0 8px 22px rgb(0 0 0 / 0.35);
     /* No escuro a sombra precisa de ser mais funda para se ver de todo. */
     --sombra-cartao: 0 1px 2px rgb(0 0 0 / 0.4), 0 4px 12px rgb(0 0 0 / 0.3);
@@ -482,11 +513,6 @@
   --ouro-claro: #ffe08a;
   --ouro-escuro: #c99a1c;
   --ouro-veu: rgb(255 199 64 / 0.3);
-  --dado-topo: #eef4f2;
-  --dado-esquerda: #c3d0cc;
-  --dado-direita: #9fb1ac;
-  --dado-aresta: rgb(13 25 23 / 0.3);
-  --emblema-traco: #e3edea;
   --sombra: 0 1px 2px rgb(0 0 0 / 0.5), 0 8px 22px rgb(0 0 0 / 0.35);
   /* No escuro a sombra precisa de ser mais funda para se ver de todo. */
   --sombra-cartao: 0 1px 2px rgb(0 0 0 / 0.4), 0 4px 12px rgb(0 0 0 / 0.3);

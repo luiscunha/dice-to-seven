@@ -1,268 +1,617 @@
 /**
- * Os emblemas das medalhas, em SVG.
+ * Os emblemas das medalhas: uma ilustração por medalha, em SVG.
  *
- * **Uma forma por modo, e o dado no centro de quase todas.** O dado é a peça do
- * jogo vista de lado — um cubo com o número na face de cima — e é o que diz a
- * quem abre a página que estas medalhas são deste jogo. O Contra-Relógio leva o
- * cronómetro, o Survival o poço onde as linhas caem, e o Desafio do Dia a chama
- * da sequência por trás do dado: as mesmas figuras dos ícones dos modos, aqui
- * em ponto grande.
+ * **Ilustração, e não ícone.** Os ícones do jogo são traço (`icones.ts`), e a
+ * direção de arte recusa-os ilustrados porque um ícone é uma instrução. Uma
+ * medalha é o contrário — é o prémio, e tem de parecer uma coisa que se ganhou:
+ * volume, brilho, ouro. É o único sítio do jogo onde se desenha assim.
  *
- * **As cores são todas do tema**, por classe: o emblema não escreve um hex. É o
- * que o deixa mudar de tema com o resto, e esmorecer de uma vez quando a
- * medalha está por ganhar — um filtro no cartão, e não um segundo desenho.
+ * **O dado é a figura de quase todas**, visto do canto, com as três faces e as
+ * pintas — a peça do tabuleiro em objeto. À volta, o que diz o tamanho da
+ * conquista: uma folha a nascer no Iniciado, dois dados no Médio, asas no
+ * Avançado, o escudo e a coroa no Perito. O Contra-Relógio é o cronómetro, o
+ * Survival a ampulheta, o desafio a chama da sequência.
  *
- * As **folhas de louro** só nas ganhas: são a diferença entre uma meta e um
- * prémio, e é a primeira coisa que o olho distingue na grelha.
+ * **SVG, e não imagens.** Nítido em qualquer ecrã, uns quilobytes no total, e
+ * as cores vêm todas de `theme.css`, por classe — nenhum hex aqui. As cores das
+ * ilustrações não mudam com o tema, como as das faces: uma medalha de ouro é de
+ * ouro no claro e no escuro.
+ *
+ * **Os degradês vivem numa folha só** (`garantirDefinicoes`), escondida no
+ * `body`, e cada emblema refere-os por id. Repetidos em cada emblema, os ids
+ * apareciam em dobro no documento, e um degradê que o browser fosse buscar a
+ * um emblema já retirado do ecrã deixava os outros sem cor.
  */
 
-import type { Emblema } from "../session/medalhas";
+import { LIMIARES } from "../session/medalhas";
 
 const NS = "http://www.w3.org/2000/svg";
 
 type Atributos = Readonly<Record<string, string | number>>;
 
-function no(tag: string, classe: string | undefined, atributos: Atributos): SVGElement {
+function no(tag: string, classe: string | undefined, atributos: Atributos = {}): SVGElement {
   const el = document.createElementNS(NS, tag);
   if (classe !== undefined) el.setAttribute("class", classe);
   for (const [k, v] of Object.entries(atributos)) el.setAttribute(k, String(v));
   return el;
 }
 
-/**
- * O texto do emblema. Encolhe com o número de caracteres: «7», «30», «100» e
- * «30k» têm de caber no mesmo sítio.
- */
-function marca(texto: string, x: number, y: number, tamanho: number): SVGElement {
-  const t = no("text", "emblema-marca", {
-    x,
-    y,
-    "text-anchor": "middle",
-    "dominant-baseline": "central",
-    "font-size": texto.length >= 3 ? tamanho * 0.72 : tamanho,
-  });
-  t.textContent = texto;
-  return t;
+function grupo(atributos: Atributos, ...filhos: readonly SVGElement[]): SVGElement {
+  const g = no("g", undefined, atributos);
+  for (const f of filhos) g.appendChild(f);
+  return g;
 }
 
-/* ─── As formas ───────────────────────────────────────────────────────────── */
+const n = (x: number): string => String(Math.round(x * 100) / 100);
+
+/* ─── Os degradês ─────────────────────────────────────────────────────────── */
+
+const DEFINICOES_ID = "emblemas-definicoes";
 
 /**
- * O dado em perspetiva: três losangos, a face de cima com a marca e as duas de
- * lado com pintas — duas e três, como num dado a sério visto do canto.
- *
- * O contorno é um hexágono à parte, por trás, com as juntas redondas: arredonda
- * os cantos do cubo sem cada face ter de pintar uma borda que pisaria a do lado.
+ * Um degradê, com as paragens por classe — a cor de cada uma vem do CSS
+ * (`stop-color`), e é isso que a deixa viver em `theme.css`.
  */
-function dado(texto: string, estrela: boolean, cy = 52): SVGElement[] {
-  const y = (v: number): number => v + cy - 52;
-  const ponto = (x: number, v: number): string => `${String(x)} ${String(y(v))}`;
-
-  const topo = `M${ponto(60, 18)} L${ponto(90, 35)} L${ponto(60, 52)} L${ponto(30, 35)} Z`;
-  const esquerda = `M${ponto(30, 35)} L${ponto(60, 52)} L${ponto(60, 86)} L${ponto(30, 69)} Z`;
-  const direita = `M${ponto(60, 52)} L${ponto(90, 35)} L${ponto(90, 69)} L${ponto(60, 86)} Z`;
-  const contorno = `M${ponto(60, 18)} L${ponto(90, 35)} L${ponto(90, 69)} L${ponto(60, 86)} L${ponto(30, 69)} L${ponto(30, 35)} Z`;
-
-  const pinta = (cx: number, v: number): SVGElement =>
-    no("circle", "emblema-pinta", { cx, cy: y(v), r: 3.4 });
-
-  /*
-   * As pintas vão na diagonal de cada face, como num dado visto do canto. As
-   * posições são as da face plana — um quarto, metade, três quartos —, levadas
-   * para o losango: a face da esquerda desce para a direita, a da direita sobe.
-   */
-  const lados = estrela
-    ? [estrelaEm(75, y(60.5), 9)]
-    : [pinta(67.5, 56.25), pinta(75, 60.5), pinta(82.5, 64.75)];
-
-  return [
-    no("path", "emblema-dado-contorno", { d: contorno }),
-    no("path", "emblema-dado-esquerda", { d: esquerda }),
-    no("path", "emblema-dado-direita", { d: direita }),
-    no("path", "emblema-dado-topo", { d: topo }),
-    no("path", "emblema-dado-aresta", {
-      d: `M${ponto(30, 35)} L${ponto(60, 52)} L${ponto(90, 35)} M${ponto(60, 52)} L${ponto(60, 86)}`,
-    }),
-    pinta(39, 50.5),
-    pinta(51, 70.5),
-    ...lados,
-    marca(texto, 60, y(35.5), 17),
-  ];
-}
-
-/** Uma estrela de cinco pontas, centrada em `(cx, cy)`. */
-function estrelaEm(cx: number, cy: number, r: number): SVGElement {
-  const pontos: string[] = [];
-  for (let i = 0; i < 10; i++) {
-    const raio = i % 2 === 0 ? r : r * 0.45;
-    const a = -Math.PI / 2 + (i * Math.PI) / 5;
-    pontos.push(`${(cx + raio * Math.cos(a)).toFixed(2)},${(cy + raio * Math.sin(a)).toFixed(2)}`);
+function degrade(
+  id: string,
+  tipo: "linearGradient" | "radialGradient",
+  atributos: Atributos,
+  paragens: readonly (readonly [number, string])[],
+): SVGElement {
+  const g = no(tipo, undefined, { id, ...atributos });
+  for (const [offset, classe] of paragens) {
+    g.appendChild(no("stop", classe, { offset }));
   }
-  return no("polygon", "emblema-estrela", { points: pontos.join(" ") });
+  return g;
 }
 
-/** O cronómetro: o mostrador com o número, a coroa, e o botão de lado. */
-function relogio(texto: string): SVGElement[] {
-  return [
-    no("rect", "emblema-relogio-coroa", { x: 52, y: 10, width: 16, height: 8, rx: 3 }),
-    no("rect", "emblema-relogio-coroa", { x: 57, y: 16, width: 6, height: 9 }),
-    no("path", "emblema-relogio-botao", { d: "M82 27 l6 -6" }),
-    no("circle", "emblema-relogio-mostrador", { cx: 60, cy: 56, r: 30 }),
-    no("path", "emblema-relogio-traco", { d: "M60 31 v5 M85 56 h-5 M60 81 v-5 M35 56 h5" }),
-    marca(texto, 60, 57, 22),
-  ];
-}
+/** Põe a folha dos degradês no documento, se ainda lá não estiver. */
+function garantirDefinicoes(): void {
+  if (document.getElementById(DEFINICOES_ID) !== null) return;
 
-/**
- * O poço do Survival: as paredes, as linhas que já caíram em baixo — nas cores
- * das faces —, e o número por cima delas, no espaço que ainda sobra.
- */
-function poco(texto: string): SVGElement[] {
-  const pecas: SVGElement[] = [];
-  const filas: readonly (readonly number[])[] = [
-    [5, 3, 6, 2],
-    [2, 4, 1, 5],
-  ];
-  filas.forEach((fila, i) => {
-    fila.forEach((face, c) => {
-      pecas.push(
-        no("rect", `emblema-peca face-${String(face)}`, {
-          x: 37 + c * 12, y: 74 - i * 12, width: 10.5, height: 10.5, rx: 2.4,
-        }),
-      );
-    });
+  const svg = no("svg", "emblemas-definicoes", {
+    id: DEFINICOES_ID,
+    width: 0,
+    height: 0,
+    "aria-hidden": "true",
+    focusable: "false",
   });
+  const defs = no("defs", undefined);
+  const diagonal = { x1: 0, y1: 0, x2: 1, y2: 1 };
+  const vertical = { x1: 0, y1: 0, x2: 0, y2: 1 };
 
-  return [
-    no("rect", "emblema-poco-fundo", { x: 32, y: 14, width: 56, height: 74, rx: 9 }),
-    ...pecas,
-    no("path", "emblema-poco-parede", { d: "M32 14 V79 a9 9 0 0 0 9 9 H79 a9 9 0 0 0 9 -9 V14" }),
-    marca(texto, 60, 40, 22),
-  ];
+  defs.append(
+    degrade("emb-ouro", "linearGradient", diagonal, [
+      [0, "emb-ouro-1"],
+      [0.45, "emb-ouro-2"],
+      [1, "emb-ouro-3"],
+    ]),
+    degrade("emb-prata", "linearGradient", diagonal, [
+      [0, "emb-prata-1"],
+      [0.5, "emb-prata-2"],
+      [1, "emb-prata-3"],
+    ]),
+    degrade("emb-escudo", "linearGradient", vertical, [
+      [0, "emb-escudo-1"],
+      [1, "emb-escudo-2"],
+    ]),
+    degrade("emb-folha", "linearGradient", diagonal, [
+      [0, "emb-folha-1"],
+      [1, "emb-folha-2"],
+    ]),
+    degrade("emb-fogo", "radialGradient", { cx: 0.5, cy: 0.8, r: 0.75 }, [
+      [0, "emb-fogo-1"],
+      [0.45, "emb-fogo-2"],
+      [1, "emb-fogo-3"],
+    ]),
+    degrade("emb-fogo-ouro", "radialGradient", { cx: 0.5, cy: 0.8, r: 0.75 }, [
+      [0, "emb-ouro-1"],
+      [0.5, "emb-ouro-2"],
+      [1, "emb-ouro-3"],
+    ]),
+    degrade("emb-areia", "linearGradient", vertical, [
+      [0, "emb-areia-1"],
+      [1, "emb-areia-2"],
+    ]),
+    degrade("emb-brilho", "linearGradient", vertical, [
+      [0, "emb-brilho-1"],
+      [1, "emb-brilho-2"],
+    ]),
+    degrade("emb-halo", "radialGradient", { cx: 0.5, cy: 0.5, r: 0.5 }, [
+      [0, "emb-halo-1"],
+      [1, "emb-halo-2"],
+    ]),
+    degrade("emb-halo-ouro", "radialGradient", { cx: 0.5, cy: 0.5, r: 0.5 }, [
+      [0, "emb-halo-ouro-1"],
+      [1, "emb-halo-2"],
+    ]),
+  );
+
+  svg.appendChild(defs);
+  document.body.appendChild(svg);
 }
+
+/* ─── O dado ──────────────────────────────────────────────────────────────── */
+
+export type PaletaDoDado = "marfim" | "prata" | "ouro" | "branco";
+
+/** O conteúdo de uma face: pintas, de 1 a 6, ou a estrela das perfeitas. */
+type Face = number | "estrela";
+
+const R3 = Math.sqrt(3) / 2;
+
+/** As pintas na face plana, de 0 a 1, na disposição de um dado a sério. */
+const PINTAS: Readonly<Record<number, readonly (readonly [number, number])[]>> = {
+  1: [[0.5, 0.5]],
+  2: [[0.27, 0.27], [0.73, 0.73]],
+  3: [[0.25, 0.25], [0.5, 0.5], [0.75, 0.75]],
+  4: [[0.27, 0.27], [0.73, 0.27], [0.27, 0.73], [0.73, 0.73]],
+  5: [[0.25, 0.25], [0.75, 0.25], [0.5, 0.5], [0.25, 0.75], [0.75, 0.75]],
+  6: [[0.27, 0.22], [0.73, 0.22], [0.27, 0.5], [0.73, 0.5], [0.27, 0.78], [0.73, 0.78]],
+};
 
 /**
- * A chama da sequência por trás do dado — o 🔥 do desafio, desenhado. Duas
- * camadas, a de fora e a de dentro, porque uma chama de uma cor só é uma gota.
- */
-function chama(texto: string): SVGElement[] {
-  return [
-    no("path", "emblema-chama-fora", {
-      d: "M60 2 C66 14 80 18 86 32 C90 24 88 18 87 14 C99 26 104 44 98 62 C93 78 78 90 60 90 C42 90 27 78 22 62 C16 44 21 26 33 14 C32 18 30 24 34 32 C40 18 54 14 60 2 Z",
-    }),
-    no("path", "emblema-chama-dentro", {
-      d: "M60 18 C64 28 76 32 79 44 C83 60 74 78 60 80 C46 78 37 60 41 44 C44 32 56 28 60 18 Z",
-    }),
-    ...dado(texto, false, 58),
-  ];
-}
-
-/** O calendário: a folha, a faixa de cima com as argolas, e a marca no meio. */
-function calendario(texto: string): SVGElement[] {
-  return [
-    no("rect", "emblema-calendario-folha", { x: 28, y: 20, width: 64, height: 64, rx: 10 }),
-    no("path", "emblema-calendario-faixa", { d: "M28 38 V30 a10 10 0 0 1 10 -10 H82 a10 10 0 0 1 10 10 V38 Z" }),
-    no("rect", "emblema-calendario-argola", { x: 42, y: 12, width: 6, height: 16, rx: 3 }),
-    no("rect", "emblema-calendario-argola", { x: 72, y: 12, width: 6, height: 16, rx: 3 }),
-    ...(texto === "★" ? [estrelaEm(60, 61, 17)] : [marca(texto, 60, 61, 24)]),
-  ];
-}
-
-/* ─── O louro ─────────────────────────────────────────────────────────────── */
-
-/**
- * Dois ramos de louro, um de cada lado, a abraçar a forma por baixo.
+ * A matriz que leva o quadrado unitário de cada face para o losango dela.
  *
- * As folhas calculam-se ao longo de um arco, e o ramo da direita é o da
- * esquerda ao espelho: desenhadas à mão, as dez folhas nunca ficavam iguais dos
- * dois lados.
+ * O cubo desenha-se num espaço unitário — o centro em `(0, 0)`, o vértice de
+ * cima em `(0, −1)` — e cada face é um paralelogramo. Desenhar as pintas num
+ * quadrado e deixar a matriz achatá-las é o que as põe *na* face, em
+ * perspetiva, em vez de pousadas por cima dela.
  */
-function louro(): SVGElement {
-  const g = no("g", "emblema-louro", {});
-  const direito = ramo();
-  const esquerdo = ramo();
-  esquerdo.setAttribute("transform", "translate(120 0) scale(-1 1)");
-  g.append(esquerdo, direito);
+const MATRIZ = {
+  topo: `matrix(${n(R3)} -0.5 ${n(R3)} 0.5 ${n(-R3)} -0.5)`,
+  esquerda: `matrix(${n(R3)} 0.5 0 1 ${n(-R3)} -0.5)`,
+  direita: `matrix(${n(R3)} -0.5 0 1 0 0)`,
+} as const;
+
+function conteudoDaFace(face: Face, matriz: string, classe: string): SVGElement {
+  const g = no("g", undefined, { transform: matriz });
+  if (face === "estrela") {
+    g.appendChild(estrela(0.5, 0.5, 0.36, `${classe} dado-estrela`));
+    return g;
+  }
+  for (const [x, y] of PINTAS[face] ?? []) {
+    g.appendChild(no("circle", classe, { cx: x, cy: y, r: 0.105 }));
+  }
   return g;
 }
 
 /**
- * O ramo da direita: uma haste em arco, do pé (em baixo, junto ao meio) até à
- * ponta (à altura do topo do emblema), e as folhas aos pares ao longo dela — a
- * de fora maior, a de dentro mais pequena, para não pisar o emblema.
+ * Um dado em perspetiva, centrado em `(x, y)`, com `s` de raio — do centro ao
+ * vértice de cima. As três faces em três tons da paleta, o brilho na de cima,
+ * e o contorno arredondado por trás: um hexágono com as juntas redondas, que
+ * arredonda os cantos sem cada face ter de pintar uma borda.
  */
+export function dado(
+  x: number,
+  y: number,
+  s: number,
+  paleta: PaletaDoDado,
+  faces: { readonly topo: Face; readonly esquerda: Face; readonly direita: Face },
+  rotacao = 0,
+): SVGElement {
+  const topo = `M0 -1 L${n(R3)} -0.5 L0 0 L${n(-R3)} -0.5 Z`;
+  return grupo(
+    {
+      class: `emb-dado dado-${paleta}`,
+      transform: `translate(${n(x)} ${n(y)}) rotate(${n(rotacao)}) scale(${n(s)})`,
+    },
+    no("path", "dado-contorno", {
+      d: `M0 -1 L${n(R3)} -0.5 L${n(R3)} 0.5 L0 1 L${n(-R3)} 0.5 L${n(-R3)} -0.5 Z`,
+      "stroke-width": 0.16,
+    }),
+    no("path", "dado-esquerda", { d: `M${n(-R3)} -0.5 L0 0 L0 1 L${n(-R3)} 0.5 Z` }),
+    no("path", "dado-direita", { d: `M0 0 L${n(R3)} -0.5 L${n(R3)} 0.5 L0 1 Z` }),
+    no("path", "dado-topo", { d: topo }),
+    no("path", "dado-brilho", { d: topo }),
+    no("path", "dado-aresta", {
+      d: `M${n(-R3)} -0.5 L0 0 L${n(R3)} -0.5 M0 0 V1`,
+      "stroke-width": 0.045,
+    }),
+    conteudoDaFace(faces.topo, MATRIZ.topo, "dado-pinta"),
+    conteudoDaFace(faces.esquerda, MATRIZ.esquerda, "dado-pinta"),
+    conteudoDaFace(faces.direita, MATRIZ.direita, "dado-pinta"),
+  );
+}
+
+/* ─── As peças ────────────────────────────────────────────────────────────── */
+
+/** Uma estrela de cinco pontas, centrada em `(cx, cy)`. */
+function estrela(cx: number, cy: number, r: number, classe: string): SVGElement {
+  const pontos: string[] = [];
+  for (let i = 0; i < 10; i++) {
+    const raio = i % 2 === 0 ? r : r * 0.46;
+    const a = -Math.PI / 2 + (i * Math.PI) / 5;
+    pontos.push(`${n(cx + raio * Math.cos(a))},${n(cy + raio * Math.sin(a))}`);
+  }
+  return no("polygon", classe, { points: pontos.join(" ") });
+}
+
+/** O brilho de quatro pontas que pisca à volta do ouro. */
+function brilho(x: number, y: number, r: number, classe = "emb-centelha"): SVGElement {
+  const q = r * 0.18;
+  return no("path", classe, {
+    d:
+      `M${n(x)} ${n(y - r)} Q${n(x + q)} ${n(y - q)} ${n(x + r)} ${n(y)} ` +
+      `Q${n(x + q)} ${n(y + q)} ${n(x)} ${n(y + r)} Q${n(x - q)} ${n(y + q)} ${n(x - r)} ${n(y)} ` +
+      `Q${n(x - q)} ${n(y - q)} ${n(x)} ${n(y - r)} Z`,
+  });
+}
+
+/** O halo por trás de uma medalha ganha: luz, e não um desenho. */
+const halo = (premium: boolean): SVGElement =>
+  no("circle", premium ? "emb-halo emb-halo-ouro" : "emb-halo", { cx: 60, cy: 52, r: 48 });
+
+/**
+ * Uma asa, a da direita, presa em `(0, 0)` e aberta para cima e para fora. A
+ * da esquerda é esta ao espelho.
+ */
+function asa(x: number, y: number, escala: number, espelho: boolean, metal: "ouro" | "prata"): SVGElement {
+  const sx = espelho ? -escala : escala;
+  return grupo(
+    { transform: `translate(${n(x)} ${n(y)}) scale(${n(sx)} ${n(escala)})`, class: `emb-asa emb-${metal}` },
+    no("path", "emb-metal", {
+      d:
+        "M0 4 C6 -6 20 -14 40 -15 C36 -9 31 -6 25 -4 C32 -3 36 -1 39 2 " +
+        "C32 6 25 6 19 5 C24 8 27 11 28 14 C18 15 8 12 0 4 Z",
+    }),
+    no("path", "emb-asa-pena", { d: "M8 1 C17 -5 27 -9 37 -12 M10 5 C18 2 26 1 35 1 M12 8 C17 9 21 10 25 12" }),
+  );
+}
+
+/** A coroa, pousada em `(x, y)` — o meio da base. */
+function coroa(x: number, y: number, escala = 1): SVGElement {
+  return grupo(
+    { transform: `translate(${n(x)} ${n(y)}) scale(${n(escala)})`, class: "emb-coroa" },
+    no("path", "emb-metal emb-ouro", { d: "M-16 0 L-19 -15 L-8 -6 L0 -19 L8 -6 L19 -15 L16 0 Z" }),
+    no("rect", "emb-metal emb-ouro", { x: -16, y: -2, width: 32, height: 6, rx: 2 }),
+    no("circle", "emb-metal emb-ouro", { cx: -19, cy: -15, r: 2.6 }),
+    no("circle", "emb-metal emb-ouro", { cx: 0, cy: -19, r: 2.6 }),
+    no("circle", "emb-metal emb-ouro", { cx: 19, cy: -15, r: 2.6 }),
+    no("circle", "emb-joia", { cx: 0, cy: 1, r: 2.2 }),
+  );
+}
+
+/** O escudo do Perito: azul, com o rebordo de ouro. */
+function escudo(dourado: boolean): SVGElement {
+  const d = "M60 24 C70 28 78 28 88 26 V52 C88 71 76 83 60 91 C44 83 32 71 32 52 V26 C42 28 50 28 60 24 Z";
+  return grupo(
+    {},
+    no("path", dourado ? "emb-escudo emb-escudo-dourado" : "emb-escudo", { d }),
+    no("path", "emb-escudo-filete", {
+      d: "M60 31 C68 34 75 34 82 33 V52 C82 67 73 77 60 84 C47 77 38 67 38 52 V33 C45 34 52 34 60 31 Z",
+    }),
+  );
+}
+
+/**
+ * Dois ramos de louro, um de cada lado, a subir do pé do emblema. As folhas
+ * calculam-se ao longo de um arco, e o ramo da esquerda é o da direita ao
+ * espelho: desenhadas à mão, nunca ficavam iguais dos dois lados.
+ */
+function louro(metal: "folha" | "ouro"): SVGElement {
+  const direito = ramo();
+  const esquerdo = ramo();
+  esquerdo.setAttribute("transform", "translate(120 0) scale(-1 1)");
+  return grupo({ class: `emb-louro emb-louro-${metal}` }, esquerdo, direito);
+}
+
 function ramo(): SVGElement {
-  const g = no("g", undefined, {});
+  const g = no("g", undefined);
   const cx = 60;
-  const cy = 50;
-  const r = 47;
+  const cy = 52;
+  const r = 46;
   const rad = (graus: number): number => (graus * Math.PI) / 180;
   const pontoEm = (graus: number): readonly [number, number] => [
     cx + r * Math.cos(rad(graus)),
     cy + r * Math.sin(rad(graus)),
   ];
+  const tangente = (graus: number): number =>
+    (Math.atan2(-Math.cos(rad(graus)), Math.sin(rad(graus))) * 180) / Math.PI;
 
-  const [x0, y0] = pontoEm(80);
-  const [x1, y1] = pontoEm(-30);
+  const [x0, y0] = pontoEm(78);
+  const [x1, y1] = pontoEm(-28);
   g.appendChild(
-    no("path", "emblema-louro-haste", {
-      d: `M${x0.toFixed(2)} ${y0.toFixed(2)} A${String(r)} ${String(r)} 0 0 0 ${x1.toFixed(2)} ${y1.toFixed(2)}`,
+    no("path", "emb-louro-haste", {
+      d: `M${n(x0)} ${n(y0)} A${String(r)} ${String(r)} 0 0 0 ${n(x1)} ${n(y1)}`,
     }),
   );
 
   const folha = (x: number, y: number, rotacao: number, comprimento: number): SVGElement => {
     // A folha prende-se à haste pela base, e não pelo meio.
-    const cxF = x + (comprimento - 1) * Math.cos(rad(rotacao));
-    const cyF = y + (comprimento - 1) * Math.sin(rad(rotacao));
-    return no("ellipse", "emblema-folha", {
-      cx: cxF.toFixed(2),
-      cy: cyF.toFixed(2),
+    const fx = x + (comprimento - 1) * Math.cos(rad(rotacao));
+    const fy = y + (comprimento - 1) * Math.sin(rad(rotacao));
+    return no("ellipse", "emb-folha", {
+      cx: n(fx),
+      cy: n(fy),
       rx: comprimento,
-      ry: (comprimento * 0.42).toFixed(2),
-      transform: `rotate(${rotacao.toFixed(1)} ${cxF.toFixed(2)} ${cyF.toFixed(2)})`,
+      ry: n(comprimento * 0.42),
+      transform: `rotate(${n(rotacao)} ${n(fx)} ${n(fy)})`,
     });
   };
 
   for (let i = 0; i < 5; i++) {
-    const graus = 70 - i * 22;
-    const a = rad(graus);
+    const graus = 68 - i * 22;
     const [x, y] = pontoEm(graus);
-    // A direção da haste a subir, em graus: a tangente ao arco.
-    const tangente = (Math.atan2(-Math.cos(a), Math.sin(a)) * 180) / Math.PI;
-    g.append(folha(x, y, tangente + 42, 8), folha(x, y, tangente - 38, 6));
+    g.append(folha(x, y, tangente(graus) + 42, 8), folha(x, y, tangente(graus) - 38, 6));
   }
-
-  const [xp, yp] = pontoEm(-30);
-  const ponta = (Math.atan2(-Math.cos(rad(-30)), Math.sin(rad(-30))) * 180) / Math.PI;
-  g.appendChild(folha(xp, yp, ponta, 7));
+  const [xp, yp] = pontoEm(-28);
+  g.appendChild(folha(xp, yp, tangente(-28), 7));
 
   return g;
 }
 
-/* ─── O emblema ───────────────────────────────────────────────────────────── */
+/** A fita por baixo, com as pontas dobradas — e um texto, se o houver. */
+function fita(y: number, texto?: string): SVGElement {
+  const g = grupo(
+    { class: "emb-fita" },
+    no("path", "emb-fita-ponta", { d: `M22 ${n(y + 2)} H38 V${n(y + 14)} H22 L28 ${n(y + 8)} Z` }),
+    no("path", "emb-fita-ponta", { d: `M98 ${n(y + 2)} H82 V${n(y + 14)} H98 L92 ${n(y + 8)} Z` }),
+    no("path", "emb-metal emb-ouro", { d: `M32 ${n(y)} H88 V${n(y + 12)} H32 Z` }),
+  );
+  if (texto !== undefined) g.appendChild(marca(texto, 60, y + 6.4, 14, "emb-fita-texto"));
+  return g;
+}
+
+/** O texto de um emblema. Encolhe com o número de caracteres. */
+function marca(texto: string, x: number, y: number, tamanho: number, classe = "emb-marca"): SVGElement {
+  const t = no("text", classe, {
+    x: n(x),
+    y: n(y),
+    "text-anchor": "middle",
+    "dominant-baseline": "central",
+    "font-size": n(texto.length >= 3 ? tamanho * 0.7 : tamanho),
+  });
+  t.textContent = texto;
+  return t;
+}
+
+/** O selo redondo, no canto, com um número: «7», «30». */
+function selo(texto: string, dourado: boolean): SVGElement {
+  return grupo(
+    { class: dourado ? "emb-selo emb-selo-ouro" : "emb-selo" },
+    no("circle", "emb-selo-disco", { cx: 90, cy: 76, r: 13 }),
+    marca(texto, 90, 76.5, 12, "emb-selo-texto"),
+  );
+}
+
+/** O cronómetro, com o mostrador e o número nele. */
+function cronometro(texto: string, metal: "ouro" | "prata"): SVGElement {
+  return grupo(
+    { class: `emb-cronometro emb-${metal}` },
+    no("rect", "emb-metal", { x: 53, y: 18, width: 14, height: 7, rx: 2.5 }),
+    no("rect", "emb-metal", { x: 57, y: 24, width: 6, height: 6 }),
+    no("rect", "emb-metal", { x: 78, y: 28, width: 7, height: 5, rx: 2, transform: "rotate(45 81.5 30.5)" }),
+    no("circle", "emb-metal emb-cronometro-caixa", { cx: 60, cy: 57, r: 26 }),
+    no("circle", "emb-mostrador", { cx: 60, cy: 57, r: 20 }),
+    no("path", "emb-mostrador-traco", { d: "M60 39.5 v4 M77.5 57 h-4 M60 74.5 v-4 M42.5 57 h4" }),
+    marca(texto, 60, 58, 17),
+  );
+}
+
+/** As linhas de velocidade, atrás do cronómetro. */
+const velocidade = (): SVGElement =>
+  no("path", "emb-velocidade", { d: "M14 48 H28 M10 57 H30 M16 66 H29" });
+
+/** A ampulheta: os tampos, o vidro, e a areia a cair. */
+function ampulheta(metal: "ouro" | "prata"): SVGElement {
+  return grupo(
+    { class: `emb-ampulheta emb-${metal}` },
+    no("path", "emb-vidro", {
+      d: "M45 26 H75 C75 41 64 47 62 54 C64 61 75 67 75 82 H45 C45 67 56 61 58 54 C56 47 45 41 45 26 Z",
+    }),
+    no("path", "emb-areia", { d: "M49 33 H71 C70 41 64 45 60 49 C56 45 50 41 49 33 Z" }),
+    no("path", "emb-areia-fio", { d: "M60 49 V69" }),
+    no("path", "emb-areia", { d: "M47 81 C48 72 55 68 60 66 C65 68 72 72 73 81 Z" }),
+    no("rect", "emb-metal", { x: 40, y: 19, width: 40, height: 8, rx: 3 }),
+    no("rect", "emb-metal", { x: 40, y: 81, width: 40, height: 8, rx: 3 }),
+    no("rect", "emb-metal", { x: 41, y: 26, width: 4, height: 56, rx: 1.5 }),
+    no("rect", "emb-metal", { x: 75, y: 26, width: 4, height: 56, rx: 1.5 }),
+  );
+}
+
+/** A chama da sequência, por trás do que estiver à frente dela. */
+function chama(ouro: boolean): SVGElement {
+  return no("path", ouro ? "emb-chama emb-chama-ouro" : "emb-chama", {
+    d:
+      "M60 4 C66 15 79 19 85 32 C89 25 88 19 87 15 C98 27 102 45 97 62 " +
+      "C92 78 78 89 60 89 C42 89 28 78 23 62 C18 45 22 27 33 15 C32 19 31 25 35 32 C41 19 54 15 60 4 Z",
+  });
+}
+
+/** O calendário do mês, com a estrela do mês completo. */
+function calendario(): SVGElement {
+  return grupo(
+    { class: "emb-calendario" },
+    no("rect", "emb-calendario-folha", { x: 30, y: 24, width: 60, height: 60, rx: 10 }),
+    no("path", "emb-calendario-faixa", { d: "M30 42 V34 a10 10 0 0 1 10 -10 H80 a10 10 0 0 1 10 10 V42 Z" }),
+    no("rect", "emb-metal emb-prata", { x: 42, y: 15, width: 7, height: 16, rx: 3.5 }),
+    no("rect", "emb-metal emb-prata", { x: 71, y: 15, width: 7, height: 16, rx: 3.5 }),
+    estrela(60, 63, 16, "emb-estrela"),
+  );
+}
+
+/** A taça da campanha perfeita. */
+function taca(): SVGElement {
+  return grupo(
+    { class: "emb-taca emb-ouro" },
+    no("path", "emb-taca-asa", { d: "M42 30 H32 C29 44 35 51 44 52" }),
+    no("path", "emb-taca-asa", { d: "M78 30 H88 C91 44 85 51 76 52" }),
+    no("path", "emb-metal", { d: "M40 22 H80 V36 C80 53 70 61 60 63 C50 61 40 53 40 36 Z" }),
+    no("rect", "emb-metal", { x: 56, y: 62, width: 8, height: 10 }),
+    no("rect", "emb-metal", { x: 45, y: 71, width: 30, height: 7, rx: 2 }),
+    no("rect", "emb-taca-base", { x: 40, y: 78, width: 40, height: 9, rx: 2.5 }),
+    estrela(60, 40, 10, "emb-taca-estrela"),
+  );
+}
+
+/** O poço do Survival, vazio e a brilhar: o tabuleiro limpo. */
+function pocoLimpo(): SVGElement {
+  return grupo(
+    { class: "emb-poco" },
+    no("path", "emb-vidro", { d: "M34 22 V78 a10 10 0 0 0 10 10 H76 a10 10 0 0 0 10 -10 V22 Z" }),
+    no("path", "emb-poco-parede", { d: "M34 22 V78 a10 10 0 0 0 10 10 H76 a10 10 0 0 0 10 -10 V22" }),
+    no("path", "emb-poco-reflexo", { d: "M42 30 V70" }),
+    brilho(60, 52, 13, "emb-centelha emb-centelha-clara"),
+    brilho(73, 38, 6, "emb-centelha emb-centelha-clara"),
+    brilho(50, 70, 5, "emb-centelha emb-centelha-clara"),
+  );
+}
+
+/* ─── As medalhas ─────────────────────────────────────────────────────────── */
+
+const DESENHOS: Readonly<Record<string, () => readonly SVGElement[]>> = {
+  /* ── Puzzles ── */
+
+  /** Um dado de madeira clara, e uma folha a nascer: o começo. */
+  iniciado: () => [
+    dado(56, 52, 31, "marfim", { topo: 1, esquerda: 2, direita: 3 }, -6),
+    grupo(
+      { class: "emb-folha-solta", transform: "translate(78 76) rotate(-38) scale(1.45)" },
+      no("path", "emb-folha", { d: "M0 0 C4 -10 14 -14 22 -12 C20 -4 12 2 0 0 Z" }),
+      no("path", "emb-folha-nervura", { d: "M2 -1 C8 -6 14 -9 20 -11" }),
+    ),
+  ],
+
+  /** Dois dados de prata, um atrás do outro, e uma estrela pequena. */
+  medio: () => [
+    dado(44, 46, 21, "prata", { topo: 2, esquerda: 3, direita: 1 }, -14),
+    dado(70, 60, 23, "prata", { topo: 5, esquerda: 4, direita: 6 }, 8),
+    estrela(94, 22, 7, "emb-estrela emb-estrela-prata"),
+  ],
+
+  /** O dado de ouro, com asas: já voa. */
+  avancado: () => [
+    asa(43, 48, 1.05, true, "ouro"),
+    asa(77, 48, 1.05, false, "ouro"),
+    dado(60, 54, 27, "ouro", { topo: 1, esquerda: 6, direita: 5 }, 0),
+    brilho(22, 78, 5),
+    brilho(98, 24, 6),
+    brilho(90, 82, 4),
+  ],
+
+  /** O escudo, a coroa por cima, e o dado de ouro ao centro. */
+  perito: () => [
+    escudo(false),
+    coroa(60, 26, 0.95),
+    dado(60, 59, 16, "ouro", { topo: 5, esquerda: 3, direita: 4 }),
+  ],
+
+  /** O dado branco com a estrela, entre louros, e a fita por baixo. */
+  "primeiro-perfeito": () => [
+    louro("folha"),
+    dado(60, 52, 24, "branco", { topo: "estrela", esquerda: 2, direita: 3 }),
+    estrela(46, 13, 4.5, "emb-estrela"),
+    estrela(60, 9, 6, "emb-estrela"),
+    estrela(74, 13, 4.5, "emb-estrela"),
+    fita(80),
+  ],
+
+  /** O escudo de ouro, a coroa, e o dado perfeito: o Perito, sem uma falha. */
+  "perito-perfeito": () => [
+    louro("ouro"),
+    escudo(true),
+    coroa(60, 26, 0.95),
+    dado(60, 59, 16, "branco", { topo: "estrela", esquerda: 2, direita: 3 }),
+  ],
+
+  /** A taça, com a estrela, e o louro de ouro à volta. */
+  "campanha-perfeita": () => [
+    louro("ouro"),
+    taca(),
+    brilho(30, 20, 5),
+    brilho(92, 18, 6),
+  ],
+
+  /* ── Contra-Relógio ── */
+
+  /** O cronómetro de prata, com uma asa e as linhas de quem corre. */
+  maratona: () => [
+    velocidade(),
+    asa(38, 44, 0.7, true, "prata"),
+    cronometro(String(LIMIARES.maratona), "prata"),
+  ],
+
+  /** O cronómetro de ouro, entre louros. */
+  recordista: () => [
+    louro("ouro"),
+    cronometro(`${String(LIMIARES.recordista / 1000)}k`, "ouro"),
+    brilho(96, 20, 6),
+  ],
+
+  /** O cronómetro de ouro, com duas asas. */
+  ultramaratona: () => [
+    velocidade(),
+    asa(38, 46, 0.8, true, "ouro"),
+    asa(82, 46, 0.8, false, "ouro"),
+    cronometro(String(LIMIARES.ultramaratona), "ouro"),
+  ],
+
+  /* ── Survival ── */
+
+  /** A ampulheta de prata: aguentar. */
+  "cinco-minutos": () => [
+    ampulheta("prata"),
+    selo(`${String(LIMIARES.cincoMinutosMs / 60_000)}′`, false),
+  ],
+
+  /** A ampulheta de ouro. */
+  "dez-minutos": () => [
+    ampulheta("ouro"),
+    selo(`${String(LIMIARES.dezMinutosMs / 60_000)}′`, true),
+    brilho(26, 26, 5),
+  ],
+
+  /** O poço vazio, a brilhar, dez vezes. */
+  "dez-limpezas": () => [pocoLimpo(), selo(String(LIMIARES.limpezas), true)],
+
+  /* ── Desafio do Dia ── */
+
+  /** A chama da sequência, e o dado à frente dela. */
+  semana: () => [
+    chama(false),
+    dado(60, 57, 22, "branco", { topo: 1, esquerda: 2, direita: 3 }),
+    selo(String(LIMIARES.semana), false),
+  ],
+
+  /** O calendário, com a estrela. */
+  "mes-completo": () => [calendario()],
+
+  /** A chama de ouro: trinta dias seguidos. */
+  "trinta-dias": () => [
+    chama(true),
+    dado(60, 57, 22, "branco", { topo: 1, esquerda: 2, direita: 3 }),
+    selo(String(LIMIARES.trintaDias), true),
+  ],
+
+  /** A chama de ouro, a coroa, e a fita dos cem. */
+  "cem-dias": () => [
+    chama(true),
+    dado(60, 54, 20, "branco", { topo: 1, esquerda: 2, direita: 3 }),
+    coroa(60, 28, 0.8),
+    fita(78, String(LIMIARES.cemDias)),
+  ],
+};
 
 /**
- * O emblema de uma medalha. `alvo` escreve-se quando o emblema não traz marca
- * própria — o tamanho de um capítulo.
+ * O emblema de uma medalha, pelo id. Uma medalha sem desenho — uma que se
+ * acrescente ao catálogo antes de o ter — leva um dado branco, e não um buraco.
+ *
+ * `ganha` acende o halo por trás; o resto do desenho é o mesmo, ganha ou não —
+ * é o cartão à volta que diz o estado.
  */
-export function emblema(e: Emblema, alvo: number, ganha: boolean): SVGElement {
-  const svg = no("svg", "emblema", { viewBox: "0 0 120 96", "aria-hidden": "true" });
-  svg.dataset["forma"] = e.forma;
+export function emblema(id: string, ganha: boolean, premium: boolean): SVGElement {
+  garantirDefinicoes();
 
-  const texto = e.marca ?? String(alvo);
-  const partes =
-    e.forma === "relogio"
-      ? relogio(texto)
-      : e.forma === "poco"
-        ? poco(texto)
-        : e.forma === "chama"
-          ? chama(texto)
-          : e.forma === "calendario"
-            ? calendario(texto)
-            : dado(texto, e.estrela === true);
+  const svg = no("svg", "emblema", { viewBox: "0 0 120 100", "aria-hidden": "true" });
+  const proprio = DESENHOS[id];
+  svg.dataset["desenho"] = proprio === undefined ? "generico" : id;
 
-  if (ganha) svg.appendChild(louro());
-  for (const p of partes) svg.appendChild(p);
+  if (ganha) svg.appendChild(halo(premium));
+
+  const desenho =
+    proprio ?? ((): readonly SVGElement[] => [dado(60, 52, 24, "branco", { topo: 1, esquerda: 2, direita: 3 })]);
+  for (const parte of desenho()) svg.appendChild(parte);
 
   return svg;
 }

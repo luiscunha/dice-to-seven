@@ -17,6 +17,7 @@ import { packed } from "@dicetoseven/engine";
 import type { Medalha } from "../src/session/medalhas";
 import { MEDALHAS } from "../src/session/medalhas";
 import { emptyProfile } from "../src/session/progress";
+import { emblema } from "../src/ui/emblemas";
 import { HomeScreen } from "../src/ui/HomeScreen";
 import { linhaDeMedalhas } from "../src/ui/medalhaNova";
 import type { MedalhaNoEcra } from "../src/ui/MedalhasScreen";
@@ -114,7 +115,7 @@ describe("a página das medalhas", () => {
     expect(aba("premium")?.getAttribute("aria-label")).toMatch(/^Premium: 1 de \d+$/);
   });
 
-  it("uma ganha tem o louro e a pastilha do que se fez; uma por ganhar tem o cadeado e o que falta", () => {
+  it("uma ganha tem o halo e a pastilha do que se fez; uma por ganhar tem o cadeado e o que falta", () => {
     ecra = abrir(
       todas((m) =>
         m.id === "iniciado"
@@ -127,14 +128,13 @@ describe("a página das medalhas", () => {
 
     const ganho = cartao("Iniciado");
     expect(ganho?.dataset["ganha"]).toBe("sim");
-    expect(ganho?.querySelector(".emblema-louro")).not.toBeNull();
+    expect(ganho?.querySelector(".emb-halo")).not.toBeNull();
     expect(ganho?.querySelector(".medalha-cadeado")).toBeNull();
     expect(ganho?.querySelector(".medalha-pastilha")?.textContent).toBe("30 níveis");
-    expect(ganho?.querySelector(".emblema-marca")?.textContent).toBe("30");
 
     const falta = cartao("Médio");
     expect(falta?.dataset["ganha"]).toBe("nao");
-    expect(falta?.querySelector(".emblema-louro")).toBeNull();
+    expect(falta?.querySelector(".emb-halo")).toBeNull();
     expect(falta?.querySelector(".medalha-cadeado")).not.toBeNull();
     expect(falta?.querySelector(".medalha-pastilha")?.textContent).toBe("2/40 níveis");
     expect(falta?.getAttribute("aria-label")).toBe("Médio, por conquistar, 2/40 níveis");
@@ -169,6 +169,41 @@ describe("a página das medalhas", () => {
     expect(host.querySelector(".medalha-pormenor-estado")?.textContent).toBe(
       "Conquistada a 20 de outubro de 2026.",
     );
+  });
+});
+
+/* ─── Os emblemas ─────────────────────────────────────────────────────────── */
+
+describe("os emblemas", () => {
+  /*
+   * Uma medalha sem desenho não rebenta — leva um dado branco genérico —, mas
+   * também não devia chegar ao jogo assim. Este teste é o que obriga a fase
+   * seguinte a desenhar as medalhas que acrescentar.
+   */
+  it("**todas as medalhas do catálogo têm desenho próprio**", () => {
+    for (const m of MEDALHAS) {
+      expect(emblema(m.id, false, m.tipo === "premium").dataset["desenho"], m.id).toBe(m.id);
+    }
+    expect(emblema("inventada", false, false).dataset["desenho"]).toBe("generico");
+  });
+
+  /*
+   * Os degradês vivem numa folha só, no `body`. Repetidos em cada emblema, os
+   * ids apareciam em dobro, e um emblema retirado do ecrã levava consigo o
+   * degradê de que os outros dependiam.
+   */
+  it("os degradês ficam numa folha só, por muitos emblemas que haja", () => {
+    for (const m of MEDALHAS) host.appendChild(emblema(m.id, true, m.tipo === "premium"));
+
+    expect(document.querySelectorAll("#emblemas-definicoes").length).toBe(1);
+    expect(document.querySelectorAll("#emb-ouro").length).toBe(1);
+    expect(host.querySelector("[id]")).toBeNull();
+  });
+
+  it("o halo é das ganhas, e o das premium é de ouro", () => {
+    expect(emblema("iniciado", false, false).querySelector(".emb-halo")).toBeNull();
+    expect(emblema("iniciado", true, false).querySelector(".emb-halo-ouro")).toBeNull();
+    expect(emblema("recordista", true, true).querySelector(".emb-halo-ouro")).not.toBeNull();
   });
 });
 
