@@ -1,0 +1,231 @@
+# Publicar nas lojas — Google Play e App Store
+
+O que falta entre o jogo de hoje e o jogo nas duas lojas, por ordem, e quem faz
+o quê. **Tu** é o dono das contas: o que pede identidade, pagamento ou
+aceitar termos. **Eu** é o que se faz no repositório.
+
+## As decisões tomadas (2026-10-16)
+
+| | |
+|---|---|
+| Contas | Nenhuma ainda: criam-se as duas |
+| Conta Google | **Pessoal** — o que obriga ao teste fechado (ver o caminho crítico) |
+| Preço | **Grátis, sem compras nem anúncios.** A compra única do plano (§9.2) fica para uma versão seguinte |
+| iPad | **Mantém-se.** Há capturas de iPad a fazer |
+
+Grátis e sem nada lá dentro é o caminho mais curto, e não por pouco: não há
+faturação para integrar, não há acordos de impostos nem de banco, e as duas
+fichas de privacidade dizem **«nenhum dado recolhido»** — o jogo não usa a rede
+para nada (a fonte vai no pacote, e o único `fetch` é aos níveis locais).
+
+## O caminho crítico
+
+O que mais demora não é código, é o **teste fechado da Google**. Uma conta
+pessoal criada depois de novembro de 2023 só pode pedir a publicação depois de
+**12 testers** terem estado inscritos num teste fechado durante **14 dias
+seguidos**. Tudo o resto cabe dentro desses 14 dias.
+
+```
+dia  0  contas criadas (Apple: 1–2 dias a aprovar; Google: verificação de identidade)
+dia ~3  primeiro AAB no teste interno da Play; primeiro build no TestFlight
+dia ~4  teste fechado na Play com 12 testers ───┐
+        fichas, capturas e privacidade prontas  │ 14 dias
+dia ~7  App Store: submeter para revisão (1–3 dias)
+dia ~18 Play: pedir acesso à produção ───────────┘ (a Google responde até 7 dias)
+dia ~25 lançamento nas duas, no mesmo dia (lançamento manual na Apple)
+```
+
+**Recrutar os 12 testers é a primeira coisa a fazer**, já: pessoas com Android
+e conta Google, que aceitem o convite e fiquem os 14 dias. Se um sair a meio, a
+contagem pode não fechar. Convém ter 15.
+
+---
+
+## 1. As contas — tu
+
+### Apple (App Store)
+
+- [ ] **Apple Developer Program**, como indivíduo — 99 USD por ano, em
+      <https://developer.apple.com/programs/enroll/>. Pede um Apple ID com
+      autenticação de dois fatores. O nome que aparece na loja como vendedor é
+      o teu nome.
+- [ ] Na aprovação, o acordo das apps grátis fica aceite. **Não** é preciso o
+      acordo das apps pagas, nem impostos, nem banco.
+- [ ] **Estatuto de comerciante na UE** (Digital Services Act), em App Store
+      Connect → Business. Sem compras nem anúncios, declaras **não
+      comerciante**; como comerciante, a morada e o telefone ficavam públicos.
+- [ ] Seguir o `guia-ios-sem-mac.md`, passos 2 a 7: o identificador
+      `com.luiscunha.dicetoseven`, o certificado, o perfil, a aplicação no App
+      Store Connect e os seis segredos do GitHub. **Criar a aplicação no App
+      Store Connect reserva o nome** — fazê-lo cedo, para saber se
+      «DiceToSeven» está livre.
+
+### Google (Play)
+
+- [ ] **Play Console**, conta pessoal — 25 USD, uma vez, em
+      <https://play.google.com/console/signup>. Verificação de identidade com
+      documento, morada e telefone; pode levar alguns dias.
+- [ ] **Um e-mail de contacto**, que fica **público** na ficha. Convém um
+      endereço só para o jogo.
+- [ ] **Estatuto de comerciante na UE**: o mesmo raciocínio — não comerciante.
+- [ ] **Os 12 testers**, numa lista de e-mails ou num Google Group.
+
+---
+
+## 2. O projeto — eu
+
+### A versão, numa fonte só
+
+Hoje a versão vive em três sítios que ninguém liga: `versionCode`/`versionName`
+no `build.gradle`, e `MARKETING_VERSION` no `project.pbxproj`, em duas
+configurações.
+
+- [ ] Uma fonte — a `version` do `packages/mobile/package.json` — e um script
+      que a escreve nos dois projetos. A primeira é a **1.0.0**.
+- [ ] O `versionCode` do Android tem de subir a cada envio, como o número de
+      build do iOS (que já é o número da execução do GitHub).
+
+### Android: o pacote para a loja
+
+- [ ] **A chave de envio** (*upload key*): um keystore gerado uma vez, **fora do
+      repositório**, guardado em dois sítios. Perdê-la obriga a pedir à Google
+      que a troque.
+- [ ] O `build.gradle` passa a assinar o release com essa chave, lida de
+      variáveis de ambiente — nunca escrita no repositório.
+- [ ] **AAB e não APK**: a Play só aceita *Android App Bundle*
+      (`./gradlew bundleRelease`). A assinatura final é da Google (*Play App
+      Signing*), que é a opção por omissão.
+- [ ] Um workflow `android.yml`, à imagem do `ios.yml`: compila o AAB assinado
+      só quando alguém o mandar, com a chave nos segredos do GitHub. Opcional
+      numa primeira fase — o AAB também se gera aqui, como os APKs de teste.
+- [ ] Verificar o pacote: sem bibliotecas nativas (a regra das páginas de
+      16 KB não se aplica a uma WebView), `targetSdk` 36 (já está), e a
+      depuração da WebView desligada no release.
+
+### iOS
+
+- [ ] **O manifesto de privacidade** (`PrivacyInfo.xcprivacy`), que falta. O
+      plugin `@capacitor/preferences` usa `UserDefaults`, que é uma API de
+      «razão obrigatória»: sem o manifesto a declará-la (razão `CA92.1`), a
+      Apple recusa o envio. Declara também «nenhum dado recolhido» e «sem
+      rastreio».
+- [ ] O SDK do iOS 26 e o Xcode 26 já estão fixados no `ios.yml`. A
+      conformidade de exportação (`ITSAppUsesNonExemptEncryption`) também já
+      está no `Info.plist`.
+
+### O que se vê dentro do jogo
+
+- [ ] **Uma linha «Acerca»** nas Definições: a versão, o contacto e a política
+      de privacidade. Não é obrigatória em nenhuma das lojas, mas é o que se
+      pede a quem reporta um defeito — e a versão tem de se ler sem abrir a
+      loja.
+
+---
+
+## 3. As páginas públicas — eu
+
+As duas lojas exigem uma **política de privacidade** num endereço público, e a
+Apple também uma **página de suporte**. Vivem no GitHub Pages, ao lado da
+versão web, e saem com o mesmo `deploy.yml`.
+
+- [ ] **Política de privacidade**, nos quatro idiomas. Curta e verdadeira: o
+      jogo não recolhe, não envia nem partilha dados; o progresso fica só no
+      telemóvel (e nas cópias de segurança do sistema, que são do utilizador);
+      não há contas, anúncios nem análise de uso.
+- [ ] **Suporte**: o e-mail de contacto e respostas curtas — o progresso não
+      passa de um telemóvel para outro, e desinstalar apaga-o.
+
+---
+
+## 4. As fichas das lojas — eu escrevo, tu aprovas
+
+Nos quatro idiomas do jogo. A loja escolhe pela língua do telemóvel, como o
+jogo.
+
+### Os textos
+
+| | Google Play | App Store |
+|---|---|---|
+| Nome | 30 caracteres | 30 caracteres |
+| Frase curta | Descrição breve, 80 | Subtítulo, 30 |
+| Descrição | até 4000 | até 4000 |
+| Outros | — | Palavras-chave (100), texto promocional (170) |
+| Categoria | Jogos → Quebra-cabeças | Jogos → Puzzle (e Tabuleiro) |
+
+### As imagens
+
+| | Google Play | App Store |
+|---|---|---|
+| Ícone | 512×512 PNG (já há a marca) | sai do projeto |
+| Destaque | **1024×500** (gráfico de destaque) | — |
+| Telemóvel | 4 a 8 capturas, ≥ 1080 px | 3 a 10, **6,9"** (1320×2868) |
+| Tablet | opcional | **13" iPad** (2064×2752) — o iPad mantém-se |
+
+- [ ] **As capturas geram-se aqui**, e não à mão: os ecrãs montam-se no
+      browser ao tamanho exato de cada loja, com dados de exemplo e em cada
+      idioma. Proposta de seis: a Home, um nível a meio com um grupo
+      selecionado, o Contra-Relógio com o combo, o Survival, o caminho do
+      Desafio do Dia, e as medalhas.
+- [ ] O gráfico de destaque da Play, a partir da marca.
+
+### Os questionários
+
+- [ ] **Privacidade**: Apple — *Data Not Collected*; Google, segurança dos
+      dados — nenhum dado recolhido nem partilhado.
+- [ ] **Classificação etária**: Apple (questionário novo, com os escalões 4+,
+      9+, 13+, 16+, 18+) e Google (IARC). Sem violência, compras, anúncios nem
+      interação entre jogadores — deve sair **4+ / PEGI 3**. (A espada do
+      Survival é um ícone, não um conteúdo.)
+- [ ] **Público-alvo** da Google: proponho **13 anos ou mais**. Incluir menores
+      de 13 põe a app na política de Famílias, com mais declarações e mais
+      revisão, por nada que o jogo ganhe com isso. A classificação continua
+      PEGI 3: qualquer pessoa pode instalar.
+- [ ] Anúncios: não. Acesso à app: sem início de sessão. Funcionalidades
+      financeiras, de saúde, de notícias: não.
+
+---
+
+## 5. Os testes antes de publicar
+
+- [ ] **Teste interno da Play** com o primeiro AAB: confirmar que a versão da
+      loja instala, arranca e guarda o progresso — é a primeira vez que o jogo
+      corre assinado pela Google.
+- [ ] **Teste fechado** com os 12 testers, 14 dias. No pedido de acesso à
+      produção a Google pergunta como correu o teste e o que mudou com ele:
+      vale a pena recolher o que os testers disserem.
+- [ ] **TestFlight** num iPhone e, se houver, num iPad — os testes internos não
+      precisam de revisão da Apple.
+- [ ] **Atualização por cima**: instalar a versão N, jogar, instalar a N+1, e o
+      progresso continua lá. É o que nenhum teste automático cobre e o que
+      mais custa se falhar.
+
+## 6. Publicar
+
+- [ ] **App Store**: submeter para revisão com **lançamento manual**, para sair
+      no mesmo dia que a Play. Nas notas para a revisão: não há início de
+      sessão, nada a configurar, e o jogo funciona sem rede.
+- [ ] **Play**: pedir o acesso à produção ao fim dos 14 dias, e depois
+      promover o build do teste fechado para a produção. Vale a pena um
+      lançamento faseado (20% → 100%), para um defeito apanhar menos gente.
+- [ ] Países: todos, por omissão.
+
+### O risco de revisão a ter em conta
+
+A Apple recusa aplicações que sejam «um site embrulhado» (regra 4.2). Este
+jogo não é: funciona sem rede, guarda tudo no telemóvel, vibra, segue o tema e
+o idioma do sistema, e o botão de voltar do Android é do jogo. Mas é a regra
+que um revisor aplica a uma app em Capacitor, e convém que a primeira coisa que
+ele vê seja o jogo — o arranque já vai direto para a Home.
+
+---
+
+## Depois do lançamento
+
+Fica para versões seguintes, por esta ordem de valor:
+
+1. **A compra única** do plano (§9.2) — o resto da campanha. Pede a Play
+   Billing e a StoreKit, e os acordos de pagamento nas duas lojas.
+2. **Tabelas de classificação** no Game Center e no Play Games, para o Desafio
+   do Dia e o Contra-Relógio (plano de implementação, fase 9).
+3. Um processo de versão escrito: subir a versão, `pnpm check`, AAB para o
+   teste interno, TestFlight, revisão.
