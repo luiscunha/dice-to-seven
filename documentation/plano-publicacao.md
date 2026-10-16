@@ -127,10 +127,9 @@ configurações.
 As duas lojas exigem uma **política de privacidade** num endereço público, e a
 Apple também uma **página de suporte**.
 
-**O jogo sai da web, e o código fica privado** (decidido a 2026-10-16). As
-páginas vivem num repositório **à parte e público**, `dicetoseven-site`, que só
-tem HTML, CSS, o ícone e a fonte do nome — nenhum código do jogo. Publicado no
-GitHub Pages:
+**As páginas vivem num repositório à parte e público**, `dicetoseven-site`, que
+só tem HTML, CSS, o ícone e a fonte do nome — nenhum código do jogo. Publicado
+no GitHub Pages, e já no ar:
 
 | Página | Endereço |
 |---|---|
@@ -150,17 +149,28 @@ Cada página tem os quatro idiomas, e mostra o do dispositivo (`?lang=` escolhe
       mudar o idioma.
 - [x] **O e-mail de contacto**: `dicetoseven@gmail.com`, nas duas páginas e nos
       quatro idiomas.
-- [ ] **Tu**: criar o repositório público `dicetoseven-site`, enviar a pasta, e
-      ligar o Pages (*Settings → Pages → Deploy from a branch → `main` /
-      root*).
-- [ ] **Tu**: pôr o repositório do jogo **privado**, e confirmar que o site
-      antigo (`luiscunha.github.io/dice-to-seven/`) saiu do ar. O `deploy.yml`
-      já não existe; no plano grátis, um repositório privado deixa de publicar
-      o Pages.
+- [x] **Tu**: criar o repositório público `dicetoseven-site`, enviar a pasta, e
+      ligar o Pages (2026-10-16).
+
+### A versão web fica até à aprovação
+
+**O jogo continua na web, e o código continua público, até as lojas o
+aprovarem** (decidido a 2026-10-16). É por lá que os amigos testam, e perder
+esse feedback agora custava mais do que esconder o código umas semanas. As duas
+coisas convivem: o jogo em `luiscunha.github.io/dice-to-seven/`, as páginas em
+`luiscunha.github.io/dicetoseven-site/`.
+
+Depois da aprovação, por esta ordem:
+
+- [ ] Retirar o `deploy.yml`, para ninguém voltar a publicar o jogo na web.
+- [ ] **Tu**: pôr o repositório do jogo **privado**, e confirmar que
+      `luiscunha.github.io/dice-to-seven/` saiu do ar. Se continuar, desligar o
+      Pages nas definições desse repositório.
+- [ ] Na página de apresentação, trocar «Em breve» pelos links das duas lojas.
 
 **Com o repositório privado, as Actions passam a ter limite**: 2 000 minutos
 por mês no plano grátis, e o macOS conta 10× — uns dez builds de iOS por mês,
-além da CI. Chega para preparar o lançamento; se não chegar, o GitHub Pro.
+além da CI. Depois do lançamento chega; se não chegar, o GitHub Pro.
 
 ---
 

@@ -136,11 +136,11 @@ remede-se antes de a tratar como facto.
 A **Fase 8** está construída. Esteve **publicada** na web, em
 `luiscunha.github.io/dice-to-seven/`, para o playtest por link.
 
-**A versão web saiu** (2026-10-16): o jogo vai para as lojas, o código passa a
-privado, e o fluxo «Publicar» (`deploy.yml`) foi retirado. Na web ficam só a
-apresentação, a privacidade e o suporte, num repositório público à parte — ver
-`plano-publicacao.md`. Os testes passam a ser pelo TestFlight e pelo teste
-fechado da Play.
+**A versão web fica até as lojas aprovarem o jogo** (decidido a 2026-10-16): é
+por lá que os amigos testam. Depois da aprovação, o fluxo «Publicar»
+(`deploy.yml`) sai, o código passa a privado, e na web ficam só a apresentação,
+a privacidade e o suporte, num repositório público à parte — ver
+`plano-publicacao.md`.
 
 **Falta o playtest externo**, que é o que o critério de aceitação pede antes de
 qualquer trabalho de empacotamento. Confirmado a jogar num iPhone 17e: o 7×7 do
