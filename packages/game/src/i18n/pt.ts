@@ -212,11 +212,7 @@ export const PT = {
 
   home: {
     modosAria: "modos de jogo",
-    modos: "Modos de jogo",
     legendaPuzzles: "A campanha, capítulo a capítulo",
-    lemaForte: "O teu objetivo é simples: Somar 7.",
-    /** Vem a seguir ao forte, na mesma linha — por isso começa com um espaço. */
-    lema: " A execução é o verdadeiro desafio.",
     escolherPerfil: "escolher nome e avatar",
     mudarPerfil: (nome: string): string => `${nome} — mudar nome e avatar`,
     recorde: (pontos: number): string => `Recorde ${String(pontos)}`,

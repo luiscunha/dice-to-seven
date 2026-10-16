@@ -1211,11 +1211,9 @@ outros modos de um dia de quando havia três ficam guardados sem contar.
       (`#/desafio/survival` num dia de Puzzle), ou com um dia que nenhuma
       chave abriu, volta a este ecrã. Sair de um desafio volta a este ecrã,
       e daqui à Home.
-- **O resto da Home ficou como era**: os modos com o rótulo «Modos de jogo» e os
-  mosaicos de pé, e as regras numa faixa — a conta 3 + 4 = 7 em peças, «Como
-  jogar?», e a seta. **Quem ainda não fez um nível vê os modos primeiro**: a
-  campanha é a porta de entrada. A 375×812 cabe tudo; num ecrã mais baixo a
-  Home desliza em vez de encolher os cartões.
+- **Os modos ficam por cima do cartão**, para quem chega e para quem já joga:
+  a campanha é a porta de entrada. O resto da Home foi arrumado depois — ver
+  «A Home em quatro faixas».
 
 **O Puzzle do Dia veio a seguir**, e abre a rotação. Nos modos de
 corrida, depois do primeiro tabuleiro nada é ao calhas — o Contra-Relógio dá a
@@ -1426,6 +1424,45 @@ todos os textos com números. Falham:
   uma tradução que ficou por fazer.
 
 O código e a documentação continuam em português.
+
+---
+
+## A Home em quatro faixas
+
+Com o desafio do dia e as medalhas, a Home chegou a **oito faixas**: a barra da
+marca, o lema, o título «Modos de jogo», o cartão dos Puzzles, os dois
+mosaicos, o desafio, o cartão das regras e o rodapé com o jogador e as
+medalhas. Cada uma tinha razão de ser, e juntas liam-se cheias. Ficaram
+**quatro**, sem perder nenhuma entrada:
+
+| Faixa | O que leva |
+|---|---|
+| A barra | quem joga à esquerda; as medalhas e as definições à direita |
+| A marca | o símbolo por cima do nome, e a regra «3 + 4 = 7 · Como jogar?» |
+| Os modos | os Puzzles em cartão largo, Contra-Relógio e Survival lado a lado |
+| O desafio | o cartão do dia, como era |
+
+**O que mudou, e porquê:**
+- **O que é de quem joga vive todo em cima.** O rodapé ocupava a zona do polegar
+  com as três coisas que menos se tocam; agora estão no canto, como em quase
+  todos os jogos de telemóvel. O nome do jogador já não disputa a linha com o
+  nome do jogo, que tem uma faixa sua.
+- **A regra substitui o lema e o cartão das regras**, que diziam o mesmo e eram
+  para quem chega pela primeira vez. A frase do cartão passou para o nome do
+  botão, para quem ouve o ecrã. O lema não foi para lado nenhum: o ecrã das
+  regras já abre pelo objetivo.
+- **Saiu o título «Modos de jogo».** Três cartões com as cores das faces já são
+  um grupo à vista.
+- **Os cartões não levam seta.** Com cor, sombra e ícone já se leem como coisa
+  que se toca; a seta é de uma lista de definições. Só a linha da regra a tem,
+  porque é texto sem cartão.
+- **O espaço que sobra é da marca.** Os cartões assentam em baixo, ao alcance do
+  polegar, e deixaram de esticar com o ecrã: num telemóvel alto eram três
+  painéis de cor a ocupar metade da Home. O símbolo cresce com a altura do ecrã,
+  e num ecrã baixo (≤ 640 px) volta para o lado do nome.
+
+**Medido:** sem deslizar a 375×812, 360×740, 375×667 e 320×568, e em paisagem a
+812×375 (a marca à esquerda, os modos e o desafio à direita).
 
 ---
 

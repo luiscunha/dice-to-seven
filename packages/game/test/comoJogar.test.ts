@@ -68,12 +68,60 @@ describe("a Home", () => {
     ecra.destruir();
   });
 
-  it("a marca vive na barra, ao lado das definições", () => {
+  /*
+   * Eram oito faixas — a marca, o lema, «Modos de jogo», os Puzzles, os
+   * mosaicos, o desafio, o cartão das regras e o rodapé — e a Home lia-se
+   * cheia. São quatro, e cada uma tem um trabalho.
+   */
+  it("tem quatro faixas: a barra, a marca, os modos e o desafio", () => {
+    const ecra = home({
+      desafio: {
+        numero: 3,
+        data: "14 out",
+        sequencia: 0,
+        chaves: 0,
+        modo: "tempo",
+        estado: { tipo: "por-jogar" },
+        aoAbrir: () => undefined,
+      },
+    });
+
+    const faixas = [...host.querySelectorAll(".ecra.home > *")].map((e) => e.classList[0]);
+    expect(faixas).toEqual(["home-barra", "home-marca", "home-modos", "home-desafio"]);
+    expect(host.querySelector(".home-lema, .home-seccao, .home-ajuda, .home-rodape")).toBeNull();
+
+    ecra.destruir();
+  });
+
+  it("a marca tem a sua faixa, e não divide a barra com ninguém", () => {
     const ecra = home();
 
-    const barra = host.querySelector(".home-barra");
-    expect(barra?.querySelector(".home-titulo")?.textContent).toBe("DiceToSeven");
-    expect(barra?.querySelector('[aria-label="Definições"]')).not.toBeNull();
+    expect(host.querySelector(".home-marca .home-titulo")?.textContent).toBe("DiceToSeven");
+    expect(host.querySelector(".home-barra .home-titulo")).toBeNull();
+
+    ecra.destruir();
+  });
+
+  /*
+   * Um cartão com cor, sombra e ícone já se lê como coisa que se toca; a seta
+   * fazia da Home uma lista de definições. Só a linha da regra a tem, porque é
+   * texto sem cartão.
+   */
+  it("os cartões não levam seta; a linha da regra leva", () => {
+    const ecra = home({
+      desafio: {
+        numero: 3,
+        data: "14 out",
+        sequencia: 0,
+        chaves: 0,
+        modo: "tempo",
+        estado: { tipo: "feito", texto: "4120" },
+        aoAbrir: () => undefined,
+      },
+    });
+
+    expect(host.querySelector(".home-modo .icone-seguir, .home-desafio .icone-seguir")).toBeNull();
+    expect(host.querySelector(".home-regra .icone-seguir")).not.toBeNull();
 
     ecra.destruir();
   });
@@ -97,33 +145,49 @@ describe("a Home", () => {
   });
 
   /*
-   * Quem joga saiu da barra de cima — partilhava-a com o nome do jogo e os dois
-   * cortavam-se com reticências. No rodapé tem a largura toda.
+   * O que é de quem joga vive todo em cima, e o fundo do ecrã fica para jogar.
+   * O jogador esteve num rodapé, sozinho com as medalhas, a ocupar a zona do
+   * polegar com as coisas que menos se tocam.
    */
-  it("a pastilha do jogador está no rodapé, e não na barra", () => {
-    const ecra = home();
+  it("quem joga, as medalhas e as definições partilham a barra de cima, por esta ordem", () => {
+    const ecra = home({
+      nome: "Rita",
+      medalhas: { ganhas: 2, total: 17, novas: false, aoAbrir: () => undefined },
+    });
 
-    expect(host.querySelector(".home-barra .home-jogador")).toBeNull();
-    expect(host.querySelector(".home-rodape .home-jogador")).not.toBeNull();
+    const barra = [...(host.querySelector(".home-barra")?.children ?? [])];
+    expect(barra.map((e) => e.classList.contains("redondo") ? "definicoes" : e.classList[1])).toEqual([
+      "home-jogador",
+      "home-medalhas",
+      "definicoes",
+    ]);
+    expect(barra[0]?.textContent).toBe("Rita");
+    expect(barra[2]?.getAttribute("aria-label")).toBe("Definições");
 
     ecra.destruir();
   });
 
-  it("o cartão das regras leva às regras, e imprime a conta em peças", () => {
+  /*
+   * A regra ficou no lugar de duas coisas que diziam o mesmo: o lema, por
+   * palavras, e o cartão das regras, em peças. Por baixo do nome do jogo lê-se
+   * como subtítulo, e as palavras passam para o nome do botão.
+   */
+  it("a regra, por baixo do nome, leva às regras e imprime a conta em peças", () => {
     const aoEscolherComoJogar = vi.fn();
     const ecra = home({ aoEscolherComoJogar });
 
-    const ajuda = host.querySelector<HTMLElement>(".home-ajuda");
-    expect(ajuda?.querySelector(".home-ajuda-titulo")?.textContent).toBe(
-      "Como jogar?",
+    const regra = host.querySelector<HTMLButtonElement>(".home-marca button.home-regra");
+    expect(regra?.querySelector(".home-regra-titulo")?.textContent).toBe("Como jogar?");
+    expect(regra?.getAttribute("aria-label")).toBe(
+      "Como jogar? Junta peças encostadas até somarem 7.",
     );
 
     // 3 e 4 — as peças a sério, e não um desenho parecido.
-    const faces = [...(ajuda?.querySelectorAll<HTMLElement>(".peca") ?? [])];
+    const faces = [...(regra?.querySelectorAll<HTMLElement>(".peca") ?? [])];
     expect(faces.map((p) => p.dataset["valor"])).toEqual(["3", "4"]);
     expect(faces.every((p) => p.classList.contains("amostra"))).toBe(true);
 
-    ajuda?.querySelector("button")?.dispatchEvent(new MouseEvent("click"));
+    regra?.click();
     expect(aoEscolherComoJogar).toHaveBeenCalledOnce();
 
     ecra.destruir();

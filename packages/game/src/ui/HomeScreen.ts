@@ -1,25 +1,43 @@
 /**
- * A Home: os três modos, as regras e as definições.
+ * A Home: os três modos, o desafio do dia, e o que é de quem joga.
  *
  * É o único ecrã sem seta de voltar, e o único que mostra o nome do jogo. Tudo
  * o resto é uma escolha entre três coisas — e três coisas não precisam de mapa,
  * de metáfora, nem de arte que envelhece (desenho §5.6).
  *
- * **Quem joga está no rodapé, não na barra.** O avatar e o nome não são enfeite
- * nem conta: são o sítio onde o jogo reconhece a pessoa que o abriu, e o único
- * do jogo inteiro que ela escolhe. Estiveram na barra de cima e partilhavam-na
- * com o nome do jogo — dois rótulos a disputar a mesma linha, e um nome comprido
- * cortava os dois com reticências. Em baixo tem a largura toda, fica na zona do
- * polegar, e lê-se como assinatura: *este jogo é jogado por esta pessoa*. Quem
- * não se nomeou vê um convite esmorecido, e o convite é o próprio botão —
- * ninguém é baptizado à revelia com um «Jogador» que tem género.
+ * ── Quatro faixas, e cada uma com um trabalho ──
  *
- * **A marca ocupa a barra de cima por inteiro.** Era um bloco centrado com o
- * símbolo grande, o nome e o lema, e ocupava o terço superior do ecrã a dizer ao
- * jogador o nome da aplicação que ele acabou de abrir. Numa barra, diz o mesmo
- * em 44px de altura — e o que sobra é dos modos, que são a razão de alguém estar
- * aqui. O que ganhou com a mudança foi largura: o nome passou a caber inteiro,
- * e com ele a pinta que lhe faz de «o».
+ * A Home chegou a ter oito: a barra da marca, o lema, o título «Modos de jogo»,
+ * o cartão dos Puzzles, os dois mosaicos, o desafio, o cartão das regras e o
+ * rodapé de quem joga. Cada uma tinha a sua razão, e juntas eram um ecrã onde
+ * tudo pedia para ser lido ao mesmo tempo. Ficaram quatro:
+ *
+ *   a barra    o que é de quem joga: o nome, as medalhas, as definições
+ *   a marca    o nome do jogo, e a regra inteira por baixo dele
+ *   os modos   o jogo
+ *   o desafio  a razão de voltar amanhã
+ *
+ * **O que é de quem joga vive todo na barra de cima.** O jogador, as medalhas e
+ * as definições estavam repartidos entre o canto de cima e um rodapé, e o rodapé
+ * ocupava a zona do polegar — o sítio mais caro do ecrã — com as três coisas que
+ * menos se tocam. A mesma razão que já tinha posto as definições no canto vale
+ * para as outras duas: são consultas, não jogo. É também a convenção de todos os
+ * jogos de telemóvel — o retrato num canto, os troféus e a roda dentada no
+ * outro —, e uma convenção não se aprende.
+ *
+ * Estiveram juntos na barra uma vez, e saíram porque o nome do jogador e o nome
+ * do jogo disputavam a mesma linha. Agora não disputam: **o nome do jogo tem uma
+ * faixa sua**, centrada, e a barra é só de quem joga.
+ *
+ * **A regra substitui o lema e o cartão das regras.** Os dois diziam o mesmo —
+ * o lema por palavras, o cartão em peças — e os dois eram para quem chega pela
+ * primeira vez, a ocupar espaço a quem já sabe. Fica uma linha só por baixo do
+ * nome: 3 + 4 = 7 em peças, e «Como jogar?» ao lado. Lê-se como subtítulo do
+ * jogo, e toca-se para as regras inteiras.
+ *
+ * **O espaço que sobra fica por cima dos cartões, à volta da marca.** Os modos
+ * e o desafio assentam em baixo, onde o polegar chega sem esticar; num ecrã
+ * alto, é a marca que ganha ar, e não os cartões que esticam até virar painéis.
  *
  * **Os três modos não são três linhas iguais.** Os Puzzles são a campanha, têm
  * 143 níveis e progresso para contar: ficam com um cartão largo. O
@@ -37,8 +55,10 @@
  * modo a que pertence**. Quem não jogou nada não vê zeros a acusá-lo — o número
  * só aparece quando há o que contar.
  *
- * **As definições ficam no canto de cima.** São a ação menos frequente da Home,
- * e o fundo de um telemóvel é a zona do polegar — o sítio mais caro do ecrã.
+ * **Sem setas nos cartões.** Um cartão com cor, sombra e ícone já se lê como
+ * coisa que se toca; a seta à direita é o idioma de uma lista de definições, e
+ * num ecrã de jogo fazia-o parecer uma. Fica só na linha da regra, que é texto
+ * sem cartão e precisa de dizer que leva a algum lado.
  *
  * **O Desafio do Dia é um cartão, e só um.** É a única coisa da Home que muda
  * todos os dias, e a razão de alguém a abrir amanhã — mas é um cartão entre os
@@ -91,7 +111,7 @@ export interface ResumoDoDesafio {
   readonly aoAbrir: () => void;
 }
 
-/** A entrada das medalhas, no rodapé. */
+/** A entrada das medalhas, na barra. */
 export interface ResumoDasMedalhas {
   readonly ganhas: number;
   readonly total: number;
@@ -152,12 +172,6 @@ export class HomeScreen {
       this.mosaico(opcoes),
     );
 
-    const lema = elemento("p", "home-lema");
-    lema.append(
-      elemento("b", "home-lema-forte", t().home.lemaForte),
-      t().home.lema,
-    );
-
     /*
      * ── O desafio do dia vem depois dos modos, para toda a gente ──
      *
@@ -169,20 +183,12 @@ export class HomeScreen {
      */
     const desafio = opcoes.desafio === undefined ? [] : [this.desafio(opcoes.desafio)];
 
-    // Com o desafio, os modos ganham um nome: são duas secções, e não uma lista.
-    if (opcoes.desafio !== undefined) {
-      modos.prepend(elemento("h2", "home-seccao", t().home.modos));
-    }
-
-    this.raiz.append(
-      this.barra(opcoes),
-      lema,
-      modos,
-      ...desafio,
-      this.ajuda(opcoes),
-      this.rodape(opcoes),
-    );
-    this.raiz.dataset["desafio"] = opcoes.desafio === undefined ? "nao" : "sim";
+    /*
+     * Sem título por cima dos modos. Esteve lá um «Modos de jogo» para separar
+     * os modos do desafio; mas três cartões com a cor das faces já são um grupo
+     * à vista, e o desafio tem o seu rótulo dentro do bilhete.
+     */
+    this.raiz.append(this.barra(opcoes), this.marca(opcoes), modos, ...desafio);
 
     host.replaceChildren(this.raiz);
   }
@@ -194,24 +200,42 @@ export class HomeScreen {
   /* ─── A barra ───────────────────────────────────────────────────────────── */
 
   /**
-   * A marca à esquerda, as definições à direita.
+   * Quem joga à esquerda; as medalhas e as definições à direita.
    *
-   * O símbolo e o nome do jogo vão dentro do mesmo elemento e não em dois: são
-   * uma coisa só a olhar, e separá-los deixava o nome a escorregar num ecrã
-   * estreito enquanto o símbolo ficava.
+   * O nome do jogador é o único rótulo de comprimento livre da barra, e fica
+   * com o que sobra das outras duas: as medalhas e a roda dentada têm largura
+   * certa, e um nome comprido corta-se com reticências sem empurrar nenhuma.
    */
   private barra(opcoes: OpcoesHome): HTMLElement {
     const barra = elemento("header", "home-barra");
 
-    const marca = elemento("div", "home-marca");
-    marca.append(this.simbolo(), this.wordmark());
-
-    barra.append(
-      marca,
+    barra.appendChild(this.jogador(opcoes));
+    if (opcoes.medalhas !== undefined) barra.appendChild(this.medalhas(opcoes.medalhas));
+    barra.appendChild(
       botaoRedondo(iconeDefinicoes(), t().definicoes.titulo, opcoes.aoEscolherDefinicoes),
     );
 
     return barra;
+  }
+
+  /* ─── A marca ───────────────────────────────────────────────────────────── */
+
+  /**
+   * O nome do jogo, centrado, e a regra por baixo.
+   *
+   * É a faixa elástica da Home: num ecrã alto fica ao meio do espaço que os
+   * cartões deixam, e lê-se como o ecrã de título de um jogo. O símbolo e o
+   * nome vão no mesmo elemento: são uma coisa só a olhar, e separados o nome
+   * escorregava num ecrã estreito enquanto o símbolo ficava.
+   */
+  private marca(opcoes: OpcoesHome): HTMLElement {
+    const el = elemento("div", "home-marca");
+
+    const logotipo = elemento("div", "home-logotipo");
+    logotipo.append(this.simbolo(), this.wordmark());
+
+    el.append(logotipo, this.regra(opcoes));
+    return el;
   }
 
   /**
@@ -249,28 +273,44 @@ export class HomeScreen {
     return h;
   }
 
-  /* ─── O rodapé ──────────────────────────────────────────────────────────── */
-
   /**
-   * Quem está a jogar, no fundo do ecrã.
+   * A regra inteira, numa linha: 3 + 4 = 7 em peças, e «Como jogar?».
    *
-   * No fundo e não na barra de cima porque a barra é partilhada com o nome do
-   * jogo: dois rótulos de comprimento livre na mesma linha, e um nome de dez
-   * letras cortava os dois. Aqui tem a largura toda para si — e é onde o polegar
-   * já está, o que é o sítio certo para a única coisa da Home que se personaliza.
+   * Ficou no lugar de duas coisas — o lema, que dizia por palavras que o
+   * objetivo é somar 7, e o cartão das regras, que o dizia em peças. Por baixo
+   * do nome lê-se como subtítulo do jogo: quem a percebe aqui já não precisa
+   * de entrar, e quem não percebe tem o botão no sítio onde a dúvida nasce.
+   *
+   * Sem cartão: é texto, e não compete com os modos. A seta fica, porque sem
+   * ela uma linha de texto não diz que leva a algum lado.
+   *
+   * As peças são `aria-hidden`, e o nome do botão diz a regra por palavras —
+   * a mesma frase que estava no cartão.
    */
-  private rodape(opcoes: OpcoesHome): HTMLElement {
-    const el = elemento("footer", "home-rodape");
-    el.appendChild(this.jogador(opcoes));
-    if (opcoes.medalhas !== undefined) el.appendChild(this.medalhas(opcoes.medalhas));
-    return el;
+  private regra(opcoes: OpcoesHome): HTMLButtonElement {
+    const face = opcoes.modoFace ?? "pintas";
+    const conta = elemento("span", "home-regra-conta");
+    conta.setAttribute("aria-hidden", "true");
+    conta.append(
+      pecaDeAmostra(3, face),
+      elemento("span", "home-regra-sinal", "+"),
+      pecaDeAmostra(4, face),
+      elemento("span", "home-regra-sinal", "="),
+      elemento("span", "home-regra-sete", "7"),
+    );
+
+    const b = botao("", "home-regra", opcoes.aoEscolherComoJogar);
+    b.append(conta, elemento("span", "home-regra-titulo", t().home.comoJogar), iconeSeguir());
+    b.setAttribute("aria-label", `${t().home.comoJogar} ${t().home.comoJogarLegenda}`);
+
+    return b;
   }
 
   /**
-   * As medalhas, ao lado de quem joga: são dele, e é a mesma pastilha.
+   * As medalhas, ao lado das definições.
    *
-   * No rodapé e não entre os modos, porque não se jogam: são o que ficou de
-   * jogar. Ao lado do nome lêem-se como o que a pessoa já tem, que é o que são.
+   * Na barra e não entre os modos, porque não se jogam: são o que ficou de
+   * jogar, e consultam-se como o perfil e as definições se consultam.
    *
    * O número é «ganhas/total», e o ponto diz que há medalhas novas por ver — até
    * a página abrir. Um ponto e não um número de novas: a notícia é que há
@@ -378,7 +418,7 @@ export class HomeScreen {
     const texto = elemento("span", "home-modo-texto");
     texto.append(cabeca, elemento("span", "home-modo-legenda", c.legenda));
 
-    b.append(icone, texto, iconeSeguir());
+    b.append(icone, texto);
     return b;
   }
 
@@ -566,7 +606,7 @@ export class HomeScreen {
             : t().home.interrompido;
 
     const linha = elemento("span", "home-desafio-linha");
-    linha.append(icone, texto, elemento("span", "desafio-modo-estado", estado), iconeSeguir());
+    linha.append(icone, texto, elemento("span", "desafio-modo-estado", estado));
 
     b.append(cabeca, linha);
     b.setAttribute(
@@ -575,44 +615,5 @@ export class HomeScreen {
     );
 
     return b;
-  }
-
-  /* ─── As regras ─────────────────────────────────────────────────────────── */
-
-  /**
-   * As regras, numa faixa: a conta em peças, «Como jogar?», e a seta.
-   *
-   * **A regra inteira continua impressa**, em peças: um 3, um 4 e o 7 que eles
-   * fazem. É o jogo todo numa linha, e quem a percebe aqui já não precisa de
-   * entrar. Foi um cartão alto, com o título, um parágrafo e um botão; numa
-   * Home que passou a ter o desafio do dia, ocupava o espaço de um modo para a
-   * única coisa do ecrã que não é jogar. A faixa inteira é o botão.
-   */
-  private ajuda(opcoes: OpcoesHome): HTMLElement {
-    const el = elemento("section", "home-ajuda");
-    el.setAttribute("aria-label", t().comoJogar.titulo);
-
-    const face = opcoes.modoFace ?? "pintas";
-    const conta = elemento("span", "home-ajuda-conta");
-    conta.setAttribute("aria-hidden", "true");
-    conta.append(
-      pecaDeAmostra(3, face),
-      elemento("span", "home-ajuda-sinal", "+"),
-      pecaDeAmostra(4, face),
-      elemento("span", "home-ajuda-sinal", "="),
-      elemento("span", "home-ajuda-sete", "7"),
-    );
-
-    const texto = elemento("span", "home-ajuda-texto");
-    texto.append(
-      elemento("span", "home-ajuda-titulo", t().home.comoJogar),
-      elemento("span", "home-ajuda-legenda", t().home.comoJogarLegenda),
-    );
-
-    const b = botao("", "home-ajuda-faixa", opcoes.aoEscolherComoJogar);
-    b.append(conta, texto, iconeSeguir());
-    el.appendChild(b);
-
-    return el;
   }
 }

@@ -252,7 +252,6 @@ describe("o cartão do Desafio do Dia, na Home", () => {
     for (const perfil of [emptyProfile(), jogador]) {
       const ecra = abrir({}, perfil);
       expect(ordem().indexOf("home-modos")).toBeLessThan(ordem().indexOf("home-desafio"));
-      expect(host.querySelector(".home-modos .home-seccao")?.textContent).toBe("Modos de jogo");
       ecra.destruir();
     }
   });

@@ -1405,87 +1405,61 @@ body::before {
 /* ─── Home ────────────────────────────────────────────────────────────────── */
 
 /*
- * Cinco faixas: a barra da marca, o lema, os modos, o cartão das regras, e o
- * rodapé de quem joga.
+ * Quatro faixas: a barra de quem joga, a marca, os modos, e o desafio do dia.
  *
- * Só os modos têm faixa elástica (`minmax(0, 1fr)`): é a única que pode crescer
- * num ecrã alto e a única que tem de ficar ao alcance do polegar. As outras
- * medem-se pelo conteúdo, e num ecrã baixo é o espaço entre elas que cede —
- * nunca um cartão.
+ * **A faixa elástica é a da marca**, e não a dos modos. Os cartões medem-se
+ * pelo conteúdo e assentam em baixo, na zona do polegar; o que sobra num ecrã
+ * alto vai para a marca, que fica ao meio desse espaço como num ecrã de título.
+ * Com os modos elásticos, num telemóvel alto, eram os cartões que esticavam até
+ * virar painéis de cor — e era isso, mais do que o número de coisas, que fazia
+ * a Home parecer cheia.
+ *
+ * Altura **mínima** do ecrã, e não altura fixa: num telemóvel baixo nada encolhe
+ * abaixo do que tem dentro, e a Home desliza em vez de sobrepor cartões.
  *
  * A Home é mais estreita do que os outros ecrãs. `.ecra` dá 920px porque um
- * tabuleiro grande precisa deles; quatro cartões esticados a 920px num monitor
- * liam-se como uma página de definições.
+ * tabuleiro grande precisa deles; cartões esticados a 920px num monitor liam-se
+ * como uma página de definições.
  */
 .ecra.home {
-  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
-  gap: 14px;
-  max-width: 460px;
-}
-
-/*
- * Com o Desafio do Dia, uma faixa a mais, entre os modos e o cartão das regras.
- *
- * A faixa dos modos deixa de poder encolher abaixo do que tem dentro
- * (`minmax(auto, …)` e não `minmax(0, …)`): com o cartão do dia, num ecrã
- * baixo, o conteúdo não cabia e os cartões sobrepunham-se. Assim, a página
- * desliza.
- */
-.ecra.home[data-desafio="sim"] {
-  grid-template-rows: auto auto minmax(auto, 1fr) auto auto auto;
+  /* A barra e a marca; os modos e o desafio, se o houver, vêm nas linhas implícitas. */
+  grid-template-rows: auto minmax(auto, 1fr);
+  grid-auto-rows: auto;
   gap: 12px;
-  /*
-   * Altura **mínima** do ecrã, e não altura fixa. Fixa, num telemóvel baixo a
-   * grelha encolhia as linhas para caber, e o bilhete do dia saía cortado a
-   * meio. Assim, onde cabe, a faixa dos modos estica e enche o ecrã; onde não
-   * cabe, a Home cresce e desliza.
-   */
+  max-width: 460px;
   height: auto;
   min-height: 100%;
 }
 
 /*
- * A barra: a marca à esquerda, as definições à direita.
+ * A barra: quem joga à esquerda, as medalhas e as definições à direita.
  *
- * A marca era um bloco centrado com o símbolo grande, o nome e o lema, e ficava
- * com o terço de cima do ecrã a dizer ao jogador o nome da aplicação que ele
- * acabou de abrir. Numa barra diz o mesmo em 44px, e o que sobra é dos modos.
+ * As três têm a mesma altura e a mesma superfície — branca, com o aro de 1px —,
+ * porque são a mesma família: o que é da pessoa, e não do jogo.
  */
 .home-barra {
   display: flex;
   align-items: center;
-  gap: 10px;
-  min-height: var(--alvo);
-}
-
-/*
- * Quem joga, no fundo do ecrã e centrado.
- *
- * Esteve na barra de cima, à esquerda do nome do jogo, e os dois rótulos
- * disputavam a mesma linha: um nome de jogador comprido cortava-se a si e ao
- * nome do jogo. Em baixo tem a largura inteira, e a pastilha centrada lê-se como
- * assinatura em vez de mais um controlo da barra.
- */
-.home-rodape {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
   gap: 8px;
   min-height: var(--alvo);
-  align-items: center;
 }
 
 /*
  * Uma pastilha e não um botão quadrado: o avatar é redondo, o nome vem a seguir,
  * e a forma diz «isto é uma pessoa» antes de se ler a palavra.
+ *
+ * Empurra as outras duas para a direita (`margin-right: auto`), e é a única que
+ * encolhe: o nome corta-se, a conta das medalhas e a roda dentada não.
  */
 .home-jogador {
   display: flex;
   align-items: center;
   gap: 8px;
-  max-width: 100%;
   min-width: 0;
-  padding: 4px 14px 4px 4px;
+  min-height: var(--alvo);
+  margin-right: auto;
+  padding: 4px 14px 4px 6px;
+  border: 0;
   border-radius: 999px;
   font-size: 14px;
   font-weight: 600;
@@ -1500,7 +1474,7 @@ body::before {
 }
 
 .home-avatar .peca {
-  --lado: 28px;
+  --lado: 32px;
 
   /* Redondo: é um retrato, e um retrato não tem cantos de peça. */
   border-radius: 50%;
@@ -1519,38 +1493,71 @@ body::before {
   color: var(--ink-muted);
 }
 
-.home-marca {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-  /* Empurra as definições para a direita sem um separador vazio pelo meio. */
-  margin-right: auto;
-}
-
-.home-simbolo {
-  display: block;
-  width: 34px;
-  height: 34px;
-  flex-shrink: 0;
+/* A roda dentada com o aro das outras duas, e não o contorno do `.btn`. */
+.home-barra > .btn.redondo {
+  border: 0;
+  box-shadow: inset 0 0 0 1px var(--line);
 }
 
 /*
- * O nome do jogo, agora com a barra inteira para si.
+ * A marca: o símbolo e o nome numa linha, a regra por baixo, tudo ao centro.
  *
- * Partilhava-a com a pastilha do jogador e media 19px por caber; com a pastilha
- * no rodapé sobram 200px, e o nome ocupa-os — é a única palavra deste ecrã que
- * não é uma instrução, e o primeiro ecrã de um jogo pode dizer como se chama em
- * tamanho de nome próprio.
+ * `align-content: center` porque esta é a faixa elástica — num ecrã alto a
+ * marca fica a meio do espaço que os cartões deixam livre.
+ */
+.home-marca {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 12px;
+  padding-block: 8px;
+}
+
+/*
+ * O símbolo por cima do nome, como no ícone da aplicação e num ecrã de título.
  *
- * Continua a cortar com reticências em vez de quebrar: uma segunda linha
- * desalinhava a barra inteira. Com o `clamp`, só chega lá em larguras onde já
- * nada mais caberia.
+ * Numa linha, ao lado do nome, o símbolo media o mesmo que uma letra, e a marca
+ * era uma palavra perdida no meio do espaço livre. Empilhado, cresce com a
+ * altura do ecrã (`vh`) e é ele que ocupa o espaço que sobra — num telemóvel
+ * baixo encolhe até ao tamanho de um ícone, e nunca empurra os cartões.
+ */
+.home-logotipo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.home-simbolo {
+  --lado-simbolo: clamp(44px, 14vh - 24px, 104px);
+
+  display: block;
+  width: var(--lado-simbolo);
+  height: var(--lado-simbolo);
+  flex-shrink: 0;
+  /* A mesma luz de cima das peças e do nome: assenta no papel, não flutua. */
+  filter: drop-shadow(0 3px 4px var(--marca-sombra));
+}
+
+/*
+ * O nome do jogo, numa faixa só sua.
+ *
+ * Mediu 19px quando partilhava a barra com a pastilha do jogador, e 34px quando
+ * a teve inteira; agora tem a largura do ecrã e uma faixa elástica à volta, e
+ * cresce até ao tamanho de um título de jogo — é a única palavra deste ecrã
+ * que não é uma instrução.
+ *
+ * Continua a cortar com reticências em vez de quebrar: o nome numa linha só é
+ * a marca, e em duas era um parágrafo. Com o `clamp`, só chega lá em larguras
+ * onde já nada mais caberia.
  */
 .home-titulo {
+  min-width: 0;
   margin: 0;
   font-family: var(--fonte-marca);
-  font-size: clamp(26px, 7.8vw, 34px);
+  font-size: clamp(30px, 10.4vw, 44px);
   font-weight: 600;
   /*
    * A Fredoka já é larga e arredondada: o `tracking` negativo que a `system-ui`
@@ -1649,35 +1656,9 @@ body::before {
   visibility: hidden;
 }
 
-/*
- * O lema: o objetivo em negrito, a ressalva a seguir.
- *
- * As duas metades dizem coisas diferentes — uma é a regra, a outra é o aviso de
- * que a regra não chega — e o contraste de peso é o que impede que se leiam
- * como uma frase corrida de que só sobra a primeira metade.
- */
-.home-lema {
-  margin: 0;
-  font-size: 14px;
-  line-height: 1.45;
-  color: var(--ink-muted);
-  text-wrap: balance;
-}
-
-.home-lema-forte {
-  font-weight: 650;
-  color: var(--ink);
-}
-
-/*
- * Os modos: um cartão largo em cima, dois mosaicos por baixo.
- *
- * `align-content: center` porque a faixa é elástica — num ecrã alto os modos
- * ficam ao meio do espaço que lhes sobra, e não encostados ao lema.
- */
+/* Os modos: um cartão largo em cima, dois mosaicos por baixo. */
 .home-modos {
   display: grid;
-  align-content: center;
   gap: 10px;
 }
 
@@ -1793,6 +1774,11 @@ body::before {
   animation-delay: calc(var(--t-escada) * 2);
 }
 
+.ecra.home[data-entrada] .home-desafio {
+  animation: assentar-cartao var(--t-ecra) var(--suavizacao) backwards;
+  animation-delay: calc(var(--t-escada) * 3);
+}
+
 @keyframes assentar-cartao {
   from {
     opacity: 0;
@@ -1808,19 +1794,19 @@ body::before {
  * primeira vez vai por aqui, e a Home tem de o dizer sem uma palavra.
  */
 .home-modo.primario {
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   gap: 14px;
   /*
-   * A altura acompanha o ecrã, com um piso e um teto.
+   * A altura acompanha o ecrã, com um piso e um teto — e um teto baixo.
    *
-   * Fixa, a Home ficava com 200px de vazio por cima e por baixo dos modos num
-   * telemóvel alto, e os cartões pareciam pequenos ao meio do nada. Em `vh`
-   * sozinho, num monitor de 1400px cada cartão virava um painel. O `clamp` dá o
-   * que há sem deixar a Home crescer para fora da sua escala.
+   * Os cartões chegaram a crescer até 112px e 200px para encherem o ecrã, e num
+   * telemóvel alto eram três painéis de cor a ocupar metade da Home. O espaço
+   * que sobra é agora da marca; os cartões crescem só o bastante para não
+   * parecerem botões de formulário num ecrã grande.
    */
-  min-height: clamp(72px, 13vh, 112px);
-  padding: 12px 14px 12px 12px;
+  min-height: clamp(76px, 11vh, 96px);
+  padding: 12px 16px 12px 12px;
 }
 
 /*
@@ -1834,7 +1820,7 @@ body::before {
 .home-modo.compacto {
   grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 10px;
-  min-height: clamp(128px, 24vh, 200px);
+  min-height: clamp(116px, 16vh, 148px);
   padding: 12px;
 }
 
@@ -1851,11 +1837,6 @@ body::before {
 .home-modo-icone .icone {
   width: 24px;
   height: 24px;
-}
-
-.home-modo > .icone-seguir {
-  color: inherit;
-  opacity: 0.7;
 }
 
 .home-modo-texto {
@@ -2000,13 +1981,9 @@ body::before {
 /* O desafio de hoje: o ícone na cor do modo, o nome e o dia, e o estado. */
 .home-desafio-linha {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
-}
-
-.home-desafio-linha > .icone-seguir {
-  color: var(--ink-muted);
 }
 
 .home-desafio .desafio-modo-icone {
@@ -2916,90 +2893,73 @@ body::before {
   color: var(--ink-muted);
 }
 
-/* ─── Home: as secções ────────────────────────────────────────────────────── */
-
-/* «Modos de jogo»: o mesmo rótulo do desafio, mais discreto — é o resto. */
-.home-seccao {
-  margin: 0;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--ink-muted);
-}
-
-/* ─── Home: as regras ─────────────────────────────────────────────────────── */
+/* ─── Home: a regra ───────────────────────────────────────────────────────── */
 
 /*
- * Uma faixa e não um cartão: a conta em peças, «Como jogar?», e a seta. A
- * regra inteira continua impressa — 3 + 4 = 7 —, e quem a percebe aqui já não
- * precisa de entrar. A faixa inteira é o botão.
+ * A regra por baixo do nome do jogo: 3 + 4 = 7 em peças, «Como jogar?», e a
+ * seta. Ficou no lugar do lema e do cartão das regras, que diziam o mesmo.
+ *
+ * Uma pastilha só com o aro, sem fundo nem sombra: é o subtítulo do jogo, e
+ * não um cartão a disputar o olhar com os modos. O aro é o mínimo que a faz
+ * ler-se como coisa que se toca — sem ele, era uma legenda.
  */
-.home-ajuda {
-  display: grid;
-}
-
-.home-ajuda-faixa {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+.btn.home-regra {
+  display: inline-flex;
   align-items: center;
-  gap: 12px;
-  min-height: 60px;
-  padding: 10px 14px;
-  font: inherit;
-  text-align: left;
-  border: 1px solid var(--line);
-  border-radius: calc(var(--raio) + 6px);
-  background: var(--surface);
+  gap: 10px;
+  max-width: 100%;
+  padding: 4px 10px 4px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--line);
   color: var(--ink);
-  box-shadow: var(--sombra-cartao);
-  cursor: pointer;
 }
 
-.home-ajuda-faixa > .icone-seguir {
+@media (hover: hover) {
+  .btn.home-regra:hover {
+    background: var(--surface);
+  }
+}
+
+.home-regra > .icone-seguir {
+  flex-shrink: 0;
   color: var(--ink-muted);
 }
 
-.home-ajuda-conta {
+.home-regra-conta {
   display: flex;
   align-items: center;
   gap: 5px;
+  flex-shrink: 0;
 }
 
-.home-ajuda-conta .peca {
-  --lado: 24px;
+.home-regra-conta .peca {
+  --lado: 22px;
 }
 
-.home-ajuda-sinal {
+.home-regra-sinal {
   font-size: 14px;
   font-weight: 600;
   color: var(--ink-muted);
 }
 
-.home-ajuda-sete {
+.home-regra-sete {
   font-family: var(--fonte-marca);
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 600;
   line-height: 1;
   color: var(--accent);
 }
 
-.home-ajuda-texto {
-  display: grid;
-  gap: 1px;
+.home-regra-titulo {
   min-width: 0;
-}
-
-.home-ajuda-titulo {
-  font-size: 15px;
+  overflow: hidden;
+  font-size: 14px;
   font-weight: 650;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   color: var(--accent);
-}
-
-.home-ajuda-legenda {
-  font-size: 12.5px;
-  line-height: 1.35;
-  color: var(--ink-muted);
 }
 
 /* ─── Quem és: o nome e o avatar ──────────────────────────────────────────── */
@@ -4087,11 +4047,6 @@ body::before {
     min-height: 28px;
   }
 
-  /* Numa Home estreita, o lema rouba a linha aos modos. */
-  .home-lema {
-    font-size: 13px;
-  }
-
   .grelha-niveis {
     grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
     gap: 6px;
@@ -4828,7 +4783,8 @@ body::before {
 /*
  * ── A entrada, na Home ──
  *
- * A mesma pastilha do jogador, ao lado dela: são as medalhas dele. O ponto é o
+ * Na barra, com a pastilha do jogador e a roda dentada: o que é da pessoa, e
+ * não do jogo. O ponto é o
  * vermelho do fogo, que é a única cor do jogo que chama sem ser uma face — e
  * diz «há aqui uma coisa nova», não «há aqui um erro».
  */
@@ -5495,17 +5451,11 @@ body::before {
 /* ─── Home num ecrã curto ─────────────────────────────────────────────────── */
 
 /*
- * Cinco faixas não cabem em 568px de altura, e o que cede é o cromado.
- *
- * A Home tem uma faixa elástica — os modos — e quatro medidas pelo conteúdo. Num
- * ecrã de 568px as quatro somam mais do que sobra, a faixa elástica encolhe
- * abaixo do que os cartões medem, e os cartões passam por cima do que está
- * abaixo. `minmax(0, 1fr)` permite-o de propósito: é o que impede o ecrã inteiro
- * de ganhar barra de scroll, e o preço é ter de o apertar aqui.
- *
- * O que encolhe é tudo o que é moldura: o espaço entre faixas, o tamanho do
- * nome, o enchimento do cartão das regras. **Nada desaparece** — quem tem um
- * ecrã pequeno vê a mesma Home, não uma Home com menos coisas.
+ * Num ecrã de 568px a Home não cabe sem deslizar, e o que cede primeiro é o
+ * cromado: o espaço entre faixas, o tamanho do nome, a folga dos mosaicos.
+ * **Nada desaparece** — quem tem um ecrã pequeno vê a mesma Home, não uma Home
+ * com menos coisas. O que ainda assim não couber desliza, porque a Home tem
+ * altura mínima e não fixa.
  *
  * A condição é a altura e não o aparelho, como na secção seguinte: uma janela de
  * computador baixa tem o mesmo problema pela mesma razão.
@@ -5515,17 +5465,23 @@ body::before {
     gap: 10px;
   }
 
-  .home-barra {
-    min-height: 0;
+  .home-marca {
+    gap: 8px;
+    padding-block: 0;
   }
 
   .home-titulo {
-    font-size: clamp(21px, 6.4vw, 24px);
+    font-size: clamp(26px, 8.4vw, 32px);
+  }
+
+  /* O símbolo volta para o lado do nome: empilhado, custava a altura de um cartão. */
+  .home-logotipo {
+    flex-direction: row;
+    gap: 10px;
   }
 
   .home-simbolo {
-    width: 27px;
-    height: 27px;
+    --lado-simbolo: 36px;
   }
 
   /*
@@ -5534,7 +5490,7 @@ body::before {
    * enchimento, o espaço entre o ícone e o nome, e o próprio ícone.
    */
   .ecra.home .home-modo.compacto {
-    min-height: clamp(104px, 20vh, 200px);
+    min-height: 0;
     gap: 6px;
     padding: 10px;
   }
@@ -5542,23 +5498,6 @@ body::before {
   .ecra.home .home-modo.compacto .home-modo-icone {
     width: 38px;
     height: 38px;
-  }
-
-  .home-ajuda {
-    gap: 6px;
-    padding: 10px 14px 12px;
-  }
-
-  .home-ajuda-conta {
-    margin-bottom: 0;
-  }
-
-  .home-ajuda-conta .peca {
-    --lado: 26px;
-  }
-
-  .home-rodape {
-    min-height: 0;
   }
 }
 
@@ -5695,21 +5634,20 @@ body::before {
   }
 
   /*
-   * A Home deitada: os modos à esquerda, o lema e as regras à direita.
+   * A Home deitada: a marca à esquerda, os modos e o desafio à direita.
    *
-   * Empilhadas, as quatro faixas pediam 620px de altura e o cartão das regras
-   * ficava abaixo da dobra — com ele, os mosaicos. A barra atravessa as duas
-   * colunas porque é a única coisa que pertence ao ecrã inteiro.
+   * Empilhadas, as faixas pediam o dobro da altura que há. A barra atravessa as
+   * duas colunas porque é a única coisa que pertence ao ecrã inteiro; a marca
+   * fica ao meio da coluna dela, como fica ao meio do espaço livre em retrato.
    */
   .ecra.home {
     max-width: 880px;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    grid-template-rows: auto auto auto minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr);
     grid-template-areas:
       "barra barra"
-      "modos lema"
-      "modos ajuda"
-      "modos rodape";
+      "marca modos"
+      "marca desafio";
     align-items: start;
     gap: 10px 24px;
     padding: 8px 16px;
@@ -5719,23 +5657,17 @@ body::before {
     grid-area: barra;
   }
 
-  .home-lema {
-    grid-area: lema;
-  }
-
-  /* Ao lado dos modos e não debaixo deles: em paisagem não há linha a sobrar. */
-  .home-rodape {
-    grid-area: rodape;
+  .home-marca {
+    grid-area: marca;
+    align-self: center;
   }
 
   .home-modos {
     grid-area: modos;
-    align-content: start;
   }
 
-  .home-ajuda {
-    grid-area: ajuda;
-    padding: 12px 14px 14px;
+  .home-desafio {
+    grid-area: desafio;
   }
 
   /* Há metade da altura: os cartões perdem a folga, não o conteúdo. */
@@ -5745,6 +5677,8 @@ body::before {
   }
 
   .ecra.home .home-modo.compacto {
-    min-height: 104px;
+    min-height: 0;
+    gap: 6px;
+    padding: 10px;
   }
 }
