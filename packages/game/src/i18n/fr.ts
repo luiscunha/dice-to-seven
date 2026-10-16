@@ -222,10 +222,7 @@ const FR_CRU: Textos = {
 
   home: {
     modosAria: "modes de jeu",
-    modos: "Modes de jeu",
     legendaPuzzles: "La campagne, chapitre par chapitre",
-    lemaForte: "Ton objectif est simple : faire 7.",
-    lema: " Y arriver, c’est ça le vrai défi.",
     escolherPerfil: "choisir un nom et un avatar",
     mudarPerfil: (nome) => `${nome} — changer le nom et l’avatar`,
     recorde: (pontos) => `Record ${String(pontos)}`,

@@ -188,10 +188,7 @@ export const ES: Textos = {
 
   home: {
     modosAria: "modos de juego",
-    modos: "Modos de juego",
     legendaPuzzles: "La campaña, capítulo a capítulo",
-    lemaForte: "Tu objetivo es sencillo: sumar 7.",
-    lema: " Conseguirlo es el verdadero reto.",
     escolherPerfil: "elegir nombre y avatar",
     mudarPerfil: (nome) => `${nome} — cambiar nombre y avatar`,
     recorde: (pontos) => `Récord ${String(pontos)}`,

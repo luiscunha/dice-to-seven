@@ -188,10 +188,7 @@ export const EN: Textos = {
 
   home: {
     modosAria: "game modes",
-    modos: "Game modes",
     legendaPuzzles: "The campaign, chapter by chapter",
-    lemaForte: "Your goal is simple: make 7.",
-    lema: " Pulling it off is the real challenge.",
     escolherPerfil: "choose a name and avatar",
     mudarPerfil: (nome) => `${nome} — change name and avatar`,
     recorde: (pontos) => `Record ${String(pontos)}`,

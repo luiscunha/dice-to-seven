@@ -243,10 +243,11 @@ describe("a entrada na Home", () => {
     ecra = undefined;
   });
 
-  it("fica no rodapé, ao lado de quem joga, com ganhas de quantas", () => {
+  it("fica na barra de cima, ao lado das definições, com ganhas de quantas", () => {
     ecra = home(false);
 
-    expect(botao()?.parentElement?.classList.contains("home-rodape")).toBe(true);
+    expect(botao()?.parentElement?.classList.contains("home-barra")).toBe(true);
+    expect(botao()?.nextElementSibling?.getAttribute("aria-label")).toBe("Definições");
     expect(botao()?.querySelector(".home-medalhas-conta")?.textContent).toBe("3/17");
     expect(botao()?.dataset["novas"]).toBeUndefined();
 
