@@ -65,7 +65,7 @@ contagem pode não fechar. Convém ter 15.
 - [ ] **Play Console**, conta pessoal — 25 USD, uma vez, em
       <https://play.google.com/console/signup>. Verificação de identidade com
       documento, morada e telefone; pode levar alguns dias.
-- [ ] **Um e-mail de contacto**, que fica **público** na ficha. Convém um
+- [x] **Um e-mail de contacto** — `dicetoseven@gmail.com`. Fica **público** na ficha. Convém um
       endereço só para o jogo.
 - [ ] **Estatuto de comerciante na UE**: o mesmo raciocínio — não comerciante.
 - [ ] **Os 12 testers**, numa lista de e-mails ou num Google Group.
@@ -148,7 +148,8 @@ Cada página tem os quatro idiomas, e mostra o do dispositivo (`?lang=` escolhe
 - [x] **Suporte**: o contacto e as perguntas frequentes — o progresso não passa
       de um telemóvel para outro, desinstalar apaga-o, como recomeçar, como
       mudar o idioma.
-- [ ] **O e-mail de contacto**, que ainda é um marcador (`EMAIL_DE_CONTACTO`).
+- [x] **O e-mail de contacto**: `dicetoseven@gmail.com`, nas duas páginas e nos
+      quatro idiomas.
 - [ ] **Tu**: criar o repositório público `dicetoseven-site`, enviar a pasta, e
       ligar o Pages (*Settings → Pages → Deploy from a branch → `main` /
       root*).
