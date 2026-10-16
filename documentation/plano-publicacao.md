@@ -125,15 +125,41 @@ configurações.
 ## 3. As páginas públicas — eu
 
 As duas lojas exigem uma **política de privacidade** num endereço público, e a
-Apple também uma **página de suporte**. Vivem no GitHub Pages, ao lado da
-versão web, e saem com o mesmo `deploy.yml`.
+Apple também uma **página de suporte**.
 
-- [ ] **Política de privacidade**, nos quatro idiomas. Curta e verdadeira: o
-      jogo não recolhe, não envia nem partilha dados; o progresso fica só no
-      telemóvel (e nas cópias de segurança do sistema, que são do utilizador);
-      não há contas, anúncios nem análise de uso.
-- [ ] **Suporte**: o e-mail de contacto e respostas curtas — o progresso não
-      passa de um telemóvel para outro, e desinstalar apaga-o.
+**O jogo sai da web, e o código fica privado** (decidido a 2026-10-16). As
+páginas vivem num repositório **à parte e público**, `dicetoseven-site`, que só
+tem HTML, CSS, o ícone e a fonte do nome — nenhum código do jogo. Publicado no
+GitHub Pages:
+
+| Página | Endereço |
+|---|---|
+| Apresentação | `https://luiscunha.github.io/dicetoseven-site/` |
+| Privacidade | `https://luiscunha.github.io/dicetoseven-site/privacy.html` |
+| Suporte | `https://luiscunha.github.io/dicetoseven-site/support.html` |
+
+Cada página tem os quatro idiomas, e mostra o do dispositivo (`?lang=` escolhe
+à mão).
+
+- [x] **Política de privacidade**, nos quatro idiomas: o jogo não recolhe, não
+      envia nem partilha dados; o progresso fica só no telemóvel (e nas cópias
+      de segurança do sistema, que são do utilizador); não há contas, anúncios
+      nem análise de uso.
+- [x] **Suporte**: o contacto e as perguntas frequentes — o progresso não passa
+      de um telemóvel para outro, desinstalar apaga-o, como recomeçar, como
+      mudar o idioma.
+- [ ] **O e-mail de contacto**, que ainda é um marcador (`EMAIL_DE_CONTACTO`).
+- [ ] **Tu**: criar o repositório público `dicetoseven-site`, enviar a pasta, e
+      ligar o Pages (*Settings → Pages → Deploy from a branch → `main` /
+      root*).
+- [ ] **Tu**: pôr o repositório do jogo **privado**, e confirmar que o site
+      antigo (`luiscunha.github.io/dice-to-seven/`) saiu do ar. O `deploy.yml`
+      já não existe; no plano grátis, um repositório privado deixa de publicar
+      o Pages.
+
+**Com o repositório privado, as Actions passam a ter limite**: 2 000 minutos
+por mês no plano grátis, e o macOS conta 10× — uns dez builds de iOS por mês,
+além da CI. Chega para preparar o lançamento; se não chegar, o GitHub Pro.
 
 ---
 
