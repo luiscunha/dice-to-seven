@@ -170,6 +170,39 @@ describe("a página das medalhas", () => {
       "Conquistada a 20 de outubro de 2026.",
     );
   });
+
+  /*
+   * A barra «2/14» diz quantas faltam, e não quais. O pormenor do Colecionador
+   * mostra as catorze, em peças, com as que já saíram acesas — e só o dele: as
+   * outras medalhas não têm grelha nenhuma.
+   */
+  it("o pormenor do Colecionador mostra as catorze composições, com as feitas marcadas", () => {
+    ecra = new MedalhasScreen(host, {
+      medalhas: todas((m) => (m.id === "colecionador" ? { progresso: { atual: 2, alvo: 14 } } : {})),
+      composicoes: ["34", "1111111"],
+      aoVoltar: () => undefined,
+    });
+
+    aba("premium")?.click();
+    cartao("Colecionador")?.click();
+
+    const composicoes = [...host.querySelectorAll<HTMLElement>(".composicao")];
+    expect(composicoes).toHaveLength(14);
+    expect(composicoes.filter((c) => c.dataset["feita"] === "sim")).toHaveLength(2);
+
+    const sete = composicoes.at(-1);
+    expect(sete?.querySelectorAll(".peca")).toHaveLength(7);
+    expect(sete?.querySelector("[role=img]")?.getAttribute("aria-label")).toBe(
+      "1 + 1 + 1 + 1 + 1 + 1 + 1, feita",
+    );
+    expect(composicoes[0]?.querySelector("[role=img]")?.getAttribute("aria-label")).toBe("1 + 6, por fazer");
+  });
+
+  it("as outras medalhas não têm grelha", () => {
+    ecra = abrir(todas());
+    cartao("Médio")?.click();
+    expect(host.querySelector(".composicoes")).toBeNull();
+  });
 });
 
 /* ─── Os emblemas ─────────────────────────────────────────────────────────── */
@@ -317,6 +350,37 @@ describe("a linha do painel de fim", () => {
     expect(linha?.textContent).toBe("Nova medalha: Iniciado");
     expect(linha?.nextElementSibling?.classList.contains("fim-acoes")).toBe(true);
 
+    ecra.destruir();
+  });
+
+  it("cada grupo que sai diz a sua composição do 7", async () => {
+    const composicoes: string[] = [];
+    const ecra = new PuzzleScreen(host, NIVEL, { aoEliminar: (c) => composicoes.push(c) });
+    await acabar();
+
+    expect(composicoes).toEqual(["34", "25"]);
+    ecra.destruir();
+  });
+
+  it("o joker conta pelo valor que tomou", async () => {
+    const composicoes: string[] = [];
+    const comJoker: Level = {
+      id: "meio-joker-000001",
+      seed: 0,
+      board: [[0], [5], [3], [4]],
+      joker: { at: [0, 0], trueValue: 2 },
+      solution: [],
+    };
+    const ecra = new PuzzleScreen(host, comJoker, { aoEliminar: (c) => composicoes.push(c) });
+
+    clicar(packed(0, 0));
+    host
+      .querySelector('.joker-opcao[aria-label="2"]')
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    clicar(packed(1, 0));
+    await assentar();
+
+    expect(composicoes).toEqual(["25"]);
     ecra.destruir();
   });
 

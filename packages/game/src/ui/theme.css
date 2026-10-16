@@ -266,6 +266,21 @@
   --emb-selo: #1b6b62;
   --emb-tinta: #123f3a;
   --emb-luz: #ffffff;
+  /* A bomba do Sangue-frio, em ferro, e o gelo na ponta do pavio. */
+  --emb-bomba-1: #7b8792;
+  --emb-bomba-2: #343c44;
+  --emb-bomba-3: #161a1e;
+  --emb-bomba-aresta: #0c0f12;
+  --emb-pavio: #c9a678;
+  --emb-gelo: #4fb6e3;
+  --emb-gelo-luz: #e6f7ff;
+  /* As peças do poço do Aguentar: a rampa das faces, fixa como as outras cores daqui. */
+  --emb-peca-1: #d7f1e7;
+  --emb-peca-2: #9bdcc6;
+  --emb-peca-3: #3ebb94;
+  --emb-peca-4: #1b6b62;
+  /* O veludo da vitrine do Colecionador. */
+  --emb-vitrine: #1f3a6b;
   /*
    * O laser do teto, no Survival: o núcleo do feixe e a passagem para o
    * laranja. Iguais nos dois temas — é luz, e a luz não muda com o fundo; o

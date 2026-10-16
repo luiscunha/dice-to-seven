@@ -19,13 +19,24 @@
 const NS = "http://www.w3.org/2000/svg";
 
 /**
+ * Um caminho com mais do que o traço: **cheio**, para as partes que só se leem
+ * como massa — a lâmina e o pomo da espada do Survival —, e rodado, para
+ * desenhar direito o que se mostra na diagonal.
+ */
+interface Caminho {
+  readonly d: string;
+  readonly cheio?: boolean;
+  readonly transform?: string;
+}
+
+/**
  * O invólucro comum.
  *
  * `d` é um ou mais caminhos; cada um entra como `<path>` próprio, porque um só
  * `d` com sub-caminhos partilharia o preenchimento e a seta do desfazer precisa
  * de ponta cheia sobre traço vazio.
  */
-function icone(classe: string, caminhos: readonly string[]): SVGElement {
+function icone(classe: string, caminhos: readonly (string | Caminho)[]): SVGElement {
   const svg = document.createElementNS(NS, "svg");
   svg.setAttribute("class", `icone ${classe}`);
   svg.setAttribute("viewBox", "0 0 24 24");
@@ -36,9 +47,14 @@ function icone(classe: string, caminhos: readonly string[]): SVGElement {
   svg.setAttribute("stroke-linejoin", "round");
   svg.setAttribute("aria-hidden", "true");
 
-  for (const d of caminhos) {
+  for (const c of caminhos) {
+    const { d, cheio = false, transform } = typeof c === "string" ? { d: c } : c;
     const p = document.createElementNS(NS, "path");
     p.setAttribute("d", d);
+    // Cheio **e** com traço: o traço redondo arredonda-lhe as pontas, e a
+    // massa fica com o mesmo peso de linha que o resto do desenho.
+    if (cheio) p.setAttribute("fill", "currentColor");
+    if (transform !== undefined) p.setAttribute("transform", transform);
     svg.appendChild(p);
   }
 
@@ -150,19 +166,27 @@ export const iconeFechar = (): SVGElement =>
   icone("icone-fechar", ["M6.5 6.5l11 11", "M17.5 6.5l-11 11"]);
 
 /**
- * Definições: dois cursores de regulação.
+ * Definições: a roda dentada.
  *
- * E não uma roda dentada: a roda a 18px é uma mancha com dentes, e os cursores
- * dizem o que o ecrã é — sítio de afinar, não de configurar uma máquina.
+ * Foram dois cursores de regulação, que diziam o que o ecrã é — sítio de
+ * afinar. Mas a roda é o sinal que toda a gente procura no canto de um jogo,
+ * e um sinal que se reconhece sem se ler ganha a um que se explica.
+ *
+ * Oito dentes, curtos e largos: a 20px, dentes finos fechavam-se numa mancha.
+ * Gera-se num círculo (dentes de 20° no topo e 32° na base), e não à mão, para
+ * os oito saírem iguais.
  */
 export const iconeDefinicoes = (): SVGElement =>
   icone("icone-definicoes", [
-    "M4 8h7",
-    "M11 8a2.25 2.25 0 1 0 4.5 0a2.25 2.25 0 1 0-4.5 0",
-    "M15.5 8H20",
-    "M4 16h3",
-    "M7 16a2.25 2.25 0 1 0 4.5 0a2.25 2.25 0 1 0-4.5 0",
-    "M11.5 16H20",
+    "M10.18 5.66L10.47 3.33A8.8 8.8 0 0 1 13.53 3.33L13.82 5.66A6.6 6.6 0 0 1 15.2 6.23" +
+      "L17.05 4.79A8.8 8.8 0 0 1 19.21 6.95L17.77 8.8A6.6 6.6 0 0 1 18.34 10.18" +
+      "L20.67 10.47A8.8 8.8 0 0 1 20.67 13.53L18.34 13.82A6.6 6.6 0 0 1 17.77 15.2" +
+      "L19.21 17.05A8.8 8.8 0 0 1 17.05 19.21L15.2 17.77A6.6 6.6 0 0 1 13.82 18.34" +
+      "L13.53 20.67A8.8 8.8 0 0 1 10.47 20.67L10.18 18.34A6.6 6.6 0 0 1 8.8 17.77" +
+      "L6.95 19.21A8.8 8.8 0 0 1 4.79 17.05L6.23 15.2A6.6 6.6 0 0 1 5.66 13.82" +
+      "L3.33 13.53A8.8 8.8 0 0 1 3.33 10.47L5.66 10.18A6.6 6.6 0 0 1 6.23 8.8" +
+      "L4.79 6.95A8.8 8.8 0 0 1 6.95 4.79L8.8 6.23A6.6 6.6 0 0 1 10.18 5.66Z",
+    "M9.4 12a2.6 2.6 0 1 0 5.2 0a2.6 2.6 0 1 0-5.2 0",
   ]);
 
 /**
@@ -206,11 +230,28 @@ export const iconeCronometro = (): SVGElement =>
     "M18 6.5l1.3-1.3",
   ]);
 
-/** Survival: uma linha a descer sobre as que já lá estão. */
+/**
+ * Survival: a espada sobre o escudo — aguentar e lutar.
+ *
+ * Foi uma linha a descer sobre as que já lá estavam: dizia a mecânica, mas
+ * não o modo, e ao lado do cronómetro e do dado lia-se como um botão de
+ * descarregar.
+ *
+ * O escudo é um contorno em duas metades, aberto onde a espada passa — por
+ * cima, onde sai a ponta, e por baixo, onde fica o pomo —, para a espada ficar
+ * à frente sem o traço lhe passar por cima. A espada desenha-se direita e roda
+ * 45°: a lâmina e o pomo cheios, a guarda e o punho em traço.
+ */
+const ESPADA = "rotate(45 12.7 11.15)";
+
 export const iconeSurvival = (): SVGElement =>
   icone("icone-survival", [
-    "M12 3v7",
-    "M8.5 7 12 10.5 15.5 7",
-    "M4.5 15h15",
-    "M4.5 19.5h15",
+    // O escudo: o ombro e o lado esquerdo; o lado direito e o fundo redondo.
+    "M4.7 13.6C4.4 11.2 4.5 8.6 5.1 6.4C8 6.3 10.8 5.6 13.4 4",
+    "M19.6 10.8c0 5.1-3.4 9.5-7.6 9.5c-.8 0-1.5-.2-2.2-.5",
+    // A espada, desenhada direita: lâmina, guarda, punho e pomo.
+    { d: "M12.7 3.6l1.4 2.9-.7 8.3h-1.4l-.7-8.3z", cheio: true, transform: ESPADA },
+    { d: "M10.1 15.7h5.2", transform: ESPADA },
+    { d: "M12.7 15.7v2", transform: ESPADA },
+    { d: "M11.95 18.6a.75.75 0 1 0 1.5 0a.75.75 0 1 0-1.5 0", cheio: true, transform: ESPADA },
   ]);

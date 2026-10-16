@@ -204,6 +204,11 @@ export interface TimeAttackState {
   readonly bomba: Bomba | undefined;
   /** Tabuleiros saltados. Não contam como limpos, nem apertam o ritmo. */
   readonly saltados: number;
+  /**
+   * Bombas desarmadas nesta corrida. Não mexe em nada do modo: conta para a
+   * medalha do Sangue-frio, que pede cinco numa corrida só.
+   */
+  readonly desarmadas: number;
 }
 
 export class JokerInTimeAttackError extends Error {
@@ -231,6 +236,7 @@ export function startTimeAttack(
     startedAt: now,
     bomba: undefined,
     saltados: 0,
+    desarmadas: 0,
   };
 }
 
@@ -734,6 +740,7 @@ export function tapTimeAttack(
       boardsCleared: antes.boardsCleared + (cleared ? 1 : 0),
       deadlineAt: antes.deadlineAt + gainedMs,
       bomba: desarmou ? undefined : seguirBomba(antes.bomba, before.board, jogada),
+      desarmadas: antes.desarmadas + (desarmou ? 1 : 0),
     },
     moved: true,
     gainedScore,

@@ -865,6 +865,15 @@ describe("a peça-bomba", () => {
     expect(resolverBomba(r.state, 99_999).rebentou).toBeUndefined();
   });
 
+  // As desarmadas contam-se para o Sangue-frio — e uma que rebentou não conta.
+  it("a corrida conta as bombas desarmadas, e só essas", () => {
+    let s = armada(TORRE, packed(0, 0), 5000);
+    expect(s.desarmadas).toBe(0);
+    s = tapTimeAttack(s, packed(0, 0), 1000).state;
+    expect(tapTimeAttack(s, packed(1, 0), 2000).state.desarmadas).toBe(1);
+    expect(tapTimeAttack(s, packed(1, 0), 6000).state.desarmadas).toBe(0);
+  });
+
   /*
    * Tirar o 3 de baixo e a coluna do 4 faz o 5 descer uma linha. A bomba tem
    * de ir com ele — senão passava a ameaçar a peça que caiu para o sítio antigo.

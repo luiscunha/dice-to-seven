@@ -10,7 +10,9 @@
  * pintas — a peça do tabuleiro em objeto. À volta, o que diz o tamanho da
  * conquista: uma folha a nascer no Iniciado, dois dados no Médio, asas no
  * Avançado, o escudo e a coroa no Perito. O Contra-Relógio é o cronómetro, o
- * Survival a ampulheta, o desafio a chama da sequência.
+ * Survival a ampulheta, o desafio a chama da sequência. As das estatísticas
+ * trazem a coisa que contam: a bomba, os elos do combo, o poço cheio, as
+ * peças de uma pinta, a vitrine das composições.
  *
  * **SVG, e não imagens.** Nítido em qualquer ecrã, uns quilobytes no total, e
  * as cores vêm todas de `theme.css`, por classe — nenhum hex aqui. As cores das
@@ -124,6 +126,11 @@ function garantirDefinicoes(): void {
     degrade("emb-halo-ouro", "radialGradient", { cx: 0.5, cy: 0.5, r: 0.5 }, [
       [0, "emb-halo-ouro-1"],
       [1, "emb-halo-2"],
+    ]),
+    degrade("emb-bomba", "radialGradient", { cx: 0.36, cy: 0.32, r: 0.75 }, [
+      [0, "emb-bomba-1"],
+      [0.55, "emb-bomba-2"],
+      [1, "emb-bomba-3"],
     ]),
   );
 
@@ -458,6 +465,152 @@ function pocoLimpo(): SVGElement {
   );
 }
 
+/**
+ * A bomba do Contra-Relógio, com o pavio cortado e gelado na ponta: a bomba
+ * que não rebentou porque alguém não perdeu a cabeça.
+ */
+function bombaGelada(): SVGElement {
+  // O floco: seis braços, cada um com dois raminhos.
+  const floco = grupo({ class: "emb-gelo", transform: "translate(87 21)" });
+  for (let i = 0; i < 6; i++) {
+    floco.appendChild(
+      no("path", undefined, {
+        d: "M0 0 V-9 M0 -5.5 L-2.8 -8 M0 -5.5 L2.8 -8",
+        transform: `rotate(${String(i * 60)})`,
+      }),
+    );
+  }
+
+  return grupo(
+    { class: "emb-bomba-grupo" },
+    no("path", "emb-pavio", { d: "M66 32 C70 22 76 20 82 23" }),
+    no("circle", "emb-bomba", { cx: 54, cy: 58, r: 27 }),
+    no("ellipse", "emb-bomba-brilho", { cx: 44, cy: 46, rx: 8, ry: 5, transform: "rotate(-35 44 46)" }),
+    no("rect", "emb-metal emb-prata", {
+      x: 58,
+      y: 27,
+      width: 14,
+      height: 10,
+      rx: 2.5,
+      transform: "rotate(34 65 32)",
+    }),
+    floco,
+    no("circle", "emb-gelo-nucleo", { cx: 87, cy: 21, r: 2.4 }),
+  );
+}
+
+/**
+ * Um elo de corrente entre dois dados, deitado ao longo da diagonal. Dois
+ * anéis entrelaçados: a aresta por baixo, o metal por cima.
+ */
+function elo(x: number, y: number, rotacao: number): SVGElement {
+  const anel = (dx: number): readonly SVGElement[] => [
+    no("ellipse", "emb-elo-aresta", { cx: dx, cy: 0, rx: 7, ry: 4.2 }),
+    no("ellipse", "emb-elo", { cx: dx, cy: 0, rx: 7, ry: 4.2 }),
+  ];
+  return grupo(
+    { transform: `translate(${n(x)} ${n(y)}) rotate(${n(rotacao)})` },
+    ...anel(-4.5),
+    ...anel(4.5),
+  );
+}
+
+/**
+ * O poço do Survival cheio até perto da borda, com a linha de fogo por cima:
+ * aguentar é isto, as linhas a subir e a pilha a não passar.
+ */
+function pocoCheio(): SVGElement {
+  const pecas: SVGElement[] = [];
+  // Quatro linhas de quatro peças, de baixo para cima, nos tons da rampa.
+  const tons = [
+    [4, 2, 3, 1],
+    [1, 3, 4, 2],
+    [3, 4, 1, 3],
+    [2, 1, 3, 4],
+  ];
+  tons.forEach((linha, r) => {
+    linha.forEach((tom, c) => {
+      pecas.push(
+        no("rect", `emb-peca emb-peca-${String(tom)}`, {
+          x: 38 + c * 11,
+          y: 75 - r * 11,
+          width: 10,
+          height: 10,
+          rx: 2.2,
+        }),
+      );
+    });
+  });
+
+  return grupo(
+    { class: "emb-poco" },
+    no("path", "emb-vidro", { d: "M34 22 V78 a10 10 0 0 0 10 10 H76 a10 10 0 0 0 10 -10 V22 Z" }),
+    ...pecas,
+    no("path", "emb-linha-fogo", { d: "M36 36 H84" }),
+    no("path", "emb-poco-parede", { d: "M34 22 V78 a10 10 0 0 0 10 10 H76 a10 10 0 0 0 10 -10 V22" }),
+  );
+}
+
+/**
+ * O grupo de sete 1, como sai no tabuleiro: sete peças planas, cada uma com a
+ * pinta ao centro, encostadas umas às outras numa forma que só os sete juntos
+ * fazem.
+ *
+ * Peças e não dados, ao contrário das outras: num dado em perspetiva, as faces
+ * de lado têm mais pintas do que a de cima, e o que se via eram os 2 e os 4. A
+ * medalha é a jogada, e a jogada faz-se com peças.
+ */
+function grupoDeUns(): SVGElement {
+  const lado = 19;
+  const folga = 3;
+  const celulas: readonly (readonly [number, number])[] = [
+    [1, 0], [2, 0],
+    [0, 1], [1, 1], [2, 1], [3, 1],
+    [1, 2],
+  ];
+  const x0 = 60 - (4 * lado + 3 * folga) / 2;
+  const y0 = 52 - (3 * lado + 2 * folga) / 2;
+
+  const pecas = celulas.flatMap(([c, r]) => {
+    const x = x0 + c * (lado + folga);
+    const y = y0 + r * (lado + folga);
+    return [
+      // A espessura por baixo, e a face por cima: a peça assenta.
+      no("rect", "emb-uns-base", { x: n(x), y: n(y + 2.5), width: lado, height: lado, rx: 4.5 }),
+      no("rect", "emb-uns-face", { x: n(x), y: n(y), width: lado, height: lado, rx: 4.5 }),
+      no("circle", "emb-uns-pinta", { cx: n(x + lado / 2), cy: n(y + lado / 2), r: 2.7 }),
+    ];
+  });
+
+  return grupo({ class: "emb-uns" }, ...pecas);
+}
+
+/**
+ * A vitrine do Colecionador: catorze casas em duas filas de sete, cada uma
+ * com uma face — as catorze maneiras de fazer 7, guardadas como se guardam
+ * medalhas.
+ */
+function vitrine(): SVGElement {
+  const casas: SVGElement[] = [];
+  const faces = [1, 6, 2, 5, 3, 4, 1, 2, 3, 1, 4, 2, 5, 1];
+  faces.forEach((face, i) => {
+    const x = 22 + (i % 7) * 11;
+    const y = 33 + Math.floor(i / 7) * 13;
+    casas.push(no("rect", "emb-casa", { x, y, width: 9, height: 9, rx: 2 }));
+    for (const [px, py] of PINTAS[face] ?? []) {
+      casas.push(no("circle", "emb-casa-pinta", { cx: n(x + px * 9), cy: n(y + py * 9), r: 0.95 }));
+    }
+  });
+
+  return grupo(
+    { class: "emb-vitrine" },
+    no("rect", "emb-metal emb-ouro", { x: 14, y: 24, width: 92, height: 38, rx: 7 }),
+    no("rect", "emb-vitrine-fundo", { x: 18, y: 28, width: 84, height: 30, rx: 4 }),
+    ...casas,
+    no("path", "emb-vitrine-reflexo", { d: "M22 30 L34 30 L24 56 L18 56 Z" }),
+  );
+}
+
 /* ─── As medalhas ─────────────────────────────────────────────────────────── */
 
 const DESENHOS: Readonly<Record<string, () => readonly SVGElement[]>> = {
@@ -532,6 +685,19 @@ const DESENHOS: Readonly<Record<string, () => readonly SVGElement[]>> = {
     cronometro(String(LIMIARES.maratona), "prata"),
   ],
 
+  /** A bomba com o pavio gelado: cinco que não rebentaram. */
+  "sangue-frio": () => [bombaGelada(), selo(String(LIMIARES.sangueFrio), false)],
+
+  /** Três dados presos por elos, a subir: a cadeia até ao ×3. */
+  "em-cadeia": () => [
+    elo(44, 58, -32),
+    elo(74, 40, -32),
+    dado(28, 70, 15, "branco", { topo: 1, esquerda: 2, direita: 3 }, -6),
+    dado(59, 51, 15, "branco", { topo: 2, esquerda: 3, direita: 1 }, 0),
+    dado(90, 32, 15, "branco", { topo: 3, esquerda: 1, direita: 2 }, 6),
+    selo("×3", false),
+  ],
+
   /** O cronómetro de ouro, entre louros. */
   recordista: () => [
     louro("ouro"),
@@ -554,6 +720,9 @@ const DESENHOS: Readonly<Record<string, () => readonly SVGElement[]>> = {
     ampulheta("prata"),
     selo(`${String(LIMIARES.cincoMinutosMs / 60_000)}′`, false),
   ],
+
+  /** O poço cheio até à linha de fogo, e a pilha a aguentar. */
+  aguentar: () => [pocoCheio(), selo(String(LIMIARES.aguentar), false)],
 
   /** A ampulheta de ouro. */
   "dez-minutos": () => [
@@ -590,6 +759,31 @@ const DESENHOS: Readonly<Record<string, () => readonly SVGElement[]>> = {
     dado(60, 54, 20, "branco", { topo: 1, esquerda: 2, direita: 3 }),
     coroa(60, 28, 0.8),
     fita(78, String(LIMIARES.cemDias)),
+  ],
+
+  /* ── O sete ── */
+
+  /** Sete peças de uma pinta, encostadas como no tabuleiro: o maior grupo que existe. */
+  "sete-uns": () => [grupoDeUns(), brilho(16, 20, 5), brilho(102, 80, 5)],
+
+  /** A vitrine das catorze composições, com a fita. */
+  colecionador: () => [
+    vitrine(),
+    fita(70, "14"),
+    brilho(14, 16, 5),
+    brilho(104, 20, 6),
+  ],
+
+  /**
+   * O dado de ouro com a estrela, a coroa e os louros: todas as normais. As
+   * duas faces do lado somam 7.
+   */
+  mestre: () => [
+    louro("ouro"),
+    dado(60, 58, 23, "ouro", { topo: "estrela", esquerda: 6, direita: 1 }),
+    coroa(60, 27, 0.9),
+    brilho(24, 22, 5),
+    brilho(96, 22, 5),
   ],
 };
 

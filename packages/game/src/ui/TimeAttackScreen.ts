@@ -25,6 +25,10 @@ import type {
   TimeAttackState,
 } from "../session/TimeAttackSession";
 import { t } from "../i18n";
+import { DEFAULT_COMBO_CONFIG } from "../session/combos";
+import type { Composicao } from "../session/estatisticas";
+import { composicaoDoGrupo } from "../session/estatisticas";
+import { comboMultiplier, DEFAULT_SCORING } from "../session/scoring";
 import type { TapRejection } from "../session/GameSession";
 import { isBlocked } from "../session/GameSession";
 import {
@@ -92,7 +96,16 @@ export interface OpcoesTimeAttack {
     readonly pontos: number;
     readonly tabuleiros: number;
     readonly saltados: number;
+    /** Bombas desarmadas na corrida. */
+    readonly bombas: number;
+    /** O combo mais longo da corrida, em jogadas encadeadas. */
+    readonly combo: number;
   }) => readonly MedalhaGanha[] | void;
+  /**
+   * Saiu um grupo, e é esta a composição do 7 que ele fez. É por aqui que os
+   * grupos chegam às estatísticas — ver `estatisticas.ts`.
+   */
+  readonly aoEliminar?: (composicao: Composicao) => void;
   readonly aoSair: () => void;
   /**
    * Outra corrida, a partir do painel de fim. Sem isto o botão não aparece, e o
@@ -164,6 +177,10 @@ export class TimeAttackScreen {
 
   private readonly elRelogio: HTMLElement;
   private readonly elMeta: HTMLElement;
+  private readonly elCombo: HTMLElement;
+  private readonly elComboValor: HTMLElement;
+  /** O combo que o ecrã já mostrou, para só reanimar quando sobe. */
+  private comboMostrado = 0;
   private readonly elFim: HTMLElement;
   private readonly elPreso: HTMLElement;
   private readonly btSaltar: HTMLButtonElement;
@@ -231,7 +248,28 @@ export class TimeAttackScreen {
     });
 
     const esquerda = elemento("div", "tempo-acoes");
-    esquerda.append(sair);
+
+    /*
+     * ── O combo, à vista ──
+     *
+     * O combo multiplicava os pontos e devolvia tempo, e não se via em lado
+     * nenhum: só o `+0.5s` a subir das peças dizia que alguma coisa tinha
+     * acontecido. Uma regra que paga e não se mostra não se aprende — e com a
+     * medalha do Em cadeia passou a ser uma meta, que tem de se poder ver.
+     *
+     * Fica ao lado da seta, na coluna da esquerda, que tinha espaço e nada
+     * dentro: aparecer e desaparecer não mexe no relógio nem no tabuleiro. Por
+     * baixo do número, um pavio que se gasta na janela do combo — é o que diz
+     * *quanto tempo há* para a jogada seguinte, que é a regra inteira.
+     */
+    this.elComboValor = elemento("span", "combo-valor");
+    this.elCombo = elemento("span", "combo");
+    this.elCombo.setAttribute("aria-hidden", "true");
+    this.elCombo.style.setProperty("--janela", `${String(DEFAULT_COMBO_CONFIG.windowMs)}ms`);
+    this.elCombo.append(this.elComboValor, elemento("span", "combo-pavio"));
+    this.elCombo.hidden = true;
+
+    esquerda.append(sair, this.elCombo);
 
     this.elRelogio = elemento("div", "relogio");
     this.elRelogio.setAttribute("role", "timer");
@@ -424,6 +462,9 @@ export class TimeAttackScreen {
     const grupo = r.state.game.lastMove;
 
     if (r.moved && grupo !== undefined) {
+      const composicao = composicaoDoGrupo(antes.game.board, grupo);
+      if (composicao !== undefined) this.opcoes.aoEliminar?.(composicao);
+
       // A âncora do anúncio calcula-se **antes** de as peças saírem: depois já
       // não há de onde o `+3s` subir.
       if (r.gainedMs > 0) this.anunciar(`+${segundos(r.gainedMs)}`, grupo);
@@ -618,6 +659,7 @@ export class TimeAttackScreen {
 
     this.pintarRelogio();
     this.pintarBomba(agora);
+    this.pintarCombo(agora);
     if (isOver(this.estado, agora)) this.terminar();
   }
 
@@ -642,6 +684,8 @@ export class TimeAttackScreen {
         pontos: this.estado.score,
         tabuleiros: this.estado.boardsCleared,
         saltados: this.estado.saltados,
+        bombas: this.estado.desarmadas,
+        combo: this.estado.combo.best,
       }) ?? [];
 
     this.pintarFim(medalhas);
@@ -667,6 +711,39 @@ export class TimeAttackScreen {
     this.view.marcarSelecao(new Set(jogo.selection));
     this.pintarBomba();
     this.pintarSalto();
+    this.pintarCombo();
+  }
+
+  /**
+   * O combo: o multiplicador, a partir da segunda jogada encadeada, e o pavio
+   * da janela por baixo. Some quando a janela passa sem jogada — que é quando
+   * o combo acabou, embora a sessão só o saiba na jogada seguinte.
+   *
+   * No teto (×3) muda para a cor do fogo: é a medalha do Em cadeia.
+   */
+  private pintarCombo(agora = Date.now()): void {
+    const { count, lastMoveAt } = this.estado.combo;
+    const vivo =
+      !this.terminado &&
+      count >= 2 &&
+      lastMoveAt !== undefined &&
+      agora - lastMoveAt <= DEFAULT_COMBO_CONFIG.windowMs;
+
+    if (!vivo) {
+      this.elCombo.hidden = true;
+      this.comboMostrado = 0;
+      return;
+    }
+
+    if (count === this.comboMostrado) return;
+
+    const formato = new Intl.NumberFormat(t().lang, { maximumFractionDigits: 2 });
+    this.elComboValor.textContent = `×${formato.format(comboMultiplier(count))}`;
+    this.elCombo.hidden = false;
+    this.elCombo.dataset["teto"] = comboMultiplier(count) >= DEFAULT_SCORING.comboCap ? "sim" : "nao";
+    // Uma jogada encadeada: o pavio volta a cheio, e o número salta.
+    reanimar(this.elCombo, "encadeou");
+    this.comboMostrado = count;
   }
 
   /**

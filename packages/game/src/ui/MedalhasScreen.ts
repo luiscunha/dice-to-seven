@@ -10,14 +10,20 @@
  * por trás do emblema e a pastilha escura. Por ganhar: o cartão cinzento, o
  * cadeado em cima, e a pastilha a dizer quanto falta — «2/40 níveis». O emblema
  * mantém as cores nos dois: é a montra do que se pode ganhar. Tocar abre o
- * pormenor: o que pede a medalha, e quando se ganhou.
+ * pormenor: o que pede a medalha, e quando se ganhou — e, no Colecionador, as
+ * catorze composições do 7, com as que já saíram acesas.
  *
  * As medalhas que o jogador ainda não tinha visto levam «Nova». A página abriu,
  * portanto da próxima vez já não — quem decide isso é o `main.ts`, que grava.
  */
 
+import type { Cell } from "@dicetoseven/engine";
+
 import { t } from "../i18n";
+import type { Composicao } from "../session/estatisticas";
+import { COMPOSICOES } from "../session/estatisticas";
 import type { Medalha, Progresso, TipoDeMedalha } from "../session/medalhas";
+import { pecaDeAmostra } from "./dice";
 import { avisar, cabecalho, elemento } from "./dom";
 import { emblema } from "./emblemas";
 import { iconeCadeado, iconeVisto } from "./icones";
@@ -34,6 +40,8 @@ export interface MedalhaNoEcra {
 
 export interface OpcoesMedalhas {
   readonly medalhas: readonly MedalhaNoEcra[];
+  /** As composições do 7 que já saíram: a grelha do Colecionador. */
+  readonly composicoes?: readonly Composicao[];
   readonly aoVoltar: () => void;
 }
 
@@ -71,6 +79,42 @@ export function rotuloDaPastilha(m: Medalha, p: Progresso, ganha: boolean): stri
 
 const unidade = (m: Medalha): string =>
   m.unidade === undefined ? "" : t().medalhas.unidades[m.unidade];
+
+/**
+ * As catorze composições do 7, em peças, com as que já saíram acesas.
+ *
+ * A barra «9/14» dizia quantas faltavam e não quais — e procurar sem saber o
+ * quê é andar às cegas. Aqui vê-se: as feitas na cor da face, as que faltam
+ * esbatidas, e quem quer o Colecionador sabe o que procurar no tabuleiro.
+ *
+ * Em peças e não em algarismos, porque é assim que o grupo aparece a jogar:
+ * «1 1 5» lê-se, três peças com uma, uma e cinco pintas reconhecem-se.
+ */
+export function grelhaDasComposicoes(feitas: ReadonlySet<Composicao>): HTMLElement {
+  const el = elemento("div", "composicoes");
+  el.appendChild(
+    elemento("p", "composicoes-titulo", t().paginaMedalhas.composicoesTitulo(COMPOSICOES.length)),
+  );
+
+  const lista = elemento("ul", "composicoes-lista");
+  for (const c of COMPOSICOES) {
+    const feita = feitas.has(c);
+    const partes = [...c].map((d) => Number(d) as Cell);
+
+    const pecas = elemento("span", "composicao-pecas");
+    pecas.setAttribute("role", "img");
+    pecas.setAttribute("aria-label", t().paginaMedalhas.composicaoAria(partes.join(" + "), feita));
+    pecas.append(...partes.map((v) => pecaDeAmostra(v)));
+
+    const li = elemento("li", "composicao");
+    li.dataset["feita"] = feita ? "sim" : "nao";
+    li.appendChild(pecas);
+    lista.appendChild(li);
+  }
+
+  el.appendChild(lista);
+  return el;
+}
 
 /** O nome da medalha, no idioma do jogo. */
 export const nomeDaMedalha = (m: Pick<Medalha, "id">): string => t().medalhas.nomes[m.id];
@@ -239,6 +283,9 @@ export class MedalhasScreen {
           ? t().paginaMedalhas.estadoProgresso(rotuloDaPastilha(medalha, progresso, false))
           : t().paginaMedalhas.estadoPorGanhar;
     conteudo.appendChild(elemento("p", "medalha-pormenor-estado", estado));
+    if (medalha.id === "colecionador") {
+      conteudo.appendChild(grelhaDasComposicoes(new Set(this.opcoes.composicoes ?? [])));
+    }
 
     avisar(this.raiz, {
       titulo: nomeDaMedalha(medalha),

@@ -32,6 +32,7 @@ import {
 import { PROFILE_KEY } from "../src/session/progress";
 import { CORRIDA_DESAFIO_KEY, CORRIDA_KEY } from "../src/session/corridaSurvival";
 import { DESAFIO_KEY } from "../src/session/desafio";
+import { ESTATISTICAS_KEY } from "../src/session/estatisticas";
 import { MEDALHAS_KEY } from "../src/session/medalhas";
 import { SETTINGS_KEY } from "../src/session/settings";
 import type { Rota } from "../src/ui/rotas";
@@ -75,6 +76,7 @@ describe("o armazenamento", () => {
         DESAFIO_KEY,
         CORRIDA_DESAFIO_KEY,
         MEDALHAS_KEY,
+        ESTATISTICAS_KEY,
       ].sort(),
     );
   });

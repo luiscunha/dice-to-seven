@@ -3539,12 +3539,88 @@ body::before {
   justify-self: end;
 }
 
-/* A coluna da esquerda leva a seta. O salto passou para o rodapé. */
+/* A coluna da esquerda leva a seta, e o combo quando o há. O salto passou para o rodapé. */
 .tempo-acoes {
   display: flex;
   align-items: center;
   gap: 8px;
   justify-self: start;
+  min-width: 0;
+}
+
+/*
+ * ── O combo ──
+ *
+ * Uma pastilha na cor de destaque, com o multiplicador, e por baixo um pavio
+ * que se gasta na janela do combo: é a regra inteira — joga antes de ele
+ * acabar. Cada jogada encadeada volta a enchê-lo, e o número dá um salto.
+ *
+ * No teto (×3) passa à cor do fogo: é aí que está a medalha do Em cadeia.
+ */
+.combo {
+  position: relative;
+  display: inline-grid;
+  justify-items: center;
+  min-width: 44px;
+  padding: 3px 9px 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 15px;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.combo[data-teto="sim"] {
+  background: var(--fogo);
+  color: var(--surface);
+}
+
+.combo-pavio {
+  position: absolute;
+  inset: auto 8px 2px;
+  height: 2px;
+  border-radius: 1px;
+  background: currentColor;
+  opacity: 0.7;
+  transform-origin: left center;
+}
+
+.combo.encadeou {
+  animation: combo-salto var(--t-ui) var(--suavizacao);
+}
+
+.combo.encadeou .combo-pavio {
+  animation: combo-pavio var(--janela, 2500ms) linear forwards;
+}
+
+@keyframes combo-salto {
+  from {
+    transform: scale(1.18);
+  }
+}
+
+@keyframes combo-pavio {
+  from {
+    transform: scaleX(1);
+  }
+
+  to {
+    transform: scaleX(0);
+  }
+}
+
+/*
+ * Com movimento reduzido o pavio não anda — a janela continua a existir, e a
+ * pastilha some quando ela passa, que é o que importa saber.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .combo.encadeou .combo-pavio {
+    animation: none;
+  }
 }
 
 /*
@@ -5081,6 +5157,64 @@ body::before {
   font-weight: 600;
 }
 
+/*
+ * ── As catorze composições do Colecionador ──
+ *
+ * Duas colunas de sete, cada composição em peças pequenas. As feitas na cor
+ * da face; as que faltam esbatidas, com o contorno à vista — estão lá para se
+ * saber o que procurar, e não para se lerem como feitas.
+ */
+.composicoes {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  margin-top: 8px;
+}
+
+.composicoes-titulo {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--ink-muted);
+  text-align: center;
+}
+
+/*
+ * Por colunas, e não por linhas: à esquerda as de duas e três peças, à direita
+ * as de quatro a sete. Lido por linhas, misturava um par com um trio a cada
+ * passo, e a ordem do catálogo — do grupo mais pequeno ao maior — perdia-se.
+ */
+.composicoes-lista {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(7, auto);
+  grid-auto-flow: column;
+  gap: 6px 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.composicao {
+  display: flex;
+  align-items: center;
+  min-height: 24px;
+}
+
+.composicao-pecas {
+  display: flex;
+  gap: 2px;
+}
+
+.composicao .peca {
+  --lado: 16px;
+}
+
+.composicao[data-feita="nao"] .peca {
+  opacity: 0.28;
+  filter: grayscale(1);
+}
+
 /* ── O emblema ── */
 
 /*
@@ -5446,6 +5580,114 @@ body::before {
   stroke: var(--emb-ouro-aresta);
   stroke-width: 0.8;
   stroke-linejoin: round;
+}
+
+/* ── O Contra-Relógio: a bomba gelada e os elos ── */
+
+.emb-bomba-1 { stop-color: var(--emb-bomba-1); }
+.emb-bomba-2 { stop-color: var(--emb-bomba-2); }
+.emb-bomba-3 { stop-color: var(--emb-bomba-3); }
+
+.emb-bomba {
+  fill: url(#emb-bomba);
+  stroke: var(--emb-bomba-aresta);
+  stroke-width: 1.2;
+}
+
+.emb-bomba-brilho {
+  fill: var(--emb-luz);
+  opacity: 0.5;
+}
+
+.emb-pavio {
+  fill: none;
+  stroke: var(--emb-pavio);
+  stroke-width: 3.2;
+  stroke-linecap: round;
+}
+
+.emb-gelo {
+  fill: none;
+  stroke: var(--emb-gelo);
+  stroke-width: 1.7;
+  stroke-linecap: round;
+}
+
+.emb-gelo-nucleo {
+  fill: var(--emb-gelo-luz);
+  stroke: var(--emb-gelo);
+  stroke-width: 1;
+}
+
+.emb-elo-aresta,
+.emb-elo {
+  fill: none;
+}
+
+.emb-elo-aresta {
+  stroke: var(--emb-prata-aresta);
+  stroke-width: 4.6;
+}
+
+.emb-elo {
+  stroke: url(#emb-prata);
+  stroke-width: 2.8;
+}
+
+/* ── O Survival: o poço cheio ── */
+
+.emb-peca {
+  stroke: var(--emb-tinta);
+  stroke-opacity: 0.35;
+  stroke-width: 0.8;
+}
+
+.emb-peca-1 { fill: var(--emb-peca-1); }
+.emb-peca-2 { fill: var(--emb-peca-2); }
+.emb-peca-3 { fill: var(--emb-peca-3); }
+.emb-peca-4 { fill: var(--emb-peca-4); }
+
+.emb-linha-fogo {
+  fill: none;
+  stroke: var(--emb-fogo-3);
+  stroke-width: 2;
+  stroke-dasharray: 4 3;
+  stroke-linecap: round;
+}
+
+/* ── O sete: o grupo de uns e a vitrine ── */
+
+.emb-uns-base {
+  fill: var(--emb-peca-3);
+}
+
+.emb-uns-face {
+  fill: var(--emb-peca-1);
+  stroke: var(--emb-peca-3);
+  stroke-width: 1;
+}
+
+.emb-uns-pinta {
+  fill: var(--emb-tinta);
+}
+
+.emb-vitrine-fundo {
+  fill: var(--emb-vitrine);
+}
+
+.emb-casa {
+  fill: var(--emb-luz);
+  stroke: var(--emb-ouro-aresta);
+  stroke-width: 0.6;
+}
+
+.emb-casa-pinta {
+  fill: var(--emb-tinta);
+}
+
+.emb-vitrine-reflexo {
+  fill: var(--emb-luz);
+  opacity: 0.16;
 }
 
 /* ─── Home num ecrã curto ─────────────────────────────────────────────────── */

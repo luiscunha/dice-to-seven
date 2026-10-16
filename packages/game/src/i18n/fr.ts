@@ -12,8 +12,12 @@
  * todos os textos de uma vez — também nos que são funções, no resultado.
  */
 
+import { DEFAULT_COMBO_CONFIG } from "../session/combos";
+import { COMPOSICOES } from "../session/estatisticas";
 import { LIMIARES } from "../session/medalhas";
 import type { Textos } from "./pt";
+
+const JANELA = new Intl.NumberFormat("fr-FR").format(DEFAULT_COMBO_CONFIG.windowMs / 1000);
 
 const FINO = " ";
 
@@ -478,6 +482,8 @@ const FR_CRU: Textos = {
     estadoProgresso: (quanto) => `Tu en es à ${quanto}.`,
     estadoPorGanhar: "Encore à obtenir.",
     fechar: "Fermer",
+    composicoesTitulo: (n) => `Les ${String(n)} façons de faire 7`,
+    composicaoAria: (partes, feita) => `${partes}, ${feita ? "faite" : "à faire"}`,
     novas: (n) => (n === 1 ? "Nouvelle médaille : " : "Nouvelles médailles : "),
     ariaEntrada: (ganhas, total, novas) =>
       `Médailles : ${String(ganhas)} sur ${String(total)}${novas ? ", avec des nouvelles à voir" : ""}`,
@@ -502,6 +508,12 @@ const FR_CRU: Textos = {
       "mes-completo": "Mois complet",
       "trinta-dias": "Inarrêtable",
       "cem-dias": "Centenaire",
+      "sangue-frio": "Sang-froid",
+      "em-cadeia": "En chaîne",
+      aguentar: "Tenir bon",
+      "sete-uns": "Sept as",
+      colecionador: "Collectionneur",
+      mestre: "Maître",
     },
     descricoes: {
       iniciado: "Terminer tous les niveaux Débutant.",
@@ -521,6 +533,12 @@ const FR_CRU: Textos = {
       "mes-completo": "Faire tous les défis d’un mois — l’étoile ★ sur le parcours des mois.",
       "trinta-dias": `Faire le Défi du jour ${String(LIMIARES.trintaDias)} jours d’affilée.`,
       "cem-dias": `Faire le Défi du jour ${String(LIMIARES.cemDias)} jours d’affilée.`,
+      "sangue-frio": `Désamorcer ${String(LIMIARES.sangueFrio)} bombes en une partie de Contre-la-montre.`,
+      "em-cadeia": `Atteindre le combo ×3 en une partie de Contre-la-montre : ${String(LIMIARES.emCadeia)} coups d’affilée sur le même plateau, sans jamais laisser passer plus de ${JANELA} s entre eux.`,
+      aguentar: `Tenir ${String(LIMIARES.aguentar)} lignes en une partie de Survie. Celles qu’on tire comptent aussi.`,
+      "sete-uns": "Éliminer un groupe de sept 1 — le plus grand groupe qui existe.",
+      colecionador: `Faire 7 des ${String(COMPOSICOES.length)} façons possibles, de 1 + 6 aux sept 1.`,
+      mestre: "Obtenir toutes les médailles normales.",
     },
     unidades: {
       niveis: "niveaux",
@@ -529,6 +547,11 @@ const FR_CRU: Textos = {
       pontos: "points",
       limpezas: "plateaux vidés",
       dias: "jours d’affilée",
+      bombas: "bombes",
+      jogadas: "coups d’affilée",
+      linhas: "lignes",
+      composicoes: "combinaisons",
+      medalhas: "médailles",
     },
   },
 };
