@@ -6,8 +6,12 @@
  * original, com «you» a fazer de «tu».
  */
 
+import { DEFAULT_COMBO_CONFIG } from "../session/combos";
+import { COMPOSICOES } from "../session/estatisticas";
 import { LIMIARES } from "../session/medalhas";
 import type { Textos } from "./pt";
+
+const JANELA = new Intl.NumberFormat("en-GB").format(DEFAULT_COMBO_CONFIG.windowMs / 1000);
 
 /** `30000` → `30,000`. */
 const milhares = (n: number): string =>
@@ -443,6 +447,8 @@ export const EN: Textos = {
     estadoProgresso: (quanto) => `You're at ${quanto}.`,
     estadoPorGanhar: "Not earned yet.",
     fechar: "Close",
+    composicoesTitulo: (n) => `The ${String(n)} ways to make 7`,
+    composicaoAria: (partes, feita) => `${partes}, ${feita ? "done" : "not yet"}`,
     novas: (n) => (n === 1 ? "New medal: " : "New medals: "),
     ariaEntrada: (ganhas, total, novas) =>
       `Medals: ${String(ganhas)} of ${String(total)}${novas ? ", with new ones to see" : ""}`,
@@ -467,6 +473,12 @@ export const EN: Textos = {
       "mes-completo": "Full Month",
       "trinta-dias": "Unstoppable",
       "cem-dias": "Centurion",
+      "sangue-frio": "Nerves of Steel",
+      "em-cadeia": "Chain Reaction",
+      aguentar: "Hold the Line",
+      "sete-uns": "Seven Ones",
+      colecionador: "Collector",
+      mestre: "Master",
     },
     descricoes: {
       iniciado: "Finish every Beginner level.",
@@ -486,6 +498,12 @@ export const EN: Textos = {
       "mes-completo": "Do every challenge in a month — the ★ on the month trail.",
       "trinta-dias": `Do the Daily Challenge ${String(LIMIARES.trintaDias)} days in a row.`,
       "cem-dias": `Do the Daily Challenge ${String(LIMIARES.cemDias)} days in a row.`,
+      "sangue-frio": `Defuse ${String(LIMIARES.sangueFrio)} bombs in one Time Attack run.`,
+      "em-cadeia": `Reach the ×3 combo in a Time Attack run: ${String(LIMIARES.emCadeia)} moves in a row on the same board, never more than ${JANELA} s apart.`,
+      aguentar: `Hold out for ${String(LIMIARES.aguentar)} rows in one Survival run. Rows you pull count too.`,
+      "sete-uns": "Clear a group of seven 1s — the biggest group there is.",
+      colecionador: `Make 7 in all ${String(COMPOSICOES.length)} possible ways, from 1 + 6 to seven 1s.`,
+      mestre: "Earn every standard medal.",
     },
     unidades: {
       niveis: "levels",
@@ -494,6 +512,11 @@ export const EN: Textos = {
       pontos: "points",
       limpezas: "clears",
       dias: "days in a row",
+      bombas: "bombs",
+      jogadas: "moves in a row",
+      linhas: "rows",
+      composicoes: "combinations",
+      medalhas: "medals",
     },
   },
 };

@@ -18,6 +18,8 @@ import {
   registar,
   somarDias,
 } from "../src/session/desafio";
+import type { Estatisticas } from "../src/session/estatisticas";
+import { COMPOSICOES, SEM_ESTATISTICAS, SETE_UNS } from "../src/session/estatisticas";
 import type { ContextoDasMedalhas, Medalha, RegistoDeMedalhas } from "../src/session/medalhas";
 import {
   LIMIARES,
@@ -57,9 +59,13 @@ const CAPITULOS = [
 const ctx = (
   perfil: Partial<Profile> = {},
   desafios: Desafios = SEM_DESAFIOS,
+  estatisticas: Partial<Estatisticas> = {},
+  ganhas: Readonly<Record<string, string>> = {},
 ): ContextoDasMedalhas => ({
   perfil: { ...emptyProfile(), ...perfil },
   desafios,
+  estatisticas: { ...SEM_ESTATISTICAS, ...estatisticas },
+  ganhas,
   capitulos: CAPITULOS,
   hoje: HOJE,
 });
@@ -113,11 +119,13 @@ describe("o catálogo", () => {
 
     expect(de("normal")).toEqual([
       "iniciado", "medio", "avancado", "perito", "primeiro-perfeito",
-      "maratona", "cinco-minutos", "semana", "mes-completo",
+      "maratona", "sangue-frio", "em-cadeia", "cinco-minutos", "aguentar",
+      "semana", "mes-completo", "sete-uns",
     ]);
     expect(de("premium")).toEqual([
       "perito-perfeito", "campanha-perfeita", "recordista", "ultramaratona",
       "dez-minutos", "dez-limpezas", "trinta-dias", "cem-dias",
+      "colecionador", "mestre",
     ]);
   });
 
@@ -260,6 +268,80 @@ describe("o Desafio do Dia", () => {
 
 /* ─── O registo ───────────────────────────────────────────────────────────── */
 
+/* ─── As das estatísticas ─────────────────────────────────────────────────── */
+
+describe("as medalhas das estatísticas", () => {
+  it("o Sangue-frio cai nas cinco bombas de uma corrida, e não na quarta", () => {
+    expect(LIMIARES.sangueFrio).toBe(5);
+    expect(ganha("sangue-frio", ctx({}, SEM_DESAFIOS, { bombas: 4 }))).toBe(false);
+    expect(ganha("sangue-frio", ctx({}, SEM_DESAFIOS, { bombas: 5 }))).toBe(true);
+  });
+
+  /*
+   * O limiar sai da pontuação: o multiplicador sobe 0,25 por jogada encadeada
+   * até ×3, e chega lá à nona. Se a pontuação mudar, a medalha acompanha.
+   */
+  it("o Em cadeia pede o combo no teto: nove jogadas encadeadas, que é o ×3", () => {
+    expect(LIMIARES.emCadeia).toBe(9);
+    expect(ganha("em-cadeia", ctx({}, SEM_DESAFIOS, { combo: 8 }))).toBe(false);
+    expect(ganha("em-cadeia", ctx({}, SEM_DESAFIOS, { combo: 9 }))).toBe(true);
+  });
+
+  it("o Aguentar cai nas vinte linhas de uma corrida", () => {
+    expect(ganha("aguentar", ctx({}, SEM_DESAFIOS, { linhas: 19 }))).toBe(false);
+    expect(ganha("aguentar", ctx({}, SEM_DESAFIOS, { linhas: 20 }))).toBe(true);
+  });
+
+  it("o Sete uns pede os sete 1, e nenhuma outra composição o dá", () => {
+    const sem = COMPOSICOES.filter((c) => c !== SETE_UNS);
+    expect(ganha("sete-uns", ctx({}, SEM_DESAFIOS, { composicoes: sem }))).toBe(false);
+    expect(ganha("sete-uns", ctx({}, SEM_DESAFIOS, { composicoes: [SETE_UNS] }))).toBe(true);
+  });
+
+  it("o Colecionador pede as catorze, e treze não chegam", () => {
+    expect(COMPOSICOES).toHaveLength(14);
+    expect(ganha("colecionador", ctx({}, SEM_DESAFIOS, { composicoes: COMPOSICOES.slice(1) }))).toBe(false);
+    expect(ganha("colecionador", ctx({}, SEM_DESAFIOS, { composicoes: COMPOSICOES }))).toBe(true);
+  });
+
+  /*
+   * As das estatísticas não são retroativas: um perfil com a campanha inteira
+   * e os recordes todos não as dá, porque nada disso diz quantas bombas se
+   * desarmaram nem que grupos saíram.
+   */
+  it("**não são retroativas**: o progresso antigo, por maior que seja, não as dá", () => {
+    const veterano = ctx({ bestTimeAttackScore: 99_999, bestBoardsCleared: 99, bestSurvivalMs: 3_600_000 });
+    for (const id of ["sangue-frio", "em-cadeia", "aguentar", "sete-uns", "colecionador"]) {
+      expect(ganha(id, veterano), id).toBe(false);
+    }
+  });
+});
+
+describe("o Mestre", () => {
+  const normais = MEDALHAS.filter((m) => m.tipo === "normal").map((m) => m.id);
+  const todas = (ids: readonly string[]): Record<string, string> =>
+    Object.fromEntries(ids.map((id) => [id, HOJE]));
+
+  it("pede todas as normais, e nenhuma premium", () => {
+    expect(ganha("mestre", ctx({}, SEM_DESAFIOS, {}, todas(normais.slice(1))))).toBe(false);
+    expect(ganha("mestre", ctx({}, SEM_DESAFIOS, {}, todas(normais)))).toBe(true);
+    expect(medalha("mestre").progresso(ctx()).alvo).toBe(normais.length);
+  });
+
+  /*
+   * O Mestre conta medalhas, e a última normal pode chegar na mesma partida.
+   * Numa ronda só, ficava à espera da partida seguinte.
+   */
+  it("**chega na mesma avaliação que a última normal**", () => {
+    const falta = normais.filter((id) => id !== "sete-uns");
+    const registo: RegistoDeMedalhas = { ganhas: todas(falta), porVer: [] };
+
+    const r = avaliar(registo, ctx({}, SEM_DESAFIOS, { composicoes: [SETE_UNS] }));
+    expect(r.novas.map((m) => m.id)).toEqual(["sete-uns", "mestre"]);
+    expect(r.registo.porVer).toEqual(["sete-uns", "mestre"]);
+  });
+});
+
 describe("ganhar", () => {
   it("marca as que passaram o alvo, com a data de hoje, e deixa-as por ver", () => {
     const { registo, novas } = avaliar(SEM_MEDALHAS, ctx({ bestBoardsCleared: 40 }));
@@ -337,11 +419,11 @@ describe("guardar e ler", () => {
     const s = memoria();
     s.dados.set(
       MEDALHAS_KEY,
-      JSON.stringify({ versao: 1, ganhas: { "sete-uns": "2027-01-01" }, porVer: ["sete-uns"] }),
+      JSON.stringify({ versao: 1, ganhas: { "de-uma-versao-futura": "2027-01-01" }, porVer: ["de-uma-versao-futura"] }),
     );
 
     const lido = lerMedalhas(s);
-    expect(lido.ganhas["sete-uns"]).toBe("2027-01-01");
+    expect(lido.ganhas["de-uma-versao-futura"]).toBe("2027-01-01");
     expect(contarGanhas(lido)).toBe(0);
   });
 });

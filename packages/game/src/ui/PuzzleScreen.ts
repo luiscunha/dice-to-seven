@@ -44,6 +44,8 @@ import {
   selectionTotal,
   tap,
 } from "../session/GameSession";
+import type { Composicao } from "../session/estatisticas";
+import { composicaoDoGrupo } from "../session/estatisticas";
 import { PASSO_RELOGIO, relogio } from "./tempo";
 import {
   vibrarPeloToque,
@@ -93,6 +95,11 @@ export interface OpcoesPuzzleScreen {
     readonly tempoMs: number;
   }) => readonly MedalhaGanha[] | void;
   readonly aoPedirSeguinte?: () => void;
+  /**
+   * Saiu um grupo, e é esta a composição do 7 que ele fez. É por aqui que os
+   * grupos chegam às estatísticas — ver `estatisticas.ts`.
+   */
+  readonly aoEliminar?: (composicao: Composicao) => void;
 
   /** Abre o tutorial do joker em revisão. Sem isto o `?` não aparece. */
   readonly aoPedirAjuda?: () => void;
@@ -535,6 +542,9 @@ export class PuzzleScreen {
     // seleção de antes mais a peça tocada" era duplicar a regra do toque — e
     // deixou de bater assim que um toque passou a trazer duas peças.
     if (jogo.lastMove !== undefined) {
+      const composicao = composicaoDoGrupo(antes.board, jogo.lastMove);
+      if (composicao !== undefined) this.opcoes.aoEliminar?.(composicao);
+
       await this.animarJogada(jogo.lastMove);
     }
 

@@ -6,8 +6,12 @@
  * como qualquer jogador espanhol lhe chama.
  */
 
+import { DEFAULT_COMBO_CONFIG } from "../session/combos";
+import { COMPOSICOES } from "../session/estatisticas";
 import { LIMIARES } from "../session/medalhas";
 import type { Textos } from "./pt";
+
+const JANELA = new Intl.NumberFormat("es-ES").format(DEFAULT_COMBO_CONFIG.windowMs / 1000);
 
 /** `30000` → `30.000`. */
 const milhares = (n: number): string =>
@@ -443,6 +447,8 @@ export const ES: Textos = {
     estadoProgresso: (quanto) => `Llevas ${quanto}.`,
     estadoPorGanhar: "Aún por conseguir.",
     fechar: "Cerrar",
+    composicoesTitulo: (n) => `Las ${String(n)} maneras de hacer 7`,
+    composicaoAria: (partes, feita) => `${partes}, ${feita ? "hecha" : "por hacer"}`,
     novas: (n) => (n === 1 ? "Nueva medalla: " : "Nuevas medallas: "),
     ariaEntrada: (ganhas, total, novas) =>
       `Medallas: ${String(ganhas)} de ${String(total)}${novas ? ", con nuevas por ver" : ""}`,
@@ -467,6 +473,12 @@ export const ES: Textos = {
       "mes-completo": "Mes completo",
       "trinta-dias": "Imparable",
       "cem-dias": "Centenario",
+      "sangue-frio": "Sangre fría",
+      "em-cadeia": "En cadena",
+      aguentar: "Aguantar",
+      "sete-uns": "Siete unos",
+      colecionador: "Coleccionista",
+      mestre: "Maestro",
     },
     descricoes: {
       iniciado: "Acabar todos los niveles de Iniciado.",
@@ -486,6 +498,12 @@ export const ES: Textos = {
       "mes-completo": "Hacer todos los desafíos de un mes — la ★ en el camino de los meses.",
       "trinta-dias": `Hacer el Desafío diario ${String(LIMIARES.trintaDias)} días seguidos.`,
       "cem-dias": `Hacer el Desafío diario ${String(LIMIARES.cemDias)} días seguidos.`,
+      "sangue-frio": `Desactivar ${String(LIMIARES.sangueFrio)} bombas en una partida de Contrarreloj.`,
+      "em-cadeia": `Llegar al combo ×3 en una partida de Contrarreloj: ${String(LIMIARES.emCadeia)} jugadas seguidas en el mismo tablero, sin que pasen nunca más de ${JANELA} s entre ellas.`,
+      aguentar: `Aguantar ${String(LIMIARES.aguentar)} filas en una partida de Supervivencia. Las que bajas tú también cuentan.`,
+      "sete-uns": "Eliminar un grupo de siete 1 — el grupo más grande que existe.",
+      colecionador: `Hacer 7 de las ${String(COMPOSICOES.length)} maneras posibles, de 1 + 6 a los siete 1.`,
+      mestre: "Conseguir todas las medallas normales.",
     },
     unidades: {
       niveis: "niveles",
@@ -494,6 +512,11 @@ export const ES: Textos = {
       pontos: "puntos",
       limpezas: "limpiezas",
       dias: "días seguidos",
+      bombas: "bombas",
+      jogadas: "jugadas seguidas",
+      linhas: "filas",
+      composicoes: "combinaciones",
+      medalhas: "medallas",
     },
   },
 };

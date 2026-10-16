@@ -306,3 +306,73 @@ describe("o salto, no ecrã", () => {
     expect(botaoSaltar()?.disabled).toBe(true);
   });
 });
+
+/* ─── O combo e as estatísticas ───────────────────────────────────────────── */
+
+/**
+ * Três colunas que somam 7: três jogadas no mesmo tabuleiro, todas na coluna
+ * da esquerda, porque cada uma leva a sua coluna e as outras encostam.
+ */
+const TRES: Level = { id: "tempo-3", seed: 0, board: [[3, 4], [4, 3], [2, 5]], solution: [] };
+
+/** Joga a coluna da esquerda inteira, e espera que a jogada assente. */
+async function jogarColuna(): Promise<void> {
+  clicar(packed(0, 0));
+  clicar(packed(0, 1));
+  await vi.runOnlyPendingTimersAsync();
+}
+
+describe("o combo, no ecrã", () => {
+  const combo = (): HTMLElement | null => host.querySelector(".combo");
+
+  it("aparece à segunda jogada encadeada, com o multiplicador, e some quando a janela passa", async () => {
+    ecra = new TimeAttackScreen(host, {
+      niveis: [TRES],
+      melhorPontuacao: 0,
+      tempoInicial: 30,
+      aoTerminar: () => undefined,
+      aoSair: () => undefined,
+    });
+
+    // Uma jogada só não é combo: nada a mostrar.
+    await jogarColuna();
+    expect(combo()?.hidden).toBe(true);
+
+    await jogarColuna();
+    expect(combo()?.hidden).toBe(false);
+    expect(combo()?.textContent).toBe("×1,25");
+    expect(combo()?.dataset["teto"]).toBe("nao");
+
+    // A janela do combo passa sem jogada: acabou, e a pastilha vai-se.
+    vi.advanceTimersByTime(2_600);
+    expect(combo()?.hidden).toBe(true);
+  });
+});
+
+describe("o que a corrida conta", () => {
+  it("o fim leva as bombas desarmadas e o combo mais longo, e cada grupo sai com a sua composição", async () => {
+    const fim: { bombas: number; combo: number }[] = [];
+    const composicoes: string[] = [];
+    ecra = new TimeAttackScreen(host, {
+      niveis: [TRES],
+      melhorPontuacao: 0,
+      tempoInicial: 30,
+      afinacao: COM_BOMBA,
+      aoEliminar: (c) => composicoes.push(c),
+      aoTerminar: ({ bombas, combo }) => {
+        fim.push({ bombas, combo });
+      },
+      aoSair: () => undefined,
+    });
+
+    // As três jogadas levam o tabuleiro inteiro — e com ele a bomba, onde quer
+    // que estivesse.
+    await jogarColuna();
+    await jogarColuna();
+    await jogarColuna();
+    vi.advanceTimersByTime(60_000);
+
+    expect(composicoes).toEqual(["34", "34", "25"]);
+    expect(fim).toEqual([{ bombas: 1, combo: 3 }]);
+  });
+});

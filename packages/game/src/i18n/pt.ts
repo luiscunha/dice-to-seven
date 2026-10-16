@@ -12,7 +12,11 @@
 
 import type { IdDoCapitulo } from "../capitulos";
 import type { IdDaMedalha, UnidadeDaMedalha } from "../session/medalhas";
+import { DEFAULT_COMBO_CONFIG } from "../session/combos";
+import { COMPOSICOES } from "../session/estatisticas";
 import { LIMIARES } from "../session/medalhas";
+
+const JANELA = new Intl.NumberFormat("pt-PT").format(DEFAULT_COMBO_CONFIG.windowMs / 1000);
 
 /** `30000` → `30 000`, com um espaço fino que não parte a linha. */
 const milhares = (n: number): string =>
@@ -489,6 +493,11 @@ export const PT = {
     estadoProgresso: (quanto: string): string => `Vais em ${quanto}.`,
     estadoPorGanhar: "Ainda por conquistar.",
     fechar: "Fechar",
+    /** O título da grelha do Colecionador, no pormenor da medalha. */
+    composicoesTitulo: (n: number): string => `As ${String(n)} maneiras de fazer 7`,
+    /** Uma composição, a quem ouve o ecrã: «1 + 6, feita». */
+    composicaoAria: (partes: string, feita: boolean): string =>
+      `${partes}, ${feita ? "feita" : "por fazer"}`,
     /** A linha do painel de fim, antes dos nomes. */
     novas: (n: number): string => (n === 1 ? "Nova medalha: " : "Novas medalhas: "),
     /** A pastilha da Home, a quem ouve o ecrã. */
@@ -515,6 +524,12 @@ export const PT = {
       "mes-completo": "Mês completo",
       "trinta-dias": "Imparável",
       "cem-dias": "Centenário",
+      "sangue-frio": "Sangue-frio",
+      "em-cadeia": "Em cadeia",
+      aguentar: "Aguentar",
+      "sete-uns": "Sete uns",
+      colecionador: "Colecionador",
+      mestre: "Mestre",
     } satisfies Record<IdDaMedalha, string>,
     descricoes: {
       iniciado: "Acabar todos os níveis do Iniciado.",
@@ -534,6 +549,12 @@ export const PT = {
       "mes-completo": "Fazer todos os desafios de um mês — a ★ no trilho dos meses.",
       "trinta-dias": `Fazer o Desafio do dia ${String(LIMIARES.trintaDias)} dias seguidos.`,
       "cem-dias": `Fazer o Desafio do dia ${String(LIMIARES.cemDias)} dias seguidos.`,
+      "sangue-frio": `Desarmar ${String(LIMIARES.sangueFrio)} bombas numa corrida do Contra-Relógio.`,
+      "em-cadeia": `Chegar ao combo ×3 numa corrida do Contra-Relógio: ${String(LIMIARES.emCadeia)} jogadas seguidas no mesmo tabuleiro, sem nunca passarem ${JANELA} s entre elas.`,
+      aguentar: `Aguentar ${String(LIMIARES.aguentar)} linhas numa corrida do Survival. As que se puxam também contam.`,
+      "sete-uns": "Eliminar um grupo de sete 1 — o maior grupo que existe.",
+      colecionador: `Fazer 7 das ${String(COMPOSICOES.length)} maneiras possíveis, de 1 + 6 aos sete 1.`,
+      mestre: "Ganhar todas as medalhas normais.",
     } satisfies Record<IdDaMedalha, string>,
     unidades: {
       niveis: "níveis",
@@ -542,6 +563,11 @@ export const PT = {
       pontos: "pontos",
       limpezas: "limpezas",
       dias: "dias seguidos",
+      bombas: "bombas",
+      jogadas: "jogadas seguidas",
+      linhas: "linhas",
+      composicoes: "composições",
+      medalhas: "medalhas",
     } satisfies Record<UnidadeDaMedalha, string>,
   },
 };

@@ -74,6 +74,15 @@ import {
   seedDoDia,
   sequencia,
 } from "./session/desafio";
+import type { Composicao, Estatisticas } from "./session/estatisticas";
+import {
+  SEM_ESTATISTICAS,
+  guardarEstatisticas,
+  lerEstatisticas,
+  registarComposicao,
+  registarCorridaDeSurvival,
+  registarCorridaDeTempo,
+} from "./session/estatisticas";
 import type { RegistoDeMedalhas } from "./session/medalhas";
 import {
   MEDALHAS,
@@ -306,9 +315,39 @@ const guardarAsMedalhas = (): void => {
   if (armazenamento !== undefined) guardarMedalhas(armazenamento, medalhas);
 };
 
+/*
+ * ── As estatísticas ──
+ *
+ * O que as medalhas da segunda fase contam, e que nenhum registo tinha: as
+ * bombas e o combo de cada corrida do Contra-Relógio, as linhas do Survival, e
+ * as composições do 7 que já saíram (`session/estatisticas.ts`).
+ *
+ * **O treino do Desafio do Dia não conta.** São os mesmos tabuleiros da
+ * tentativa oficial, e decorá-los não é o que uma medalha premeia. Contam a
+ * campanha, as corridas livres e a tentativa oficial.
+ */
+let estatisticas: Estatisticas = SEM_ESTATISTICAS;
+
+/** Grava as estatísticas, se mudaram — os registos devolvem o mesmo objeto quando não. */
+function mudarEstatisticas(novas: Estatisticas): void {
+  if (novas === estatisticas) return;
+  estatisticas = novas;
+  if (armazenamento !== undefined) guardarEstatisticas(armazenamento, estatisticas);
+}
+
+/**
+ * Saiu um grupo. Grava-se logo, e não no fim da partida: quem faz o sete uns e
+ * sai a meio do nível fez o sete uns. A medalha chega na avaliação seguinte.
+ */
+const contarComposicao = (c: Composicao): void => {
+  mudarEstatisticas(registarComposicao(estatisticas, c));
+};
+
 const contextoDasMedalhas = (): Parameters<typeof avaliar>[1] => ({
   perfil,
   desafios,
+  estatisticas,
+  ganhas: medalhas.ganhas,
   capitulos: campanha.map((c) => ({ id: c.capitulo.id, niveis: c.niveis })),
   hoje: hoje(),
 });
@@ -427,6 +466,12 @@ async function montar(rota: Rota): Promise<void> {
 
   switch (rota.ecra) {
     case "home":
+      /*
+       * Avalia antes de se montar. Uma medalha das estatísticas pode ter
+       * chegado numa partida deixada a meio — o sete uns, num nível de que se
+       * saiu —, e sem isto o ponto só aparecia no fim da partida seguinte.
+       */
+      avaliarMedalhas();
       atual = new HomeScreen(app as HTMLElement, {
         perfil,
         totalNiveis: campanha.reduce((n, c) => n + c.niveis.length, 0),
@@ -518,8 +563,10 @@ async function montar(rota: Rota): Promise<void> {
         aoApagarProgresso: () => {
           perfil = emptyProfile();
           guardarPerfil();
-          // As medalhas são do progresso: vão com ele. As do desafio, que não
-          // se apaga, voltam logo — e voltam por ver.
+          // As medalhas são do progresso: vão com ele, e as estatísticas de
+          // que se deduzem também. As do desafio, que não se apaga, voltam logo
+          // — e voltam por ver.
+          mudarEstatisticas(SEM_ESTATISTICAS);
           medalhas = SEM_MEDALHAS;
           guardarAsMedalhas();
           avaliarMedalhas();
@@ -571,6 +618,7 @@ function mostrarMedalhas(): void {
         nova: porVer.has(medalha.id),
       };
     }),
+    composicoes: estatisticas.composicoes,
     aoVoltar: voltarA({ ecra: "home" }),
   });
 
@@ -660,6 +708,7 @@ async function mostrarJogo(id: string, indice: number): Promise<void> {
     // O recorde de **antes** desta partida: o painel de fim compara com ele, e
     // o `recordLevel` abaixo é que o atualiza.
     melhorTempoMs: perfil.levels[nivel.id]?.bestTimeMs ?? 0,
+    aoEliminar: contarComposicao,
     aoTerminar: ({ level, selo, tempoMs }) => {
       perfil = recordLevel(perfil, level.id, selo as Seal, tempoMs);
       guardarPerfil();
@@ -741,9 +790,11 @@ async function mostrarTempo(): Promise<void> {
     ...tempo,
     melhorPontuacao: perfil.bestTimeAttackScore,
     tempoInicial: preferencias.tempoInicial,
-    aoTerminar: ({ pontos, tabuleiros }) => {
+    aoEliminar: contarComposicao,
+    aoTerminar: ({ pontos, tabuleiros, bombas, combo }) => {
       perfil = recordTimeAttack(perfil, pontos, tabuleiros);
       guardarPerfil();
+      mudarEstatisticas(registarCorridaDeTempo(estatisticas, { bombas, combo }));
       return avaliarMedalhas();
     },
     aoSair: voltarA({ ecra: "home" }),
@@ -788,11 +839,13 @@ function mostrarSurvival(seed: number | undefined): void {
     ...(corridaSurvival?.estado.seed === seed ? { retomar: corridaSurvival } : {}),
     aoGuardar: guardarSurvival,
     melhorTempo: perfil.bestSurvivalMs,
-    aoTerminar: ({ limpou, tempoMs }) => {
+    aoEliminar: contarComposicao,
+    aoTerminar: ({ limpou, tempoMs, linhas }) => {
       // A corrida acabou: não há nada para retomar.
       guardarSurvival(undefined);
       perfil = recordSurvival(perfil, limpou, tempoMs);
       guardarPerfil();
+      mudarEstatisticas(registarCorridaDeSurvival(estatisticas, { linhas }));
       return avaliarMedalhas();
     },
     /*
@@ -1113,6 +1166,9 @@ async function mostrarDesafio(modo: ModoDoDesafio, dataPedida?: string): Promise
    */
   if (modo !== "tempo") marcarTentativa();
 
+  // Só a tentativa oficial conta para as estatísticas: o treino repete-a.
+  const aoEliminar = oficial ? { aoEliminar: contarComposicao } : {};
+
   const etiqueta = t().desafio.etiqueta(numeroDoDia(data));
   const desafio: DesafioNoEcra = !oficial
     ? { etiqueta: t().desafio.etiquetaTreino(etiqueta) }
@@ -1134,6 +1190,7 @@ async function mostrarDesafio(modo: ModoDoDesafio, dataPedida?: string): Promise
     atual = new PuzzleScreen(app as HTMLElement, nivel, {
       titulo: etiqueta,
       desafio,
+      ...aoEliminar,
       aoTerminar: ({ selo, tempoMs }) =>
         terminar((d) => registar(d, data, "puzzle", { tempoMs, selo: selo as Seal })),
       aoVoltar: voltarA({ ecra: "desafio" }),
@@ -1164,8 +1221,11 @@ async function mostrarDesafio(modo: ModoDoDesafio, dataPedida?: string): Promise
       melhorPontuacao: Number.POSITIVE_INFINITY,
       tempoInicial: DESAFIO_TEMPO_INICIAL,
       ...(oficial ? { aoComecar: marcarTentativa } : {}),
-      aoTerminar: ({ pontos, tabuleiros, saltados }) =>
-        terminar((d) => registar(d, data, "tempo", { pontos, tabuleiros, saltados })),
+      ...aoEliminar,
+      aoTerminar: ({ pontos, tabuleiros, saltados, bombas, combo }) => {
+        if (oficial) mudarEstatisticas(registarCorridaDeTempo(estatisticas, { bombas, combo }));
+        return terminar((d) => registar(d, data, "tempo", { pontos, tabuleiros, saltados }));
+      },
       aoSair: voltarA({ ecra: "desafio" }),
       aoRecomecar: outraVez,
     });
@@ -1179,9 +1239,11 @@ async function mostrarDesafio(modo: ModoDoDesafio, dataPedida?: string): Promise
     aoGuardar: oficial ? guardarCorridaDesafio : () => undefined,
     melhorTempo: Number.POSITIVE_INFINITY,
     desafio,
+    ...aoEliminar,
     aoTerminar: ({ limpou, tempoMs, linhas }) => {
       if (!oficial) return [];
       guardarCorridaDesafio(undefined);
+      mudarEstatisticas(registarCorridaDeSurvival(estatisticas, { linhas }));
       // Transbordar não grava nada (ver `registar`): a tentativa fica aberta,
       // e a próxima corrida começa do princípio.
       return terminar((d) => registar(d, data, "survival", { tempoMs, limpou, linhas }));
@@ -1297,6 +1359,7 @@ async function arrancar(): Promise<void> {
     desafios = lerDesafios(armazenamento);
     corridaDesafio = lerCorrida(armazenamento, CORRIDA_DESAFIO_KEY);
     medalhas = lerMedalhas(armazenamento);
+    estatisticas = lerEstatisticas(armazenamento);
   }
 
   aplicarIdioma();

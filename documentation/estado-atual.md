@@ -1323,6 +1323,12 @@ elementos:
   - o cronómetro no Contra-Relógio;
   - a ampulheta no Survival;
   - a chama da sequência no desafio.
+- **As da segunda fase:** a bomba com o pavio gelado (Sangue-frio), três dados
+  presos por elos (Em cadeia), o poço cheio até à linha de fogo (Aguentar),
+  sete peças de uma pinta encostadas (Sete uns), a vitrine das catorze casas
+  (Colecionador) e o dado de ouro com coroa e louros (Mestre). O Sete uns é a
+  única em peças planas: num dado em perspetiva, as faces de lado tinham mais
+  pintas do que a de cima, e o que se via eram os 2 e os 4.
 
 É SVG, e não imagem. As cores vêm de `theme.css` e são as mesmas nos dois
 temas. Os degradês vivem numa folha só no `body`, para os ids não se repetirem.
@@ -1333,9 +1339,10 @@ Um teste obriga cada medalha do catálogo a ter desenho próprio.
 | | Normais | Premium |
 |---|---|---|
 | Puzzles | Iniciado, Médio, Avançado, Perito (o capítulo todo); Perfeição (um nível Perfeito) | Perito perfeito; Campanha perfeita |
-| Contra-Relógio | Maratona (15 tabuleiros numa corrida) | Recordista (30 000 pontos); Ultramaratona (40 tabuleiros) |
-| Survival | Cinco minutos | Dez minutos; Dez limpezas |
+| Contra-Relógio | Maratona (15 tabuleiros numa corrida); Sangue-frio (5 bombas desarmadas numa corrida); Em cadeia (o combo ×3) | Recordista (30 000 pontos); Ultramaratona (40 tabuleiros) |
+| Survival | Cinco minutos; Aguentar (20 linhas numa corrida) | Dez minutos; Dez limpezas |
 | Desafio do Dia | Uma semana (7 dias seguidos); Mês completo (a ★) | Imparável (30 dias); Centenário (100) |
+| O sete | Sete uns (um grupo de sete 1) | Colecionador (as 14 composições do 7); Mestre (todas as normais) |
 
 **Os limiares do Contra-Relógio são simulados** contra o pack publicado, com
 60 s de arranque, por dois jogadores de ritmo constante — um que segue a
@@ -1371,9 +1378,64 @@ Um capítulo que não montou (índice sem rede) tem alvo zero, e **um alvo zero
 nunca se atinge**: sem essa guarda, «zero de zero feitos» dava a campanha inteira
 a quem nunca a jogou.
 
-Por fazer, na fase seguinte: as medalhas que precisam de contagens novas —
-bombas desarmadas, linhas aguentadas, combo máximo, grupos de sete 1 e as 14
-composições de 7 — e a «Mestre», de todas as normais.
+### A segunda fase: as medalhas das estatísticas
+
+Seis medalhas precisavam de coisas que nenhum registo tinha. Passaram a
+contar-se em `session/estatisticas.ts`, numa chave própria
+(`dicetoseven.estatisticas`, versão 1), à parte do registo das medalhas: um APK
+mais antigo lê esse registo com a versão que conhece, e não pode apagar números
+que nunca soube contar.
+
+| Estatística | O que guarda | Medalha |
+|---|---|---|
+| `bombas` | o máximo de bombas desarmadas numa corrida do Contra-Relógio | Sangue-frio (5) |
+| `combo` | o combo mais longo numa corrida do Contra-Relógio | Em cadeia (9 jogadas, que é o ×3) |
+| `linhas` | o máximo de linhas aguentadas numa corrida do Survival | Aguentar (20) |
+| `composicoes` | as composições do 7 que já saíram | Sete uns; Colecionador (14) |
+
+**O que se decidiu, e porquê:**
+- **Não são retroativas.** Nada do que o jogo guardava dizia quantas bombas se
+  desarmaram ou que grupos saíram; contam a partir desta versão.
+- **O melhor de uma corrida, e não a soma.** As medalhas pedem cinco bombas
+  *numa* corrida; um contador acumulado premiava a persistência, e para isso já
+  há o Desafio do Dia.
+- **Sangue-frio em cinco, e só no Contra-Relógio.** As bombas armam-se a partir
+  do quarto tabuleiro, em metade deles: cinco desarmadas pedem uns treze
+  tabuleiros. Dez pediam vinte e três, e eram uma Maratona mais difícil. As
+  bombas do Survival não contam: lá são só mais uma razão para cair uma linha.
+- **Em cadeia é o combo no teto.** O multiplicador sobe 0,25 por jogada
+  encadeada até ×3, e chega lá à nona — o limiar sai da pontuação
+  (`DEFAULT_SCORING`), para não ficar a pedir um combo que o jogo deixou de dar.
+  O combo recomeça a cada tabuleiro, portanto são nove jogadas no mesmo, e só
+  os tabuleiros grandes do meio da corrida as têm.
+- **O combo passou a ver-se.** Multiplicava os pontos e devolvia tempo sem
+  aparecer em lado nenhum. Agora há uma pastilha ao lado da seta, a partir da
+  segunda jogada encadeada, com o multiplicador («×1,5») e um pavio que se gasta
+  na janela de 2,5 s; no ×3 passa à cor do fogo. Some quando a janela passa sem
+  jogada.
+- **Aguentar conta as linhas puxadas** — é o número do fim da corrida, «N
+  linhas aguentadas», que conta também as cinco do arranque. Puxar cedo chega
+  lá mais depressa, e é essa a estratégia que o Survival quer ensinar.
+- **As composições contam em todos os modos**, com o joker pelo valor que
+  tomou. Gravam-se logo que o grupo sai: quem faz o sete uns e sai a meio do
+  nível fez o sete uns. A Home avalia as medalhas antes de se montar, para o
+  ponto aparecer sem esperar pelo fim da partida seguinte.
+- **O Colecionador mostra quais faltam.** O pormenor da medalha tem as catorze
+  composições em peças, por colunas — as de duas e três peças à esquerda, as de
+  quatro a sete à direita —, com as feitas acesas.
+- **O treino do Desafio do Dia não conta**, para nenhuma das estatísticas: são
+  os mesmos tabuleiros da tentativa oficial, e decorá-los não é o que uma
+  medalha premeia. Contam a campanha, as corridas livres e a tentativa oficial.
+- **O Mestre avalia-se em rondas.** Conta as normais ganhas, e a última normal
+  pode chegar na mesma partida que ele; numa ronda só, ficava à espera da
+  partida seguinte.
+- **«Apagar o progresso» leva também as estatísticas**: as medalhas deduzem-se
+  delas, e voltavam logo.
+
+**Onde aparecem os sete 1 e as catorze composições** — medido nas soluções
+guardadas dos packs: os sete 1 só nos capítulos Avançado (16 níveis) e Perito
+(5); as catorze composições só aparecem todas nesses dois. Nos tabuleiros do
+Contra-Relógio não há sete 1.
 
 ---
 

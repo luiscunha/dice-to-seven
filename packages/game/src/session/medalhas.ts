@@ -12,12 +12,16 @@
  * - **Premium** — raras, de prestígio. Ganham-se a jogar, como as outras; o que
  *   as distingue é a exigência, e a moldura dourada que a diz.
  *
- * ── Deduzem-se do que o jogo já guarda ──
+ * ── Deduzem-se do que o jogo guarda ──
  *
- * Nenhuma medalha tem contador próprio: o progresso lê-se do perfil e do
- * histórico do desafio (`progresso`). É o que as torna **retroativas** — quem
- * acabou o Perito antes de haver medalhas recebe a dele no primeiro arranque —,
- * e é o que impede um contador de divergir do número que ele conta.
+ * Nenhuma medalha tem contador próprio: o progresso lê-se do perfil, do
+ * histórico do desafio e das estatísticas (`progresso`). É o que impede um
+ * contador de divergir do número que ele conta.
+ *
+ * As do perfil e do desafio são **retroativas** — quem acabou o Perito antes de
+ * haver medalhas recebe a dele no primeiro arranque. As das estatísticas
+ * (`estatisticas.ts`) não podem ser: as bombas, o combo, as linhas e os grupos
+ * eliminados nunca se tinham contado, e contam a partir de agora.
  *
  * ── Uma medalha ganha não se perde ──
  *
@@ -37,9 +41,13 @@
 
 import type { Desafios, ModoDoDesafio } from "./desafio";
 import { estadoDoModo, maiorSequencia, mesesCompletos } from "./desafio";
+import type { Estatisticas } from "./estatisticas";
+import { COMPOSICOES, SETE_UNS } from "./estatisticas";
 import type { Profile, ProfileStorage } from "./progress";
+import { DEFAULT_SCORING } from "./scoring";
 
-export type FamiliaDaMedalha = "puzzle" | "tempo" | "survival" | "desafio";
+/** `sete`: as que não são de um modo, mas do próprio 7. */
+export type FamiliaDaMedalha = "puzzle" | "tempo" | "survival" | "desafio" | "sete";
 export type TipoDeMedalha = "normal" | "premium";
 
 export interface Progresso {
@@ -57,6 +65,12 @@ export interface ContextoDasMedalhas {
   readonly perfil: Profile;
   readonly desafios: Desafios;
   readonly capitulos: readonly CapituloDasMedalhas[];
+  readonly estatisticas: Estatisticas;
+  /**
+   * As medalhas já ganhas, por id. Só o Mestre as lê: é a única medalha feita
+   * de outras medalhas. Em `avaliar`, é o registo a ser avaliado que conta.
+   */
+  readonly ganhas: Readonly<Record<string, string>>;
   /** `AAAA-MM-DD`. Decide que meses já acabaram. */
   readonly hoje: string;
 }
@@ -76,21 +90,38 @@ export const IDS_DAS_MEDALHAS = [
   "perito-perfeito",
   "campanha-perfeita",
   "maratona",
+  "sangue-frio",
+  "em-cadeia",
   "recordista",
   "ultramaratona",
   "cinco-minutos",
+  "aguentar",
   "dez-minutos",
   "dez-limpezas",
   "semana",
   "mes-completo",
   "trinta-dias",
   "cem-dias",
+  "sete-uns",
+  "colecionador",
+  "mestre",
 ] as const;
 
 export type IdDaMedalha = (typeof IDS_DAS_MEDALHAS)[number];
 
 /** O que uma medalha conta. O nome, em cada língua, está no dicionário. */
-export type UnidadeDaMedalha = "niveis" | "perfeitos" | "tabuleiros" | "pontos" | "limpezas" | "dias";
+export type UnidadeDaMedalha =
+  | "niveis"
+  | "perfeitos"
+  | "tabuleiros"
+  | "pontos"
+  | "limpezas"
+  | "dias"
+  | "bombas"
+  | "jogadas"
+  | "linhas"
+  | "composicoes"
+  | "medalhas";
 
 export interface Medalha {
   readonly id: IdDaMedalha;
@@ -128,14 +159,31 @@ export interface Medalha {
  * Quinze tabuleiros é um jogador bom, a uns 2 s por jogada sem encravar — a
  * medalha normal. Trinta mil pontos e quarenta tabuleiros já pedem 1,5 s ou
  * menos, a corrida inteira: são as premium.
+ *
+ * ── E as das estatísticas ──
+ *
+ * - **Sangue-frio, cinco bombas.** As bombas armam-se a partir do quarto
+ *   tabuleiro, em metade deles: cinco desarmadas pedem uns treze tabuleiros. Dez
+ *   pediam vinte e três, e eram uma Maratona mais difícil com outro nome.
+ * - **Em cadeia, o combo no teto.** O multiplicador sobe um quarto por jogada
+ *   encadeada até ×3, e chega lá à nona — tiradas da pontuação, e não escritas
+ *   aqui, para a medalha não ficar a pedir um combo que o jogo deixou de dar.
+ *   O combo recomeça a cada tabuleiro, portanto são nove jogadas no mesmo: só
+ *   os tabuleiros grandes, de meio da corrida para a frente, as têm.
+ * - **Aguentar, vinte linhas** — o número que o fim da corrida mostra, que
+ *   conta as cinco do arranque e as puxadas. Puxar cedo chega lá mais depressa,
+ *   e é essa a estratégia que o Survival quer ensinar.
  */
 export const LIMIARES = {
   maratona: 15,
   ultramaratona: 40,
   recordista: 30_000,
+  sangueFrio: 5,
+  emCadeia: 1 + (DEFAULT_SCORING.comboCap - 1) / DEFAULT_SCORING.comboStep,
   cincoMinutosMs: 5 * 60_000,
   dezMinutosMs: 10 * 60_000,
   limpezas: 10,
+  aguentar: 20,
   semana: 7,
   trintaDias: 30,
   cemDias: 100,
@@ -244,6 +292,20 @@ export const MEDALHAS: readonly Medalha[] = [
     progresso: (ctx) => ate(melhorTabuleiros(ctx), LIMIARES.maratona),
   },
   {
+    id: "sangue-frio",
+    familia: "tempo",
+    tipo: "normal",
+    unidade: "bombas",
+    progresso: (ctx) => ate(ctx.estatisticas.bombas, LIMIARES.sangueFrio),
+  },
+  {
+    id: "em-cadeia",
+    familia: "tempo",
+    tipo: "normal",
+    unidade: "jogadas",
+    progresso: (ctx) => ate(ctx.estatisticas.combo, LIMIARES.emCadeia),
+  },
+  {
     id: "recordista",
     familia: "tempo",
     tipo: "premium",
@@ -265,6 +327,13 @@ export const MEDALHAS: readonly Medalha[] = [
     tipo: "normal",
     formato: "tempo",
     progresso: (ctx) => ate(melhorSurvival(ctx), LIMIARES.cincoMinutosMs),
+  },
+  {
+    id: "aguentar",
+    familia: "survival",
+    tipo: "normal",
+    unidade: "linhas",
+    progresso: (ctx) => ate(ctx.estatisticas.linhas, LIMIARES.aguentar),
   },
   {
     id: "dez-minutos",
@@ -309,6 +378,31 @@ export const MEDALHAS: readonly Medalha[] = [
     unidade: "dias",
     progresso: (ctx) => ate(maiorSequencia(ctx.desafios), LIMIARES.cemDias),
   },
+
+  /* ── O sete ── */
+  {
+    id: "sete-uns",
+    familia: "sete",
+    tipo: "normal",
+    progresso: (ctx) => ate(ctx.estatisticas.composicoes.includes(SETE_UNS) ? 1 : 0, 1),
+  },
+  {
+    id: "colecionador",
+    familia: "sete",
+    tipo: "premium",
+    unidade: "composicoes",
+    progresso: (ctx) => ate(ctx.estatisticas.composicoes.length, COMPOSICOES.length),
+  },
+  {
+    id: "mestre",
+    familia: "sete",
+    tipo: "premium",
+    unidade: "medalhas",
+    progresso: (ctx) => {
+      const normais = MEDALHAS.filter((m) => m.tipo === "normal");
+      return ate(normais.filter((m) => ctx.ganhas[m.id] !== undefined).length, normais.length);
+    },
+  },
 ];
 
 /* ─── O registo ───────────────────────────────────────────────────────────── */
@@ -333,6 +427,10 @@ export const atingido = (p: Progresso): boolean => p.alvo > 0 && p.atual >= p.al
 /**
  * Marca as medalhas que passaram o alvo desde a última vez, e devolve-as.
  *
+ * **Em rondas, até nada mudar**: o Mestre conta as outras medalhas, e a última
+ * normal e o Mestre podem chegar na mesma partida. Numa ronda só, o Mestre
+ * ficava à espera da partida seguinte para ver a normal que acabou de entrar.
+ *
  * Devolve o **mesmo** registo se nada mudou, para quem chama saber que não há
  * nada a gravar.
  */
@@ -340,13 +438,21 @@ export function avaliar(
   registo: RegistoDeMedalhas,
   ctx: ContextoDasMedalhas,
 ): { readonly registo: RegistoDeMedalhas; readonly novas: readonly Medalha[] } {
-  const novas = MEDALHAS.filter(
-    (m) => registo.ganhas[m.id] === undefined && atingido(m.progresso(ctx)),
-  );
-  if (novas.length === 0) return { registo, novas };
+  const ganhas: Record<string, string> = { ...registo.ganhas };
+  const novas: Medalha[] = [];
 
-  const ganhas = { ...registo.ganhas };
-  for (const m of novas) ganhas[m.id] = ctx.hoje;
+  for (;;) {
+    const daRonda = MEDALHAS.filter(
+      (m) => ganhas[m.id] === undefined && atingido(m.progresso({ ...ctx, ganhas })),
+    );
+    if (daRonda.length === 0) break;
+    for (const m of daRonda) {
+      ganhas[m.id] = ctx.hoje;
+      novas.push(m);
+    }
+  }
+
+  if (novas.length === 0) return { registo, novas };
 
   return {
     registo: { ganhas, porVer: [...registo.porVer, ...novas.map((m) => m.id)] },

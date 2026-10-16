@@ -58,6 +58,8 @@ import {
 } from "../session/SurvivalSession";
 import { pavioAcabou, pavioDe } from "../session/bomba";
 import type { CorridaGuardada } from "../session/corridaSurvival";
+import type { Composicao } from "../session/estatisticas";
+import { composicaoDoGrupo } from "../session/estatisticas";
 import { vibrarExplosao, vibrarPeloToque } from "../plataforma/nativo";
 import { anunciar } from "./anuncio";
 import { BoardView } from "./BoardView";
@@ -91,6 +93,11 @@ export interface OpcoesSurvival {
   readonly retomar?: CorridaGuardada;
   /** Chamado ao sair, para que a corrida sobreviva à navegação. */
   readonly aoGuardar: (corrida: CorridaGuardada) => void;
+  /**
+   * Saiu um grupo, e é esta a composição do 7 que ele fez. É por aqui que os
+   * grupos chegam às estatísticas — ver `estatisticas.ts`.
+   */
+  readonly aoEliminar?: (composicao: Composicao) => void;
   /** Maior tempo sobrevivido, em ms, ou 0 se ainda não há. */
   readonly melhorTempo: number;
   /**
@@ -526,6 +533,9 @@ topo.append(sair, this.elRelogio);
     const grupo = r.state.game.lastMove;
 
     if (r.moved && grupo !== undefined) {
+      const composicao = composicaoDoGrupo(antes.game.board, grupo);
+      if (composicao !== undefined) this.opcoes.aoEliminar?.(composicao);
+
       this.ocupado = true;
       if (r.desarmou) this.view.desarmarBomba();
 
