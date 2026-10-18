@@ -53,6 +53,8 @@ packages/mobile/android/.gradle/
 packages/mobile/android/build/
 packages/mobile/android/app/build/
 packages/mobile/android/local.properties
+# A chave de envio da Play e as senhas dela. Ver documentation/guia-android-loja.md.
+packages/mobile/android/chave-envio.properties
 
 # Assinatura e credenciais de loja. Nunca no repo.
 *.keystore

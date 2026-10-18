@@ -17,7 +17,8 @@
     "dice7": "tsx packages/tools/src/cli.ts",
     "dev": "pnpm --filter @dicetoseven/game dev",
     "build:game": "pnpm --filter @dicetoseven/game build",
-    "mobile:sync": "pnpm --filter @dicetoseven/mobile sync"
+    "mobile:sync": "pnpm --filter @dicetoseven/mobile sync",
+    "versao": "tsx packages/mobile/versao.ts"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.5.2",

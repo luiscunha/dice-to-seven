@@ -1,6 +1,6 @@
 {
   "name": "@dicetoseven/mobile",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "description": "Casca nativa (Capacitor) para iOS e Android. Sem código próprio: embrulha o build do game.",
