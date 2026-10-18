@@ -452,6 +452,11 @@ const FR_CRU: Textos = {
     apagar: "Effacer la progression",
     apagarConfirmar: "Touche encore pour tout effacer",
     apagado: "Progression effacée",
+    acerca: "À propos",
+    versao: (v) => `Version ${v}`,
+    contacto: "Contact",
+    privacidade: "Politique de confidentialité",
+    suporte: "Assistance",
   },
 
   partilha: {

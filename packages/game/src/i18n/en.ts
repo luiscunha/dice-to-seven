@@ -417,6 +417,11 @@ export const EN: Textos = {
     apagar: "Erase progress",
     apagarConfirmar: "Tap again to erase everything",
     apagado: "Progress erased",
+    acerca: "About",
+    versao: (v) => `Version ${v}`,
+    contacto: "Contact",
+    privacidade: "Privacy policy",
+    suporte: "Support",
   },
 
   partilha: {

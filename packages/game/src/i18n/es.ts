@@ -417,6 +417,11 @@ export const ES: Textos = {
     apagar: "Borrar el progreso",
     apagarConfirmar: "Pulsa otra vez para borrarlo todo",
     apagado: "Progreso borrado",
+    acerca: "Acerca de",
+    versao: (v) => `Versión ${v}`,
+    contacto: "Contacto",
+    privacidade: "Política de privacidad",
+    suporte: "Soporte",
   },
 
   partilha: {

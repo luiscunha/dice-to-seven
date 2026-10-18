@@ -76,49 +76,57 @@ contagem pode não fechar. Convém ter 15.
 
 ### A versão, numa fonte só
 
-Hoje a versão vive em três sítios que ninguém liga: `versionCode`/`versionName`
-no `build.gradle`, e `MARKETING_VERSION` no `project.pbxproj`, em duas
+Vivia em três sítios que ninguém ligava: `versionCode`/`versionName` no
+`build.gradle`, e `MARKETING_VERSION` no `project.pbxproj`, em duas
 configurações.
 
-- [ ] Uma fonte — a `version` do `packages/mobile/package.json` — e um script
-      que a escreve nos dois projetos. A primeira é a **1.0.0**.
-- [ ] O `versionCode` do Android tem de subir a cada envio, como o número de
-      build do iOS (que já é o número da execução do GitHub).
+- [x] Uma fonte — a `version` do `packages/mobile/package.json` — e
+      `pnpm versao` (`packages/mobile/versao.ts`), que a escreve nos dois
+      projetos. A primeira é a **1.0.0**. Um teste falha se os projetos não
+      disserem a versão do `package.json`.
+- [x] O `versionCode` do Android sai da versão — `1.2.3` → `10203` —, e a
+      regra é uma só: **cada pacote para a loja leva uma versão nova**, nem que
+      seja só o último número. O número de build do iOS continua a ser o da
+      execução do GitHub.
 
 ### Android: o pacote para a loja
 
-- [ ] **A chave de envio** (*upload key*): um keystore gerado uma vez, **fora do
-      repositório**, guardado em dois sítios. Perdê-la obriga a pedir à Google
-      que a troque.
-- [ ] O `build.gradle` passa a assinar o release com essa chave, lida de
-      variáveis de ambiente — nunca escrita no repositório.
-- [ ] **AAB e não APK**: a Play só aceita *Android App Bundle*
-      (`./gradlew bundleRelease`). A assinatura final é da Google (*Play App
-      Signing*), que é a opção por omissão.
+- [ ] **Tu: a chave de envio** (*upload key*): um keystore gerado uma vez,
+      **fora do repositório**, guardado em dois sítios. Os passos estão em
+      `guia-android-loja.md`.
+- [x] O `build.gradle` assina o release com essa chave, lida de
+      `android/chave-envio.properties` (fora do Git) ou de variáveis de
+      ambiente. Sem ela, o `bundleRelease` falha logo a dizer o que falta, e o
+      `assembleDebug` continua igual. Verificado com uma chave de teste,
+      descartada a seguir.
+- [x] **AAB e não APK**: `./gradlew bundleRelease`. A assinatura final é da
+      Google (*Play App Signing*), que é a opção por omissão.
 - [ ] Um workflow `android.yml`, à imagem do `ios.yml`: compila o AAB assinado
       só quando alguém o mandar, com a chave nos segredos do GitHub. Opcional
       numa primeira fase — o AAB também se gera aqui, como os APKs de teste.
-- [ ] Verificar o pacote: sem bibliotecas nativas (a regra das páginas de
-      16 KB não se aplica a uma WebView), `targetSdk` 36 (já está), e a
-      depuração da WebView desligada no release.
+- [x] Verificar o pacote: nenhuma biblioteca nativa (a regra das páginas de
+      16 KB não se aplica), `targetSdk` 36, e a depuração da WebView só nos
+      pacotes de depuração — é a omissão do Capacitor, que a liga pela marca
+      `debuggable` do Android.
 
 ### iOS
 
-- [ ] **O manifesto de privacidade** (`PrivacyInfo.xcprivacy`), que falta. O
-      plugin `@capacitor/preferences` usa `UserDefaults`, que é uma API de
-      «razão obrigatória»: sem o manifesto a declará-la (razão `CA92.1`), a
-      Apple recusa o envio. Declara também «nenhum dado recolhido» e «sem
-      rastreio».
+- [x] **O manifesto de privacidade** (`ios/App/App/PrivacyInfo.xcprivacy`),
+      registado nos recursos do projeto. Declara o `UserDefaults` do
+      `@capacitor/preferences` (razão `CA92.1`), «nenhum dado recolhido» e
+      «sem rastreio». Um teste guarda o que as fichas vão dizer: falha se o
+      manifesto mudar, se entrar um plugin novo ou uma permissão Android nova.
+- [ ] Confirmar que o projeto compila no macOS: o `ios.yml` corre sozinho no
+      PR, porque o PR mexe em `packages/mobile`.
 - [ ] O SDK do iOS 26 e o Xcode 26 já estão fixados no `ios.yml`. A
       conformidade de exportação (`ITSAppUsesNonExemptEncryption`) também já
       está no `Info.plist`.
 
 ### O que se vê dentro do jogo
 
-- [ ] **Uma linha «Acerca»** nas Definições: a versão, o contacto e a política
-      de privacidade. Não é obrigatória em nenhuma das lojas, mas é o que se
-      pede a quem reporta um defeito — e a versão tem de se ler sem abrir a
-      loja.
+- [x] **O «Acerca»**, no fim das Definições: a versão (a do `mobile`), o
+      contacto, a política de privacidade e o suporte, estas duas no idioma do
+      jogo. Os links abrem fora do jogo.
 
 ---
 
