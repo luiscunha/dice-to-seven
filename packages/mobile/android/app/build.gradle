@@ -1,5 +1,25 @@
 apply plugin: 'com.android.application'
 
+/*
+ * ── A chave de envio ──
+ *
+ * O pacote que vai para a Play é assinado com a chave de envio (upload key); a
+ * Google volta a assiná-lo com a dela antes de o distribuir (Play App Signing).
+ * A chave e as senhas **nunca entram no repositório**: lêem-se de
+ * `android/chave-envio.properties`, que o .gitignore exclui, ou de variáveis de
+ * ambiente, para um fluxo do GitHub. Ver documentation/guia-android-loja.md.
+ *
+ * Sem chave, o build de depuração (`assembleDebug`) funciona como sempre. É só
+ * o de release que se recusa — ver o fim deste ficheiro.
+ */
+def chaveDeEnvio = new Properties()
+def ficheiroDaChave = rootProject.file('chave-envio.properties')
+if (ficheiroDaChave.exists()) {
+    ficheiroDaChave.withInputStream { chaveDeEnvio.load(it) }
+}
+def daChave = { String nome, String variavel -> chaveDeEnvio.getProperty(nome) ?: System.getenv(variavel) }
+def armazemDaChave = daChave('ficheiro', 'ANDROID_CHAVE_FICHEIRO')
+
 android {
     namespace = "com.luiscunha.dicetoseven"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -7,8 +27,8 @@ android {
         applicationId "com.luiscunha.dicetoseven"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode 10000
+        versionName "1.0.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,11 +36,37 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            if (armazemDaChave) {
+                storeFile file(armazemDaChave)
+                storePassword daChave('senhaDoArmazem', 'ANDROID_CHAVE_SENHA_ARMAZEM')
+                keyAlias daChave('alias', 'ANDROID_CHAVE_ALIAS')
+                keyPassword daChave('senhaDaChave', 'ANDROID_CHAVE_SENHA')
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (armazemDaChave) {
+                signingConfig signingConfigs.release
+            }
         }
+    }
+}
+
+/*
+ * Um pacote de release sem chave sairia sem assinatura, e a Play recusa-o só
+ * depois de o enviarmos. Falha aqui, no primeiro segundo, a dizer o que falta.
+ */
+gradle.taskGraph.whenReady { grafo ->
+    def pedeRelease = grafo.allTasks.any { it.name in ['bundleRelease', 'assembleRelease'] }
+    if (pedeRelease && !armazemDaChave) {
+        throw new GradleException(
+            "Falta a chave de envio: cria android/chave-envio.properties " +
+            "(ver documentation/guia-android-loja.md).")
     }
 }
 

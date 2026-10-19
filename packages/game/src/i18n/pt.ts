@@ -452,6 +452,11 @@ export const PT = {
     apagar: "Apagar o progresso",
     apagarConfirmar: "Carrega outra vez para apagar tudo",
     apagado: "Progresso apagado",
+    acerca: "Acerca",
+    versao: (v: string): string => `Versão ${v}`,
+    contacto: "Contacto",
+    privacidade: "Política de privacidade",
+    suporte: "Suporte",
   },
 
   /**

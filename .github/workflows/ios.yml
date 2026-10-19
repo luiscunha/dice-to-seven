@@ -2,7 +2,12 @@
 # TestFlight quando alguém o pedir.
 #
 # Existe porque não há um Mac por perto. O `xcodebuild` só corre em macOS, e o
-# GitHub empresta um a cada execução — de graça, porque o repositório é público.
+# GitHub empresta um a cada execução — de graça enquanto o repositório for
+# público. **Quando passar a privado** (depois de as lojas aprovarem o jogo, ver
+# `plano-publicacao.md`), passa a custar minutos: o macOS conta 10× na quota
+# mensal das Actions (2 000 minutos no plano grátis), o que dá uns dez builds
+# por mês. É também por isso que a compilação de PR só corre quando o PR mexe
+# na casca nativa.
 #
 # **Dois modos**, e só um deles publica:
 #

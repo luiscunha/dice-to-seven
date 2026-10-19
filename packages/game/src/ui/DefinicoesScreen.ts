@@ -1,7 +1,8 @@
 /**
  * Definições.
  *
- * Tema, contra-relógio, vibração e apagar o progresso. O desenho §5.8 prevê
+ * Idioma, tema, contra-relógio, vibração, apagar o progresso, e no fim o
+ * «Acerca» — a versão, o contacto e as páginas do site. O desenho §5.8 prevê
  * mais, e o som há de entrar quando existir som; a estrutura é uma lista de
  * secções, para que acrescentar uma entrada não obrigue a mexer nas outras.
  *
@@ -20,6 +21,7 @@ import type { PreferenciaDeIdioma } from "../i18n";
 import { IDIOMAS, t } from "../i18n";
 import type { Tema, TempoInicial } from "../session/settings";
 import { emTelemovel } from "../plataforma/nativo";
+import { AUTOR, CONTACTO, VERSAO, paginaDoSite } from "../sobre";
 import { botao, cabecalho, elemento } from "./dom";
 
 const TEMAS: readonly Tema[] = ["sistema", "claro", "escuro"];
@@ -62,7 +64,7 @@ export class DefinicoesScreen {
      */
     if (emTelemovel()) rolo.appendChild(this.seccaoVibracao());
 
-    rolo.appendChild(this.seccaoProgresso());
+    rolo.append(this.seccaoProgresso(), this.seccaoAcerca());
 
     this.raiz.append(topo, rolo);
     host.replaceChildren(this.raiz);
@@ -233,6 +235,49 @@ export class DefinicoesScreen {
     });
 
     el.appendChild(b);
+    return el;
+  }
+
+  /**
+   * Acerca: a versão, o contacto, a privacidade e o suporte.
+   *
+   * Por último, depois de tudo o que se muda: é o sítio onde se vem uma vez,
+   * quando alguma coisa correu mal ou se quer saber com quem falar. A versão
+   * está à vista porque é a primeira pergunta a quem reporta um defeito, e
+   * tem de se responder sem abrir a loja.
+   *
+   * Os links abrem fora do jogo — o e-mail no programa de correio, as páginas
+   * no browser. Na aplicação é o Capacitor que o faz: um endereço que não é o
+   * da própria aplicação sai para o sistema.
+   */
+  private seccaoAcerca(): HTMLElement {
+    const d = t().definicoes;
+    const el = this.seccao(d.acerca);
+    el.classList.add("acerca");
+
+    const link = (texto: string, href: string): HTMLAnchorElement => {
+      const a = elemento("a", undefined, texto) as HTMLAnchorElement;
+      a.href = href;
+      if (!href.startsWith("mailto:")) {
+        a.target = "_blank";
+        a.rel = "noopener";
+      }
+      return a;
+    };
+
+    const lista = elemento("ul", "acerca-lista");
+    const item = (...filhos: (Node | string)[]): void => {
+      const li = elemento("li");
+      li.append(...filhos);
+      lista.appendChild(li);
+    };
+
+    item(elemento("span", "acerca-versao", d.versao(VERSAO)));
+    item(`${d.contacto}: `, link(CONTACTO, `mailto:${CONTACTO}`));
+    item(link(d.privacidade, paginaDoSite("privacy.html", t().lang)));
+    item(link(d.suporte, paginaDoSite("support.html", t().lang)));
+
+    el.append(lista, elemento("p", "nota", `© 2026 ${AUTOR}`));
     return el;
   }
 }

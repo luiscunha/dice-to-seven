@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  O manifesto de privacidade que a Apple exige desde maio de 2024.
+
+  O jogo não rastreia nem recolhe nada: as duas listas de dados ficam vazias, e
+  é o mesmo que a ficha da App Store diz ("Data Not Collected").
+
+  A única API de "razão obrigatória" é o UserDefaults, que o
+  @capacitor/preferences usa para guardar o progresso no próprio telemóvel.
+  CA92.1: ler e escrever dados que só a própria aplicação usa. Sem esta
+  declaração, o App Store Connect recusa o envio (ITMS-91053).
+
+  Um plugin novo do Capacitor pode trazer outra API destas: ver a lista de cada
+  um em https://capacitorjs.com/docs/ios/privacy-manifest antes de o acrescentar.
+-->
+<plist version="1.0">
+<dict>
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array/>
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<dict>
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>CA92.1</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>
