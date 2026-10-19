@@ -64,7 +64,8 @@ contagem pode não fechar. Convém ter 15.
 
 - [ ] **Play Console**, conta pessoal — 25 USD, uma vez, em
       <https://play.google.com/console/signup>. Verificação de identidade com
-      documento, morada e telefone; pode levar alguns dias.
+      documento, morada e telefone; pode levar alguns dias. O passo a passo
+      está em `guia-android-loja.md`, secção 4.
 - [x] **Um e-mail de contacto** — `dicetoseven@gmail.com`. Fica **público** na ficha. Convém um
       endereço só para o jogo.
 - [ ] **Estatuto de comerciante na UE**: o mesmo raciocínio — não comerciante.
