@@ -55,6 +55,8 @@ packages/mobile/android/app/build/
 packages/mobile/android/local.properties
 # A chave de envio da Play e as senhas dela. Ver documentation/guia-android-loja.md.
 packages/mobile/android/chave-envio.properties
+# As imagens das lojas: refazem-se com `node packages/mobile/capturas.mjs`.
+packages/mobile/loja/
 
 # Assinatura e credenciais de loja. Nunca no repo.
 *.keystore

@@ -203,6 +203,36 @@ JUSTE ET SIMPLE
 
 ---
 
+## As imagens
+
+Geram-se todas por código, a partir do jogo verdadeiro: cada captura é o ecrã
+do jogo, montado com dados de exemplo e no idioma da ficha
+(`packages/game/vitrine/`), fotografado pelo Chrome ao píxel exato de cada loja
+(`packages/mobile/capturas.mjs`). Quando o jogo mudar de aspeto, refazem-se:
+
+```bash
+pnpm dev                               # noutro terminal
+node packages/mobile/capturas.mjs      # tudo; --so iphone --lang pt para uma parte
+```
+
+Saem para `packages/mobile/loja/`, fora do Git:
+
+| Ficheiro | Para onde vai |
+|---|---|
+| `play-icone-512.png` | Play → ficha → ícone da aplicação (512×512, PNG de 32 bits) |
+| `play-destaque-1024x500.png` | Play → ficha → gráfico de destaque; o mesmo nas quatro línguas |
+| `play-1080x1920/<língua>/` | Play → ficha de cada língua → capturas do telemóvel |
+| `ipad-2064x2752/<língua>/` | App Store → iPad de 13"; e Play → capturas de tablet (opcional) |
+| `iphone-1320x2868/<língua>/` | App Store → iPhone de 6,9" |
+
+As pastas das línguas são `en`, `pt`, `es` e `fr` — na Play, a ficha
+predefinida (inglês) e as traduções em português (Portugal), espanhol (Espanha)
+e francês (França).
+
+**O iPad mostra o ecrã de um iPad de 11"** dentro da moldura de 13". A peça do
+tabuleiro tem um teto de 72px (`LADO_MAX`, no `BoardView`), e num ecrã de 13" o
+tabuleiro ficava a ocupar metade da largura. É o mesmo jogo num iPad Air.
+
 ## As frases das capturas
 
 Uma frase por cima de cada captura, curta o bastante para se ler na miniatura
