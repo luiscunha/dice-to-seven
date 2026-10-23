@@ -1,0 +1,230 @@
+/*
+ * A moldura das capturas das lojas.
+ *
+ * O fundo é o verde-petróleo da marca (a face 6), com as peças soltas do fundo
+ * do jogo em marca de água; a frase em branco, na Fredoka do nome; e o
+ * aparelho escuro, com o jogo lá dentro em tema claro, que é o que mais se
+ * destaca contra o verde.
+ */
+
+@font-face {
+  font-family: "Fredoka";
+  font-style: normal;
+  font-weight: 600;
+  src: url("../src/ui/tipos/fredoka-600-latin.woff2") format("woff2");
+}
+
+html,
+body {
+  margin: 0;
+  background: #0f4a43;
+}
+
+.tela {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 70% at 50% 0%, #2a8c77 0%, transparent 70%),
+    linear-gradient(180deg, #1b6b62 0%, #0f4a43 100%);
+  color: #ffffff;
+  font-family: "Fredoka", system-ui, sans-serif;
+}
+
+/* As peças do fundo do jogo, a branco e quase transparentes. */
+.tela::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-color: rgb(255 255 255 / 0.06);
+  mask-image: url("../src/ui/fundo-pecas.svg");
+  mask-repeat: repeat;
+  mask-size: 240px 240px;
+  -webkit-mask-image: url("../src/ui/fundo-pecas.svg");
+  -webkit-mask-repeat: repeat;
+  -webkit-mask-size: 240px 240px;
+  pointer-events: none;
+}
+
+.tela > * {
+  position: relative;
+}
+
+/* ─── A frase ─────────────────────────────────────────────────────────────── */
+
+.frase {
+  max-width: 88%;
+  margin: 0;
+  font-weight: 600;
+  line-height: 1.12;
+  letter-spacing: 0.005em;
+  text-align: center;
+  text-wrap: balance;
+  text-shadow: 0 2px 6px rgb(0 0 0 / 0.18);
+}
+
+[data-formato="play"] .frase {
+  padding-top: 34px;
+  font-size: 30px;
+}
+
+[data-formato="iphone"] .frase {
+  padding-top: 64px;
+  font-size: 37px;
+}
+
+[data-formato="ipad"] .frase {
+  padding-top: 80px;
+  font-size: 64px;
+}
+
+/* ─── O aparelho ──────────────────────────────────────────────────────────── */
+
+.aparelho {
+  --escala: 0.5;
+  --borda: 22px;
+  --raio: 58px;
+
+  margin-top: auto;
+  margin-bottom: auto;
+  width: calc((var(--largura-ecra) + 2 * var(--borda)) * var(--escala));
+  height: calc((var(--altura-ecra) + 2 * var(--borda)) * var(--escala));
+  border-radius: calc(var(--raio) * var(--escala));
+  background: #0d1917;
+  box-shadow:
+    inset 0 0 0 calc(3px * var(--escala)) #2b403a,
+    0 calc(30px * var(--escala)) calc(60px * var(--escala)) rgb(0 0 0 / 0.35);
+}
+
+.aparelho.tablet {
+  --raio: 54px;
+}
+
+.aparelho .ecra {
+  position: absolute;
+  top: calc(var(--borda) * var(--escala));
+  left: calc(var(--borda) * var(--escala));
+  width: var(--largura-ecra);
+  height: var(--altura-ecra);
+  border: 0;
+  border-radius: calc(var(--raio) - var(--borda));
+  background: #f1f2f0;
+  transform: scale(var(--escala));
+  transform-origin: 0 0;
+}
+
+/* ─── O gráfico de destaque ───────────────────────────────────────────────── */
+
+[data-formato="destaque"] {
+  flex-direction: row;
+  justify-content: center;
+  gap: 22px;
+}
+
+.destaque-simbolo {
+  width: 150px;
+  height: 150px;
+  filter: drop-shadow(0 6px 10px rgb(0 0 0 / 0.3));
+}
+
+.destaque-texto {
+  display: grid;
+  gap: 14px;
+  justify-items: start;
+}
+
+.nome {
+  font-size: 50px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  text-shadow: 0 2px 6px rgb(0 0 0 / 0.2);
+}
+
+.nome-liga {
+  color: #bdeee0;
+}
+
+.nome-peca {
+  position: relative;
+  display: inline-block;
+  width: 0.62em;
+  height: 0.62em;
+  margin-inline: 0.07em;
+  border-radius: 0.2em;
+  background: #bdeee0;
+  vertical-align: -0.02em;
+}
+
+.nome-peca::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 0.2em;
+  height: 0.2em;
+  margin: auto;
+  border-radius: 50%;
+  background: #123f3a;
+}
+
+.nome-o {
+  display: inline-block;
+  width: 0;
+  overflow: hidden;
+  visibility: hidden;
+}
+
+.regra {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sinal {
+  font-size: 26px;
+  opacity: 0.85;
+}
+
+.sete {
+  font-size: 40px;
+  line-height: 1;
+  color: #bdeee0;
+}
+
+/* Uma peça de amostra: a face 3 e a face 4, com as pintas no sítio de um dado. */
+.amostra {
+  position: relative;
+  display: inline-block;
+  width: 38px;
+  height: 38px;
+  border-radius: 9px;
+  box-shadow: inset 0 0 0 1px rgb(18 63 58 / 0.18), 0 3px 0 rgb(0 0 0 / 0.18);
+}
+
+.amostra.face-3 {
+  background: #74c8b0;
+}
+
+.amostra.face-4 {
+  background: #3ebb94;
+}
+
+.pinta {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  margin: -3.5px 0 0 -3.5px;
+  border-radius: 50%;
+  background: #123f3a;
+}
+
+.face-3 .pinta:nth-child(1) { left: 27%; top: 27%; }
+.face-3 .pinta:nth-child(2) { left: 50%; top: 50%; }
+.face-3 .pinta:nth-child(3) { left: 73%; top: 73%; }
+
+.face-4 .pinta:nth-child(1) { left: 28%; top: 28%; }
+.face-4 .pinta:nth-child(2) { left: 72%; top: 28%; }
+.face-4 .pinta:nth-child(3) { left: 28%; top: 72%; }
+.face-4 .pinta:nth-child(4) { left: 72%; top: 72%; }

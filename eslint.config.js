@@ -164,14 +164,22 @@ export default tseslint.config(
   },
 
   /*
-   * Os utilitários de linha de comandos do `mobile` — hoje só o gerador de
-   * ícones. Correm com `node` à mão, fora do build, e por isso têm os globais
-   * do Node como qualquer script.
+   * Os utilitários de linha de comandos do `mobile` — o gerador de ícones e o
+   * das capturas das lojas. Correm com `node` à mão, fora do build, e por isso
+   * têm os globais do Node como qualquer script; o das capturas fala com o
+   * Chrome por `fetch` e `WebSocket`, que o Node já traz.
    */
   {
     files: ["packages/mobile/*.mjs"],
     languageOptions: {
-      globals: { console: "readonly", process: "readonly" },
+      globals: {
+        console: "readonly",
+        process: "readonly",
+        setTimeout: "readonly",
+        fetch: "readonly",
+        WebSocket: "readonly",
+        Buffer: "readonly",
+      },
     },
     rules: {
       "no-restricted-imports": "off",
