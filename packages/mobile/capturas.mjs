@@ -1,13 +1,16 @@
 /**
- * As imagens das lojas: as capturas com a frase, e o gráfico de destaque.
+ * As imagens das lojas — as capturas com a frase, e o gráfico de destaque — e
+ * as do Instagram.
  *
  * Fotografa a vitrine do jogo (`packages/game/vitrine/`) com o Chrome em modo
  * headless, ao píxel exato de cada loja, e deixa os PNG em `loja/` — fora do
- * Git, porque se refazem a qualquer momento.
+ * Git, porque se refazem a qualquer momento. As do Instagram vão para
+ * `instagram/`, e só com `--so instagram`.
  *
  *   pnpm dev                                    # noutro terminal: o servidor do jogo
  *   node capturas.mjs                           # daqui, com o servidor em localhost:5173
  *   node capturas.mjs --so iphone --lang pt     # só uma parte
+ *   node capturas.mjs --so instagram            # as capas dos destaques e as publicações
  *
  * Fala com o Chrome pelo protocolo de depuração (DevTools Protocol), e não
  * pela linha de comandos do `--screenshot`: esse fotografa no fim do
@@ -28,6 +31,8 @@ import { crc32, deflateSync, inflateSync } from "node:zlib";
 const AQUI = dirname(fileURLToPath(import.meta.url));
 const SAIDA = join(AQUI, "loja");
 const VITRINE = join(AQUI, "../game/vitrine/vitrine.html").replace(/\\/g, "/");
+const SAIDA_INSTAGRAM = join(AQUI, "instagram");
+const VITRINE_INSTAGRAM = join(AQUI, "../game/vitrine/instagram.html").replace(/\\/g, "/");
 const SERVIDOR = process.env.SERVIDOR ?? "http://localhost:5173";
 const CHROME =
   process.env.CHROME ??
@@ -203,35 +208,71 @@ const cdp = (metodo, params = {}) =>
 
 /* ─── Fotografar ──────────────────────────────────────────────────────────── */
 
-async function fotografar(formato, query, ficheiro) {
-  const f = FORMATOS[formato];
+/** Abre uma página da vitrine ao tamanho dado, e espera que ela diga que está pronta. */
+async function abrir(url, f) {
   await cdp("Emulation.setDeviceMetricsOverride", {
     width: f.largura,
     height: f.altura,
     deviceScaleFactor: f.escala,
     mobile: false,
   });
-  await cdp("Page.navigate", { url: `${SERVIDOR}/@fs/${VITRINE}?formato=${formato}&${query}` });
+  await cdp("Page.navigate", { url });
 
   for (let i = 0; i < 300; i++) {
     const { result } = await cdp("Runtime.evaluate", { expression: "window.__pronto === true" });
-    if (result.value === true) break;
-    if (i === 299) throw new Error(`a vitrine não ficou pronta: ${formato} ${query}`);
+    if (result.value === true) return;
     await esperar(100);
   }
+  throw new Error(`a vitrine não ficou pronta: ${url}`);
+}
 
+async function guardar(ficheiro, raiz) {
   const { data } = await cdp("Page.captureScreenshot", { format: "png" });
   mkdirSync(dirname(ficheiro), { recursive: true });
   writeFileSync(ficheiro, Buffer.from(data, "base64"));
-  console.log(`  ${ficheiro.slice(SAIDA.length + 1)}`);
+  console.log(`  ${ficheiro.slice(raiz.length + 1)}`);
+}
+
+async function fotografar(formato, query, ficheiro) {
+  await abrir(`${SERVIDOR}/@fs/${VITRINE}?formato=${formato}&${query}`, FORMATOS[formato]);
+  await guardar(ficheiro, SAIDA);
+}
+
+/**
+ * As imagens do Instagram. A lista do que há é a da própria página
+ * (`instagram.ts`), lida de `window.__instagram`: aqui não há outra.
+ */
+async function instagram() {
+  const pagina = `${SERVIDOR}/@fs/${VITRINE_INSTAGRAM}`;
+  await abrir(pagina, { largura: 360, altura: 360, escala: 1 });
+  const { result } = await cdp("Runtime.evaluate", {
+    expression: "JSON.stringify(window.__instagram)",
+  });
+  const { formatos, pecas } = JSON.parse(result.value);
+
+  for (const p of pecas) {
+    const linguas = p.comLingua ? ["en", "pt"] : [undefined];
+    for (const lingua of linguas) {
+      if (soLingua !== undefined && lingua !== undefined && soLingua !== lingua) continue;
+      const query = [`peca=${p.peca}`, p.query, lingua === undefined ? "" : `lang=${lingua}`]
+        .filter((q) => q !== "")
+        .join("&");
+      await abrir(`${pagina}?${query}`, formatos[p.formato]);
+      await guardar(join(SAIDA_INSTAGRAM, lingua ?? "", p.ficheiro), SAIDA_INSTAGRAM);
+    }
+  }
 }
 
 try {
-  mkdirSync(SAIDA, { recursive: true });
-  iconeDe32Bits(join(AQUI, "../game/public/marca/icone-512.png"), join(SAIDA, "play-icone-512.png"));
-  console.log("  play-icone-512.png");
-
   await cdp("Page.enable");
+
+  if (so === "instagram") {
+    await instagram();
+  } else {
+    mkdirSync(SAIDA, { recursive: true });
+    iconeDe32Bits(join(AQUI, "../game/public/marca/icone-512.png"), join(SAIDA, "play-icone-512.png"));
+    console.log("  play-icone-512.png");
+  }
 
   for (const formato of Object.keys(FORMATOS)) {
     if (so !== undefined && so !== formato) continue;

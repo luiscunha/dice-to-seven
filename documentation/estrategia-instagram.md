@@ -155,12 +155,29 @@ mosaicos — que, de resto, estragam cada publicação sozinha.
 
 ### As imagens saem do jogo
 
-As capturas das lojas já se fazem por código, a partir do jogo verdadeiro
-(`packages/game/vitrine/` + `packages/mobile/capturas.mjs`, no ramo
-`feature/ficha-loja`, ainda por integrar no `main`). **Eu** acrescento
-dois formatos — `insta` (1080×1350) e `story` (1080×1920) — e os moldes
-Tabuleiro e Número. Assim cada imagem do feed é um ecrã real do jogo, nas
-quatro línguas, e refaz-se quando o jogo mudar de aspeto.
+Fazem-se como as capturas das lojas: por código, a partir do jogo verdadeiro.
+A página é `packages/game/vitrine/instagram.html`, com as peças
+(`pecaDeAmostra`) e o tabuleiro (`BoardView`) do jogo, e o telemóvel da beta
+mostra um ecrã real. Quando o jogo mudar de aspeto, refazem-se:
+
+```bash
+pnpm dev                                          # noutro terminal
+node packages/mobile/capturas.mjs --so instagram  # --lang pt para uma língua só
+```
+
+Saem para `packages/mobile/instagram/`, fora do Git:
+
+| Ficheiro | O que é |
+|---|---|
+| `destaques/1.png` … `6.png` | As capas dos seis destaques, 1080×1080. Sem texto, servem às duas línguas |
+| `<língua>/02-como-jogar/1.png` … `5.png` | O carrossel #02, 1080×1350 |
+| `<língua>/03-beta.png` | A imagem da beta, #03, 1080×1350 |
+
+As línguas são `en` e `pt`. O tabuleiro do «Como jogar» é um exemplo feito à
+mão, como os do ecrã «Como jogar» do jogo, e **a página verifica-o com o
+solver**: se deixar de ter solução, a página falha em vez de o mostrar.
+
+Faltam o formato das Stories (1080×1920) e o molde Número.
 
 Os **Reels gravam-se no telemóvel**, com o gravador de ecrã do sistema: é a
 única maneira de ter o toque e a animação verdadeiros. Tema escuro para os
@@ -232,8 +249,9 @@ qua 25 nov  →             5. O ritmo             3 publicações por semana + 
 
 - [ ] **Tu**: criar a conta, mudá-la para Criador, nome, bio, foto, contacto,
       dois fatores. Reservar o nome no TikTok, Threads e YouTube.
-- [ ] **Eu**: as capas dos destaques, as imagens do #02 e do #03, as Stories
-      dos destaques «How to play» e «FAQ».
+- [x] **Eu**: as capas dos destaques, as imagens do #02 e do #03 (§2, «As
+      imagens saem do jogo»).
+- [ ] **Eu**: as Stories dos destaques «How to play» e «FAQ».
 - [ ] **Tu**: gravar o trailer (#01, guião no anexo A).
 - [ ] Publicar **#01, #02, #03 no mesmo dia**, por esta ordem, e fixá-los. Uma
       conta nova com uma fila completa parece a sério; com uma publicação só,
@@ -491,10 +509,14 @@ mostrada a cada vez menos gente.
 
 **Eu**
 
-- [ ] Os formatos `insta` e `story` na vitrine, e os moldes Tabuleiro e Número.
-- [ ] As capas dos seis destaques, e as Stories dos destaques fixos.
-- [ ] As imagens dos carrosséis: os puzzles (com a solução), as 14 maneiras, os
-      quatro modos, as peças.
+- [x] A vitrine do Instagram: as publicações (1080×1350), as capas (1080×1080)
+      e o molde Tabuleiro.
+- [ ] O formato das Stories (1080×1920) e o molde Número.
+- [x] As capas dos seis destaques.
+- [ ] As Stories dos destaques fixos.
+- [x] O carrossel #02 «How to play» e a imagem #03 da beta.
+- [ ] As imagens dos outros carrosséis: os puzzles (com a solução), as 14
+      maneiras, os quatro modos, as peças.
 - [ ] As legendas que faltam, nas duas línguas, à medida do calendário.
 - [ ] As ligações com marca de campanha, uma por sítio.
 - [ ] A lista dos 30 criadores, a partir de pesquisas que tu confirmas.
