@@ -33,6 +33,7 @@ Os jogos grandes não podem contar a segunda história. É a vantagem de ser um.
 | Língua | **Inglês primeiro**, com uma linha em português no fim de cada legenda | Os dados não precisam de tradução, e o alcance dos Reels vem do mundo inteiro. A rede que arranca a conta é portuguesa e lê as duas. O inglês já é a língua por omissão das lojas |
 | Cara | **Tu apareces**, pelo menos uma vez por semana | Um jogo de uma pessoa só ganha quando se vê a pessoa. Não tem de ser vídeo a falar: as mãos a jogar e uma frase escrita já contam |
 | Orçamento | **0 €** até ao lançamento; 50–100 € depois, se um Reel já provou sozinho | Pagar para empurrar o que não funcionou de graça é deitar dinheiro fora |
+| A beta | **A versão web**, `luiscunha.github.io/dice-to-seven/` (decidido por ti a 2026-10-24) | Joga-se no browser, em qualquer telemóvel ou computador, com um toque. O teste fechado da Play pedia três passos e só servia ao Android. Mais gente a jogar dá mais feedback antes do lançamento. O teste fechado continua, para quem quiser a app a sério |
 | Dia do lançamento (**L**) | **Terça, 17 de novembro**, provisório | A regra é: a primeira terça, quarta ou quinta **cinco dias depois** de as duas lojas aprovarem. Com a Play a pedir a produção a ~6 de novembro e a responder até 7 dias, 17 é o mais provável. **A data só se anuncia com as duas aprovações na mão** |
 
 ---
@@ -69,7 +70,7 @@ na bio, na loja e no ícone do telemóvel é como uma marca se fixa.
 
 | Quando | Ligações, por esta ordem |
 |---|---|
-| Até L | 1. **Beta para Android** (o grupo do teste fechado) · 2. O site |
+| Até L | 1. **A beta**, a versão web (`https://luiscunha.github.io/dice-to-seven/`) · 2. O site |
 | A partir de L | 1. **Google Play** · 2. **App Store** · 3. O site |
 
 As duas ligações das lojas levam uma marca de campanha, para se saber quantas
@@ -280,10 +281,17 @@ na beta, e descobrir que formatos pegam.
 batota?»), um bastidor, uma pergunta. As Stories não crescem a conta — fazem
 voltar quem já a segue, e é isso que faz o algoritmo mostrar as publicações.
 
-**A beta é a chamada desta fase.** «Comenta BETA e mando-te a ligação» dá
-comentários (o algoritmo gosta) e uma conversa privada com cada um (tu gostas).
-E o que eles disserem entra no questionário que a Google faz no pedido de
-produção — o feedback recebido e o que mudou com ele.
+**A beta é a chamada desta fase**, e é a versão web: joga-se no browser, sem
+instalar nada. «Comenta BETA e mando-te a ligação» dá comentários (o algoritmo
+gosta) e uma conversa privada com cada um (tu gostas). A ligação também fica
+na bio, para quem não quiser comentar. E o que eles disserem entra no
+questionário que a Google faz no pedido de produção: o feedback recebido e o
+que mudou com ele.
+
+**A versão web tem de estar atualizada antes de a divulgar**: publica-se à
+mão, e a de 2026-10-24 era de 16 de outubro, sem o «Acerca» nem o que entrou
+depois. No GitHub, `dice-to-seven` → Actions → «Publicar» → Run workflow. E
+volta a publicar-se cada vez que o `main` mudar o jogo, até ao lançamento.
 
 ### Fase 2 — Contagem (seg 9 nov → seg 16 nov)
 
@@ -480,9 +488,16 @@ mostrada a cada vez menos gente.
 
 ## 9. O que não fazer
 
-- **Não divulgar a versão web.** Sai do ar quando as lojas aprovarem, e o
-  repositório passa a privado (`plano-publicacao.md`): uma ligação partilhada
-  agora estava partida daqui a três semanas.
+- **Não deixar a ligação da beta partida.** A versão web sai do ar quando as
+  lojas aprovarem, e o repositório passa a privado (`plano-publicacao.md`).
+  Antes disso, a mesma morada tem de passar a mandar para as lojas, em vez de
+  dar um erro a quem a guardou. Deve dar para o fazer com uma página no site
+  da conta (`luiscunha.github.io`), mas confirma-se como quando chegar a
+  altura. **Eu** trato disso.
+
+  E a troca faz-se **no dia L, e não no dia da aprovação**: entre uma e outra
+  há uns cinco dias (fase 2) em que o jogo ainda não está nas lojas, e a
+  ligação ia mandar a pessoa para uma página onde não há nada para instalar.
 - **Não anunciar a data antes das duas aprovações.** Uma data adiada gasta a
   confiança que a contagem construiu.
 - **Não prometer o que ainda não existe**: as tabelas de classificação e a
@@ -500,7 +515,10 @@ mostrada a cada vez menos gente.
 
 **Tu**
 
-- [ ] Criar a conta e reservar o nome nas outras redes (fase 0).
+- [x] Criar a conta (2026-10-23).
+- [ ] Reservar o nome nas outras redes.
+- [ ] Publicar a versão web antes de divulgar a beta (Actions → «Publicar»), e
+      sempre que o jogo mudar até ao lançamento.
 - [ ] Gravar os Reels no telemóvel — os guiões estão no anexo A.
 - [ ] Aparecer: o #04, o #10, e uma vez por semana a seguir.
 - [ ] Responder a comentários e mensagens, todos os dias.
@@ -632,20 +650,39 @@ Tip: the order matters. Every group you clear moves the pieces around it — so 
 
 ### #03 — Imagem · A beta (fixado até L)
 
-**Play it before anyone else** — o jogo num telemóvel Android, e por baixo:
-`Android beta · open now`.
+**Play it before anyone else**, a etiqueta `Free beta · play in your browser`,
+e o jogo num telemóvel. A beta é a versão web: corre em qualquer telemóvel ou
+computador.
 
 ```text
-DiceToSeven is in beta on Android, and you can be in it. 🎲
+DiceToSeven is almost here, and you can play the beta today. 🎲
 
-Comment BETA and I'll send you the link. You'll get the game before launch — and what you tell me goes straight into the next build.
+Comment BETA and I'll send you the link. It runs in your browser, on any phone or computer. No install, no account.
 
-On iPhone? Launch is close. Follow so you don't miss it.
+What you tell me goes straight into the next build.
 
-🇵🇹 Comenta BETA e envio-te a ligação para o teste no Android.
+🇵🇹 Comenta BETA e envio-te a ligação: joga já no browser, em qualquer telemóvel ou computador.
 
-#DiceToSeven #indiegame #mobilegame #betatest
+#DiceToSeven #indiegame #puzzlegame #betatest
 ```
+
+Texto alternativo: `The DiceToSeven app on a phone, showing a chapter's grid of levels with stars. Text: Play it before anyone else. Free beta, play in your browser.`
+
+A quem comentar «BETA»: uma resposta ao comentário («Sent! Check your DMs
+📩»), que é o que o algoritmo mais conta, e a mensagem privada:
+
+```text
+Thanks for trying the beta! 🎲 Here it is: https://luiscunha.github.io/dice-to-seven/
+It runs in the browser, best on your phone. Anything you notice, good or bad, just reply here. 🙏
+```
+
+```text
+Obrigado por experimentares a beta! 🎲 Está aqui: https://luiscunha.github.io/dice-to-seven/
+Corre no browser, e fica melhor no telemóvel. Qualquer coisa que notes, boa ou má, responde aqui. 🙏
+```
+
+O que as pessoas disserem guarda-se: é a resposta ao questionário da Google no
+pedido de produção.
 
 ### #04 — Reel · Hi, I'm Luís
 

@@ -82,7 +82,7 @@ const TEXTOS = {
     perfeito: "Perfect",
     semAjuda: "No undos, no restarts, no hints",
     beta: "Play it before anyone else",
-    betaEtiqueta: "Android beta · open now",
+    betaEtiqueta: "Free beta · play in your browser",
   },
   pt: {
     passos: [
@@ -95,7 +95,7 @@ const TEXTOS = {
     perfeito: "Perfeito",
     semAjuda: "Sem desfazer, sem recomeçar, sem dicas",
     beta: "Joga antes de toda a gente",
-    betaEtiqueta: "Beta no Android · já aberta",
+    betaEtiqueta: "Beta grátis · joga no browser",
   },
 } as const;
 
@@ -244,9 +244,9 @@ if (peca === "destaque") {
   tela.append(titulo, meio, assinatura());
 } else if (peca === "beta") {
   /*
-   * A chamada para a beta: a frase, a etiqueta com o anel de luz do site — o
-   * mesmo «em breve» que a pessoa vê quando segue a ligação da bio — e o
-   * telemóvel com a grelha de um capítulo.
+   * A chamada para a beta, que é a versão web: joga-se no browser, em qualquer
+   * telemóvel ou computador. A frase, a etiqueta com o anel de luz do site, e
+   * o telemóvel com a grelha de um capítulo.
    *
    * A grelha e não um nível: o telemóvel fica cortado pela margem de baixo, e
    * num nível o que se via era o espaço vazio por cima das peças, que assentam
