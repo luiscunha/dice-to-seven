@@ -34,6 +34,7 @@ Os jogos grandes não podem contar a segunda história. É a vantagem de ser um.
 | Cara | **Tu apareces**, pelo menos uma vez por semana | Um jogo de uma pessoa só ganha quando se vê a pessoa. Não tem de ser vídeo a falar: as mãos a jogar e uma frase escrita já contam |
 | Orçamento | **0 €** até ao lançamento; 50–100 € depois, se um Reel já provou sozinho | Pagar para empurrar o que não funcionou de graça é deitar dinheiro fora |
 | A beta | **A versão web**, `luiscunha.github.io/dice-to-seven/` (decidido por ti a 2026-10-24) | Joga-se no browser, em qualquer telemóvel ou computador, com um toque. O teste fechado da Play pedia três passos e só servia ao Android. Mais gente a jogar dá mais feedback antes do lançamento. O teste fechado continua, para quem quiser a app a sério |
+| Quem recebe a beta | **Só quem comenta BETA**, por mensagem automática (ManyChat). A bio leva só o site (decidido por ti a 2026-10-24) | Se a beta só chega a quem comenta, cada comentário vale mais, porque é a única porta. A ligação não é secreta, e quem a recebe pode passá-la: a exclusividade é de perceção, e mais jogadores até ajudam |
 | Dia do lançamento (**L**) | **Terça, 17 de novembro**, provisório | A regra é: a primeira terça, quarta ou quinta **cinco dias depois** de as duas lojas aprovarem. Com a Play a pedir a produção a ~6 de novembro e a responder até 7 dias, 17 é o mais provável. **A data só se anuncia com as duas aprovações na mão** |
 
 ---
@@ -70,7 +71,7 @@ na bio, na loja e no ícone do telemóvel é como uma marca se fixa.
 
 | Quando | Ligações, por esta ordem |
 |---|---|
-| Até L | 1. **A beta**, a versão web (`https://luiscunha.github.io/dice-to-seven/`) · 2. O site |
+| Até L | 1. **O site** (`https://luiscunha.github.io/dicetoseven-site/`), e mais nenhuma. A beta não vai para a bio: chega só a quem comenta |
 | A partir de L | 1. **Google Play** · 2. **App Store** · 3. O site |
 
 As duas ligações das lojas levam uma marca de campanha, para se saber quantas
@@ -282,11 +283,15 @@ batota?»), um bastidor, uma pergunta. As Stories não crescem a conta — fazem
 voltar quem já a segue, e é isso que faz o algoritmo mostrar as publicações.
 
 **A beta é a chamada desta fase**, e é a versão web: joga-se no browser, sem
-instalar nada. «Comenta BETA e mando-te a ligação» dá comentários (o algoritmo
-gosta) e uma conversa privada com cada um (tu gostas). A ligação também fica
-na bio, para quem não quiser comentar. E o que eles disserem entra no
-questionário que a Google faz no pedido de produção: o feedback recebido e o
-que mudou com ele.
+instalar nada. **Só a recebe quem comenta BETA**: a ligação não vai para a bio
+nem para as legendas. «Comenta BETA e mando-te a ligação» dá comentários (o
+algoritmo gosta) e uma conversa privada com cada um (tu gostas).
+
+A mensagem vai **sozinha**, pelo ManyChat (anexo A, #03), para ninguém ficar à
+espera de que estejas ao telemóvel. A conversa a seguir é tua: quem responder
+com feedback cai na caixa de entrada normal do Instagram. E o que eles
+disserem entra no questionário que a Google faz no pedido de produção: o
+feedback recebido e o que mudou com ele.
 
 **A versão web tem de estar atualizada antes de a divulgar**: publica-se à
 mão, e a de 2026-10-24 era de 16 de outubro, sem o «Acerca» nem o que entrou
@@ -441,7 +446,7 @@ imagem trata.
 |---|---|---|
 | 1 | Seguidores | 300 |
 | 1 | Guardados por carrossel | ≥ 5% do alcance |
-| 1 | Pessoas que pediram a beta | 25 |
+| 1 | Pessoas que pediram a beta (os contactos no ManyChat) | 25 |
 | 2 | Toques em «Lembrar-me» | 100 |
 | L | Toques nas ligações (estatísticas do perfil) | 300 |
 | L+7 | Instalações vindas do Instagram (`utm_source=instagram`, `ct=ig-*`) | 150 |
@@ -517,6 +522,8 @@ mostrada a cada vez menos gente.
 
 - [x] Criar a conta (2026-10-23).
 - [ ] Reservar o nome nas outras redes.
+- [ ] Ligar a @dicetoseven ao ManyChat e ativar a mensagem automática da
+      beta, antes de publicar o #03 (anexo A).
 - [ ] Publicar a versão web antes de divulgar a beta (Actions → «Publicar»), e
       sempre que o jogo mudar até ao lançamento.
 - [ ] Gravar os Reels no telemóvel — os guiões estão no anexo A.
@@ -668,20 +675,42 @@ What you tell me goes straight into the next build.
 
 Texto alternativo: `The DiceToSeven app on a phone, showing a chapter's grid of levels with stars. Text: Play it before anyone else. Free beta, play in your browser.`
 
-A quem comentar «BETA»: uma resposta ao comentário («Sent! Check your DMs
-📩»), que é o que o algoritmo mais conta, e a mensagem privada:
+**A mensagem a quem comenta vai sozinha, pelo ManyChat**, parceiro oficial da
+Meta. O plano grátis chega para começar; confirmar os limites no site. A conta
+e as permissões são tuas; os nomes dos botões podem mudar.
 
-```text
-Thanks for trying the beta! 🎲 Here it is: https://luiscunha.github.io/dice-to-seven/
-It runs in the browser, best on your phone. Anything you notice, good or bad, just reply here. 🙏
-```
+1. **No Instagram, antes:** Definições → Mensagens e respostas a stories →
+   Controlos de mensagens → Ferramentas ligadas → **Permitir acesso às
+   mensagens**. Sem isto, nenhuma ferramenta envia nada.
+2. **No ManyChat:** criar a conta, escolher Instagram e ligar a @dicetoseven.
+3. **Automation → New Automation**, com o modelo de enviar uma mensagem a quem
+   comenta.
+4. **O gatilho:** um comentário em **qualquer publicação ou Reel** com a
+   palavra **BETA**. Com «qualquer», fica pronta antes de o #03 existir e
+   serve para os posts seguintes.
+5. **A resposta pública**, com várias versões, para não parecer um robô:
+   - `Sent! Check your DMs 📩`
+   - `On its way to your DMs 🎲`
+   - `Done! Look in your messages 📩`
+6. **A mensagem privada**, com a ligação num botão e não crua no texto:
 
-```text
-Obrigado por experimentares a beta! 🎲 Está aqui: https://luiscunha.github.io/dice-to-seven/
-Corre no browser, e fica melhor no telemóvel. Qualquer coisa que notes, boa ou má, responde aqui. 🙏
-```
+   ```text
+   Thanks for joining the DiceToSeven beta! 🎲
+   It runs in your browser, best on your phone. Tap below to play.
+   Anything you notice, good or bad, just reply here. 🙏
 
-O que as pessoas disserem guarda-se: é a resposta ao questionário da Google no
+   🇵🇹 Obrigado! Toca abaixo para jogar, e diz-me o que achaste.
+   ```
+
+   Botão: **Play the beta** → `https://luiscunha.github.io/dice-to-seven/`
+7. **Ativar** a automação (Set Live), e só depois publicar o #03.
+8. **Testar** com a conta pessoal: comentar «beta» no #03, e ver chegar a
+   resposta pública e a mensagem com o botão. Depois apagar o comentário.
+
+Quem não segue a @dicetoseven pode receber a mensagem nos **pedidos de
+mensagem**: é lá que deve procurar quem disser que não recebeu. As respostas
+com feedback chegam à caixa de entrada normal do Instagram, e são tuas. O que
+as pessoas disserem guarda-se: é a resposta ao questionário da Google no
 pedido de produção.
 
 ### #04 — Reel · Hi, I'm Luís
