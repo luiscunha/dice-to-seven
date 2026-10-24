@@ -1,0 +1,301 @@
+/*
+ * As imagens do Instagram.
+ *
+ * O papel claro do jogo, com as peças soltas do fundo em marca de água; a
+ * Fredoka só nos títulos, como no jogo; e as peças verdadeiras no meio, que
+ * são o que se quer que se veja. É o molde «Tabuleiro» da estratégia
+ * (`documentation/estrategia-instagram.md` §2).
+ *
+ * As cores vêm do `theme.css`: nada aqui escolhe uma cor que o jogo não tenha.
+ */
+
+html,
+body {
+  margin: 0;
+  background: var(--ground);
+}
+
+/*
+ * `isolation` faz da imagem um contexto de empilhamento: o halo da etiqueta
+ * da beta, com `z-index: -1`, fica por cima do fundo e por baixo da etiqueta.
+ * Sem isto ia para trás do fundo e não se via.
+ */
+.insta {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: hidden;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* As peças do fundo do jogo, quase transparentes. */
+.insta::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-color: rgb(18 63 58 / 0.028);
+  mask-image: url("../src/ui/fundo-pecas.svg");
+  mask-repeat: repeat;
+  mask-size: 200px 200px;
+  -webkit-mask-image: url("../src/ui/fundo-pecas.svg");
+  -webkit-mask-repeat: repeat;
+  -webkit-mask-size: 200px 200px;
+  pointer-events: none;
+}
+
+.insta > * {
+  position: relative;
+}
+
+/* ─── As capas dos destaques ──────────────────────────────────────────────── */
+
+/*
+ * Uma face, e mais nada: na fila dos destaques a capa mede 64px, e qualquer
+ * textura vira ruído. A peça ocupa menos de metade da largura, para o círculo
+ * do Instagram a recortar com folga.
+ */
+.insta[data-peca="destaque"] {
+  justify-content: center;
+}
+
+.insta[data-peca="destaque"]::before {
+  display: none;
+}
+
+.insta[data-peca="destaque"] .peca.amostra {
+  --lado: 164px;
+  filter: drop-shadow(0 10px 16px rgb(18 63 58 / 0.16));
+}
+
+/* ─── As publicações ──────────────────────────────────────────────────────── */
+
+.insta-titulo {
+  margin: 0;
+  padding: 34px 30px 0;
+  color: var(--ink);
+  font-family: "Fredoka", system-ui, sans-serif;
+  font-size: 27px;
+  font-weight: 600;
+  line-height: 1.12;
+  text-align: center;
+  text-wrap: balance;
+}
+
+.insta-meio {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 22px;
+  width: 100%;
+}
+
+.insta-palco {
+  display: grid;
+  place-items: center;
+}
+
+/* A soma em peças: as parcelas, os sinais, e o total — o 7 na cor da marca. */
+.insta-conta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.insta-conta .peca.amostra {
+  --lado: 38px;
+}
+
+.insta-sinal {
+  color: var(--ink-muted);
+  font-family: "Fredoka", system-ui, sans-serif;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.insta-total {
+  min-width: 1ch;
+  color: var(--ink);
+  font-family: "Fredoka", system-ui, sans-serif;
+  font-size: 34px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.insta-total.sete {
+  color: var(--accent);
+}
+
+/* O antes e o depois da jogada, lado a lado. */
+.insta-antes-depois {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.insta-seta {
+  color: var(--accent);
+  font-family: "Fredoka", system-ui, sans-serif;
+  font-size: 28px;
+  font-weight: 600;
+}
+
+/* O selo Perfeito: o glifo da grelha de níveis, e o nome dele. */
+.insta-selo {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+}
+
+.insta-selo-glifo {
+  color: var(--accent);
+  font-size: 104px;
+  line-height: 1;
+}
+
+.insta-selo-nome {
+  color: var(--ink);
+  font-family: "Fredoka", system-ui, sans-serif;
+  font-size: 38px;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.insta-selo-texto {
+  margin: -6px 0 0;
+  color: var(--ink-muted);
+  font-size: 15px;
+}
+
+/* A assinatura: o ícone e o nome, no fundo de cada publicação. */
+.insta-assinatura {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding-bottom: 22px;
+}
+
+.insta-assinatura img {
+  width: 24px;
+  height: 24px;
+}
+
+/*
+ * O nome como no jogo: o «To» na cor de destaque, e uma peça de uma pinta no
+ * lugar do «o». O «o» fica no texto, só invisível.
+ */
+.nome {
+  color: var(--ink);
+  font-family: "Fredoka", system-ui, sans-serif;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.nome-liga {
+  color: var(--accent);
+}
+
+.nome-peca {
+  position: relative;
+  display: inline-block;
+  width: 0.62em;
+  height: 0.62em;
+  margin-inline: 0.07em;
+  border-radius: 0.2em;
+  background: var(--accent);
+  vertical-align: -0.02em;
+}
+
+.nome-peca::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 0.2em;
+  height: 0.2em;
+  margin: auto;
+  border-radius: 50%;
+  background: var(--ground);
+}
+
+.nome-o {
+  display: inline-block;
+  width: 0;
+  overflow: hidden;
+  visibility: hidden;
+}
+
+/* ─── A beta ──────────────────────────────────────────────────────────────── */
+
+/*
+ * A etiqueta com o anel de luz do site (`dicetoseven-site`, o «em breve»):
+ * uma pílula escura com o anel nas cores das faces, e um halo desfocado atrás.
+ * Na imagem fica parado; é a mesma etiqueta que a pessoa encontra na bio.
+ */
+.insta-etiqueta {
+  --anel: conic-gradient(from 200deg, #cfe3f2, #3ebb94, #a9cbe8, #3fd34b, #74c8b0, #cfe3f2);
+
+  margin-top: 16px;
+  padding: 9px 18px;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, #1c4a44, #0e2c28) padding-box,
+    var(--anel) border-box;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.18);
+  color: #f6f8f7;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.insta-etiqueta::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  z-index: -1;
+  border-radius: inherit;
+  background: conic-gradient(from 200deg, #3fd34b, #3ebb94, #6aa9e0, #2a8c77, #3fd34b);
+  filter: blur(12px);
+  opacity: 0.6;
+}
+
+/*
+ * O telemóvel sobe do fundo e fica cortado pela margem de baixo: grande o
+ * bastante para se ler o tabuleiro, que é o que interessa, em vez de inteiro
+ * e pequeno.
+ */
+.insta-aparelho {
+  --escala: 0.6;
+  --borda: 16px;
+  --raio: 58px;
+
+  flex: none;
+  margin-top: 26px;
+  width: calc((390px + 2 * var(--borda)) * var(--escala));
+  height: calc((844px + 2 * var(--borda)) * var(--escala));
+  border-radius: calc(var(--raio) * var(--escala));
+  background: #0d1917;
+  box-shadow:
+    inset 0 0 0 calc(3px * var(--escala)) #2b403a,
+    0 calc(30px * var(--escala)) calc(60px * var(--escala)) rgb(18 63 58 / 0.3);
+}
+
+.insta-ecra {
+  position: absolute;
+  top: calc(var(--borda) * var(--escala));
+  left: calc(var(--borda) * var(--escala));
+  width: 390px;
+  height: 844px;
+  border: 0;
+  border-radius: calc(var(--raio) - var(--borda));
+  background: #f1f2f0;
+  transform: scale(var(--escala));
+  transform-origin: 0 0;
+}

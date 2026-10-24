@@ -51,6 +51,14 @@ export default tseslint.config(
        */
       "packages/mobile/android/**",
       "packages/mobile/ios/**",
+
+      /*
+       * As worktrees do Claude Code vivem dentro do repositório, em
+       * `.claude/worktrees/`, e cada uma é uma cópia inteira dele — com os
+       * bundles já construídos. Corrido na pasta principal, o lint analisava-as
+       * todas e falhava com milhares de erros que não são deste código.
+       */
+      ".claude/**",
     ],
   },
 

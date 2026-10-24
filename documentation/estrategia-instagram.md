@@ -33,6 +33,7 @@ Os jogos grandes não podem contar a segunda história. É a vantagem de ser um.
 | Língua | **Inglês primeiro**, com uma linha em português no fim de cada legenda | Os dados não precisam de tradução, e o alcance dos Reels vem do mundo inteiro. A rede que arranca a conta é portuguesa e lê as duas. O inglês já é a língua por omissão das lojas |
 | Cara | **Tu apareces**, pelo menos uma vez por semana | Um jogo de uma pessoa só ganha quando se vê a pessoa. Não tem de ser vídeo a falar: as mãos a jogar e uma frase escrita já contam |
 | Orçamento | **0 €** até ao lançamento; 50–100 € depois, se um Reel já provou sozinho | Pagar para empurrar o que não funcionou de graça é deitar dinheiro fora |
+| A beta | **A versão web**, `luiscunha.github.io/dice-to-seven/` (decidido por ti a 2026-10-24) | Joga-se no browser, em qualquer telemóvel ou computador, com um toque. O teste fechado da Play pedia três passos e só servia ao Android. Mais gente a jogar dá mais feedback antes do lançamento. O teste fechado continua, para quem quiser a app a sério |
 | Dia do lançamento (**L**) | **Terça, 17 de novembro**, provisório | A regra é: a primeira terça, quarta ou quinta **cinco dias depois** de as duas lojas aprovarem. Com a Play a pedir a produção a ~6 de novembro e a responder até 7 dias, 17 é o mais provável. **A data só se anuncia com as duas aprovações na mão** |
 
 ---
@@ -69,7 +70,7 @@ na bio, na loja e no ícone do telemóvel é como uma marca se fixa.
 
 | Quando | Ligações, por esta ordem |
 |---|---|
-| Até L | 1. **Beta para Android** (o grupo do teste fechado) · 2. O site |
+| Até L | 1. **A beta**, a versão web (`https://luiscunha.github.io/dice-to-seven/`) · 2. O site |
 | A partir de L | 1. **Google Play** · 2. **App Store** · 3. O site |
 
 As duas ligações das lojas levam uma marca de campanha, para se saber quantas
@@ -155,12 +156,29 @@ mosaicos — que, de resto, estragam cada publicação sozinha.
 
 ### As imagens saem do jogo
 
-As capturas das lojas já se fazem por código, a partir do jogo verdadeiro
-(`packages/game/vitrine/` + `packages/mobile/capturas.mjs`, no ramo
-`feature/ficha-loja`, ainda por integrar no `main`). **Eu** acrescento
-dois formatos — `insta` (1080×1350) e `story` (1080×1920) — e os moldes
-Tabuleiro e Número. Assim cada imagem do feed é um ecrã real do jogo, nas
-quatro línguas, e refaz-se quando o jogo mudar de aspeto.
+Fazem-se como as capturas das lojas: por código, a partir do jogo verdadeiro.
+A página é `packages/game/vitrine/instagram.html`, com as peças
+(`pecaDeAmostra`) e o tabuleiro (`BoardView`) do jogo, e o telemóvel da beta
+mostra um ecrã real. Quando o jogo mudar de aspeto, refazem-se:
+
+```bash
+pnpm dev                                          # noutro terminal
+node packages/mobile/capturas.mjs --so instagram  # --lang pt para uma língua só
+```
+
+Saem para `packages/mobile/instagram/`, fora do Git:
+
+| Ficheiro | O que é |
+|---|---|
+| `destaques/1.png` … `6.png` | As capas dos seis destaques, 1080×1080. Sem texto, servem às duas línguas |
+| `<língua>/02-como-jogar/1.png` … `5.png` | O carrossel #02, 1080×1350 |
+| `<língua>/03-beta.png` | A imagem da beta, #03, 1080×1350 |
+
+As línguas são `en` e `pt`. O tabuleiro do «Como jogar» é um exemplo feito à
+mão, como os do ecrã «Como jogar» do jogo, e **a página verifica-o com o
+solver**: se deixar de ter solução, a página falha em vez de o mostrar.
+
+Faltam o formato das Stories (1080×1920) e o molde Número.
 
 Os **Reels gravam-se no telemóvel**, com o gravador de ecrã do sistema: é a
 única maneira de ter o toque e a animação verdadeiros. Tema escuro para os
@@ -232,8 +250,9 @@ qua 25 nov  →             5. O ritmo             3 publicações por semana + 
 
 - [ ] **Tu**: criar a conta, mudá-la para Criador, nome, bio, foto, contacto,
       dois fatores. Reservar o nome no TikTok, Threads e YouTube.
-- [ ] **Eu**: as capas dos destaques, as imagens do #02 e do #03, as Stories
-      dos destaques «How to play» e «FAQ».
+- [x] **Eu**: as capas dos destaques, as imagens do #02 e do #03 (§2, «As
+      imagens saem do jogo»).
+- [ ] **Eu**: as Stories dos destaques «How to play» e «FAQ».
 - [ ] **Tu**: gravar o trailer (#01, guião no anexo A).
 - [ ] Publicar **#01, #02, #03 no mesmo dia**, por esta ordem, e fixá-los. Uma
       conta nova com uma fila completa parece a sério; com uma publicação só,
@@ -262,10 +281,17 @@ na beta, e descobrir que formatos pegam.
 batota?»), um bastidor, uma pergunta. As Stories não crescem a conta — fazem
 voltar quem já a segue, e é isso que faz o algoritmo mostrar as publicações.
 
-**A beta é a chamada desta fase.** «Comenta BETA e mando-te a ligação» dá
-comentários (o algoritmo gosta) e uma conversa privada com cada um (tu gostas).
-E o que eles disserem entra no questionário que a Google faz no pedido de
-produção — o feedback recebido e o que mudou com ele.
+**A beta é a chamada desta fase**, e é a versão web: joga-se no browser, sem
+instalar nada. «Comenta BETA e mando-te a ligação» dá comentários (o algoritmo
+gosta) e uma conversa privada com cada um (tu gostas). A ligação também fica
+na bio, para quem não quiser comentar. E o que eles disserem entra no
+questionário que a Google faz no pedido de produção: o feedback recebido e o
+que mudou com ele.
+
+**A versão web tem de estar atualizada antes de a divulgar**: publica-se à
+mão, e a de 2026-10-24 era de 16 de outubro, sem o «Acerca» nem o que entrou
+depois. No GitHub, `dice-to-seven` → Actions → «Publicar» → Run workflow. E
+volta a publicar-se cada vez que o `main` mudar o jogo, até ao lançamento.
 
 ### Fase 2 — Contagem (seg 9 nov → seg 16 nov)
 
@@ -462,9 +488,16 @@ mostrada a cada vez menos gente.
 
 ## 9. O que não fazer
 
-- **Não divulgar a versão web.** Sai do ar quando as lojas aprovarem, e o
-  repositório passa a privado (`plano-publicacao.md`): uma ligação partilhada
-  agora estava partida daqui a três semanas.
+- **Não deixar a ligação da beta partida.** A versão web sai do ar quando as
+  lojas aprovarem, e o repositório passa a privado (`plano-publicacao.md`).
+  Antes disso, a mesma morada tem de passar a mandar para as lojas, em vez de
+  dar um erro a quem a guardou. Deve dar para o fazer com uma página no site
+  da conta (`luiscunha.github.io`), mas confirma-se como quando chegar a
+  altura. **Eu** trato disso.
+
+  E a troca faz-se **no dia L, e não no dia da aprovação**: entre uma e outra
+  há uns cinco dias (fase 2) em que o jogo ainda não está nas lojas, e a
+  ligação ia mandar a pessoa para uma página onde não há nada para instalar.
 - **Não anunciar a data antes das duas aprovações.** Uma data adiada gasta a
   confiança que a contagem construiu.
 - **Não prometer o que ainda não existe**: as tabelas de classificação e a
@@ -482,7 +515,10 @@ mostrada a cada vez menos gente.
 
 **Tu**
 
-- [ ] Criar a conta e reservar o nome nas outras redes (fase 0).
+- [x] Criar a conta (2026-10-23).
+- [ ] Reservar o nome nas outras redes.
+- [ ] Publicar a versão web antes de divulgar a beta (Actions → «Publicar»), e
+      sempre que o jogo mudar até ao lançamento.
 - [ ] Gravar os Reels no telemóvel — os guiões estão no anexo A.
 - [ ] Aparecer: o #04, o #10, e uma vez por semana a seguir.
 - [ ] Responder a comentários e mensagens, todos os dias.
@@ -491,10 +527,14 @@ mostrada a cada vez menos gente.
 
 **Eu**
 
-- [ ] Os formatos `insta` e `story` na vitrine, e os moldes Tabuleiro e Número.
-- [ ] As capas dos seis destaques, e as Stories dos destaques fixos.
-- [ ] As imagens dos carrosséis: os puzzles (com a solução), as 14 maneiras, os
-      quatro modos, as peças.
+- [x] A vitrine do Instagram: as publicações (1080×1350), as capas (1080×1080)
+      e o molde Tabuleiro.
+- [ ] O formato das Stories (1080×1920) e o molde Número.
+- [x] As capas dos seis destaques.
+- [ ] As Stories dos destaques fixos.
+- [x] O carrossel #02 «How to play» e a imagem #03 da beta.
+- [ ] As imagens dos outros carrosséis: os puzzles (com a solução), as 14
+      maneiras, os quatro modos, as peças.
 - [ ] As legendas que faltam, nas duas línguas, à medida do calendário.
 - [ ] As ligações com marca de campanha, uma por sítio.
 - [ ] A lista dos 30 criadores, a partir de pesquisas que tu confirmas.
@@ -515,17 +555,68 @@ do calendário, no mesmo molde.
 
 ### #01 — Reel · O trailer (fixado)
 
-| Tempo | Imagem | Texto no ecrã |
-|---|---|---|
-| 0–1,5 s | Tabuleiro cheio; o dedo toca num 3 e num 4 | **One rule:** |
-| 1,5–3 s | O grupo desaparece, as peças caem, as colunas encostam | **add up to 7** |
-| 3–9 s | Quatro jogadas seguidas, rápidas, com a soma a aparecer | — |
-| 9–12 s | A última peça sai; o selo Perfeito | **Clear the board.** |
-| 12–15 s | O logótipo | **Coming soon · iOS & Android** |
+Grava-se o ecrã do telemóvel a jogar um nível inteiro, e corta-se e acelera-se
+no editor de Reels do Instagram. Não é precisa nenhuma aplicação de edição.
 
-Áudio: um som tranquilo dos que estão a subir na biblioteca, ou cliques de
-dados. O primeiro segundo é o que decide: tem de haver um toque e uma peça a
-sair antes de 1,5 s.
+**1. Preparar o telemóvel**
+
+- Modo Não incomodar, para não aparecer nenhuma notificação a meio.
+- No jogo: Definições → Tema → **Escuro**, que se destaca mais no feed.
+- No gravador de ecrã do Android (no painel rápido), ligar **mostrar toques no
+  ecrã** — num Samsung, «Toques e gestos». O áudio fica desligado: o jogo não
+  tem som.
+
+**2. O nível: Iniciado 2** (`inicio-000134`)
+
+A primeira jogada é um **3 + 4**, e é um dos três níveis que mostram a linha da
+soma — que é o que o trailer quer mostrar. Esta é a solução guardada no pack.
+As colunas contam-se da esquerda, e as peças de baixo para cima, sempre como
+estão no ecrã nesse momento, porque as colunas encostam:
+
+| Jogada | Toca em |
+|---|---|
+| 1 | o **3** e o **4** da coluna 1 (3.ª e 4.ª peças) |
+| 2 | o **2** e o **2** da coluna 1 (2.ª e 3.ª), e o **3** da coluna 2 (2.ª) |
+| 3 | o **3** e o **2** da coluna 3 (3.ª e 4.ª), e o **2** da coluna 4 (3.ª) |
+| 4 | o **2** e o **2** da coluna 3 (2.ª e 3.ª), e o **3** da coluna 4 (2.ª) |
+| 5 | o **2** e o **1** da coluna 1 (1.ª e 2.ª), e o **4** da coluna 2 (2.ª) |
+| 6 | o **3**, o **2** e o **2** de baixo das colunas 1, 2 e 3 |
+| 7 | o **4** da coluna 1, e o **1** e o **2** da coluna 2 |
+
+Se o pack mudar, o nível 2 pode deixar de ser este: confirma-se pelo id.
+Ensaia-se duas ou três vezes antes de gravar. Sem desfazer e sem dicas, o nível
+acaba com o selo **Perfect**, que é o fecho do trailer.
+
+**3. Gravar**
+
+1. Abrir o Iniciado 2 e esperar que o tabuleiro apareça.
+2. Começar a gravação do ecrã, e esperar que acabe a contagem decrescente.
+3. Jogar as 7 jogadas **a um ritmo calmo**: acelera-se depois.
+4. No painel do Perfect, esperar 2 segundos. Voltar à Home, onde está o
+   logótipo, e ficar lá 3 segundos.
+5. Parar. Fazer duas ou três gravações e ficar com a melhor.
+
+**4. Montar no Instagram**
+
+1. **+ → Reel** → a gravação.
+2. **Cortar o início**, para o primeiro toque no 3 acontecer logo no primeiro
+   segundo. É o que decide se as pessoas param de deslizar.
+3. **Dividir** logo a seguir à primeira jogada, e pôr o meio (jogadas 2 a 7) a
+   **velocidade 2×**. O fim — o Perfect e a Home — fica à velocidade normal.
+   Tudo junto, uns 15 segundos.
+4. **Três textos** (Aa), cada um com a sua duração na linha do tempo:
+   - «**One rule: add up to 7.**» — do início até o primeiro par sair.
+   - «**Every move changes the next one.**» — durante a parte acelerada.
+   - «**Coming soon · iOS & Android**» — por cima da Home, no fim.
+
+   A meio do ecrã: em cima e em baixo é onde o Instagram põe os botões e a
+   legenda.
+5. **Música**: um instrumental calmo da biblioteca («lofi», «chill»), com o
+   volume baixo.
+6. **Capa**: a imagem com o tabuleiro inteiro e o primeiro texto.
+7. **Legenda**: a de baixo.
+8. **«Partilhar também no feed»** ligado, e **guardar como rascunho**: publica-se
+   no mesmo dia que o #02 e o #03.
 
 ```text
 One rule: join touching dice that add up to exactly 7. 🎲
@@ -559,20 +650,39 @@ Tip: the order matters. Every group you clear moves the pieces around it — so 
 
 ### #03 — Imagem · A beta (fixado até L)
 
-**Play it before anyone else** — o jogo num telemóvel Android, e por baixo:
-`Android beta · open now`.
+**Play it before anyone else**, a etiqueta `Free beta · play in your browser`,
+e o jogo num telemóvel. A beta é a versão web: corre em qualquer telemóvel ou
+computador.
 
 ```text
-DiceToSeven is in beta on Android, and you can be in it. 🎲
+DiceToSeven is almost here, and you can play the beta today. 🎲
 
-Comment BETA and I'll send you the link. You'll get the game before launch — and what you tell me goes straight into the next build.
+Comment BETA and I'll send you the link. It runs in your browser, on any phone or computer. No install, no account.
 
-On iPhone? Launch is close. Follow so you don't miss it.
+What you tell me goes straight into the next build.
 
-🇵🇹 Comenta BETA e envio-te a ligação para o teste no Android.
+🇵🇹 Comenta BETA e envio-te a ligação: joga já no browser, em qualquer telemóvel ou computador.
 
-#DiceToSeven #indiegame #mobilegame #betatest
+#DiceToSeven #indiegame #puzzlegame #betatest
 ```
+
+Texto alternativo: `The DiceToSeven app on a phone, showing a chapter's grid of levels with stars. Text: Play it before anyone else. Free beta, play in your browser.`
+
+A quem comentar «BETA»: uma resposta ao comentário («Sent! Check your DMs
+📩»), que é o que o algoritmo mais conta, e a mensagem privada:
+
+```text
+Thanks for trying the beta! 🎲 Here it is: https://luiscunha.github.io/dice-to-seven/
+It runs in the browser, best on your phone. Anything you notice, good or bad, just reply here. 🙏
+```
+
+```text
+Obrigado por experimentares a beta! 🎲 Está aqui: https://luiscunha.github.io/dice-to-seven/
+Corre no browser, e fica melhor no telemóvel. Qualquer coisa que notes, boa ou má, responde aqui. 🙏
+```
+
+O que as pessoas disserem guarda-se: é a resposta ao questionário da Google no
+pedido de produção.
 
 ### #04 — Reel · Hi, I'm Luís
 

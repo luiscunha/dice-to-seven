@@ -57,6 +57,8 @@ packages/mobile/android/local.properties
 packages/mobile/android/chave-envio.properties
 # As imagens das lojas: refazem-se com `node packages/mobile/capturas.mjs`.
 packages/mobile/loja/
+# As imagens do Instagram: refazem-se com `node packages/mobile/capturas.mjs --so instagram`.
+packages/mobile/instagram/
 
 # Assinatura e credenciais de loja. Nunca no repo.
 *.keystore
