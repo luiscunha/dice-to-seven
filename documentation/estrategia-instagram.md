@@ -537,17 +537,68 @@ do calendário, no mesmo molde.
 
 ### #01 — Reel · O trailer (fixado)
 
-| Tempo | Imagem | Texto no ecrã |
-|---|---|---|
-| 0–1,5 s | Tabuleiro cheio; o dedo toca num 3 e num 4 | **One rule:** |
-| 1,5–3 s | O grupo desaparece, as peças caem, as colunas encostam | **add up to 7** |
-| 3–9 s | Quatro jogadas seguidas, rápidas, com a soma a aparecer | — |
-| 9–12 s | A última peça sai; o selo Perfeito | **Clear the board.** |
-| 12–15 s | O logótipo | **Coming soon · iOS & Android** |
+Grava-se o ecrã do telemóvel a jogar um nível inteiro, e corta-se e acelera-se
+no editor de Reels do Instagram. Não é precisa nenhuma aplicação de edição.
 
-Áudio: um som tranquilo dos que estão a subir na biblioteca, ou cliques de
-dados. O primeiro segundo é o que decide: tem de haver um toque e uma peça a
-sair antes de 1,5 s.
+**1. Preparar o telemóvel**
+
+- Modo Não incomodar, para não aparecer nenhuma notificação a meio.
+- No jogo: Definições → Tema → **Escuro**, que se destaca mais no feed.
+- No gravador de ecrã do Android (no painel rápido), ligar **mostrar toques no
+  ecrã** — num Samsung, «Toques e gestos». O áudio fica desligado: o jogo não
+  tem som.
+
+**2. O nível: Iniciado 2** (`inicio-000134`)
+
+A primeira jogada é um **3 + 4**, e é um dos três níveis que mostram a linha da
+soma — que é o que o trailer quer mostrar. Esta é a solução guardada no pack.
+As colunas contam-se da esquerda, e as peças de baixo para cima, sempre como
+estão no ecrã nesse momento, porque as colunas encostam:
+
+| Jogada | Toca em |
+|---|---|
+| 1 | o **3** e o **4** da coluna 1 (3.ª e 4.ª peças) |
+| 2 | o **2** e o **2** da coluna 1 (2.ª e 3.ª), e o **3** da coluna 2 (2.ª) |
+| 3 | o **3** e o **2** da coluna 3 (3.ª e 4.ª), e o **2** da coluna 4 (3.ª) |
+| 4 | o **2** e o **2** da coluna 3 (2.ª e 3.ª), e o **3** da coluna 4 (2.ª) |
+| 5 | o **2** e o **1** da coluna 1 (1.ª e 2.ª), e o **4** da coluna 2 (2.ª) |
+| 6 | o **3**, o **2** e o **2** de baixo das colunas 1, 2 e 3 |
+| 7 | o **4** da coluna 1, e o **1** e o **2** da coluna 2 |
+
+Se o pack mudar, o nível 2 pode deixar de ser este: confirma-se pelo id.
+Ensaia-se duas ou três vezes antes de gravar. Sem desfazer e sem dicas, o nível
+acaba com o selo **Perfect**, que é o fecho do trailer.
+
+**3. Gravar**
+
+1. Abrir o Iniciado 2 e esperar que o tabuleiro apareça.
+2. Começar a gravação do ecrã, e esperar que acabe a contagem decrescente.
+3. Jogar as 7 jogadas **a um ritmo calmo**: acelera-se depois.
+4. No painel do Perfect, esperar 2 segundos. Voltar à Home, onde está o
+   logótipo, e ficar lá 3 segundos.
+5. Parar. Fazer duas ou três gravações e ficar com a melhor.
+
+**4. Montar no Instagram**
+
+1. **+ → Reel** → a gravação.
+2. **Cortar o início**, para o primeiro toque no 3 acontecer logo no primeiro
+   segundo. É o que decide se as pessoas param de deslizar.
+3. **Dividir** logo a seguir à primeira jogada, e pôr o meio (jogadas 2 a 7) a
+   **velocidade 2×**. O fim — o Perfect e a Home — fica à velocidade normal.
+   Tudo junto, uns 15 segundos.
+4. **Três textos** (Aa), cada um com a sua duração na linha do tempo:
+   - «**One rule: add up to 7.**» — do início até o primeiro par sair.
+   - «**Every move changes the next one.**» — durante a parte acelerada.
+   - «**Coming soon · iOS & Android**» — por cima da Home, no fim.
+
+   A meio do ecrã: em cima e em baixo é onde o Instagram põe os botões e a
+   legenda.
+5. **Música**: um instrumental calmo da biblioteca («lofi», «chill»), com o
+   volume baixo.
+6. **Capa**: a imagem com o tabuleiro inteiro e o primeiro texto.
+7. **Legenda**: a de baixo.
+8. **«Partilhar também no feed»** ligado, e **guardar como rascunho**: publica-se
+   no mesmo dia que o #02 e o #03.
 
 ```text
 One rule: join touching dice that add up to exactly 7. 🎲
