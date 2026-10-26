@@ -4,6 +4,7 @@
  *   instagram.html?peca=destaque&face=3
  *   instagram.html?peca=como-jogar&passo=2&lang=en
  *   instagram.html?peca=beta&lang=en
+ *   instagram.html?peca=beta-story&lang=pt
  *
  * Como nas capturas das lojas, **não há desenhos parecidos com o jogo**: as
  * peças são as `pecaDeAmostra` do jogo, o tabuleiro é o `BoardView`, e o
@@ -38,6 +39,12 @@ const FORMATOS = {
   publicacao: { largura: 360, altura: 450, escala: 3 },
   /** Capa de destaque: 1080×1080. O Instagram recorta-a num círculo. */
   capa: { largura: 360, altura: 360, escala: 3 },
+  /**
+   * Story: 1080×1920. O Instagram tapa em cima o nome da conta (os primeiros
+   * ~250 px) e em baixo a barra de resposta (os últimos ~340 px): nada que
+   * importe vive aí.
+   */
+  story: { largura: 360, altura: 640, escala: 3 },
 } as const;
 
 /**
@@ -63,6 +70,7 @@ const PECAS = [
     comLingua: true,
   })),
   { peca: "beta", formato: "publicacao", query: "", ficheiro: "03-beta.png", comLingua: true },
+  { peca: "beta-story", formato: "story", query: "", ficheiro: "stories/beta.png", comLingua: true },
 ] as const;
 
 window.__instagram = { formatos: FORMATOS, pecas: PECAS };
@@ -83,6 +91,9 @@ const TEXTOS = {
     semAjuda: "No undos, no restarts, no hints",
     beta: "Play it before anyone else",
     betaEtiqueta: "Free beta · play in your browser",
+    storyTitulo: "Play the beta before anyone else",
+    storyPedido: "Reply BETA to this story",
+    storyNota: "I'll send you the link. Free, in your browser.",
   },
   pt: {
     passos: [
@@ -96,6 +107,9 @@ const TEXTOS = {
     semAjuda: "Sem desfazer, sem recomeçar, sem dicas",
     beta: "Joga antes de toda a gente",
     betaEtiqueta: "Beta grátis · joga no browser",
+    storyTitulo: "Joga a beta antes de toda a gente",
+    storyPedido: "Responde BETA a esta story",
+    storyNota: "Envio-te a ligação. Grátis, no browser.",
   },
 } as const;
 
@@ -135,7 +149,8 @@ const parametros = new URLSearchParams(location.search);
 const peca = parametros.get("peca") ?? "destaque";
 const lingua: Lingua = parametros.get("lang") === "pt" ? "pt" : "en";
 const textos = TEXTOS[lingua];
-const formato = peca === "destaque" ? FORMATOS.capa : FORMATOS.publicacao;
+const formato =
+  peca === "destaque" ? FORMATOS.capa : peca === "beta-story" ? FORMATOS.story : FORMATOS.publicacao;
 
 document.documentElement.lang = lingua === "pt" ? "pt-PT" : "en-GB";
 document.documentElement.dataset["tema"] = "claro";
@@ -269,6 +284,22 @@ if (peca === "destaque") {
       setTimeout(r, 100);
     });
   }
+} else if (peca === "beta-story") {
+  /*
+   * A Story da beta: o pedido é **responder**, e não comentar. A resposta a uma
+   * Story é privada, e entre amigos comentar «BETA» à vista de todos pesava
+   * mais do que o jogo valia. O ManyChat responde às respostas com a mesma
+   * palavra, como responde aos comentários.
+   *
+   * Em fundo escuro, como o fim do Reel: na fila das Stories, que é quase toda
+   * de fotografias, destaca-se. O tabuleiro é o do carrossel, com o grupo do 7
+   * escolhido: a regra lê-se sem ler nada.
+   */
+  const meio = el("div", "insta-meio");
+  meio.append(tabuleiro(TABULEIRO, { largura: 296, altura: 184 }, GRUPO), soma(GRUPO.map(valorEm)));
+  const pedido = el("div", "insta-pedido");
+  pedido.append(el("div", "insta-etiqueta", textos.storyPedido), el("p", "insta-nota", textos.storyNota));
+  tela.append(el("h1", "insta-titulo", textos.storyTitulo), meio, pedido);
 }
 
 await document.fonts.ready;

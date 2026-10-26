@@ -299,3 +299,67 @@ body {
   transform: scale(var(--escala));
   transform-origin: 0 0;
 }
+
+/* ─── A Story da beta ─────────────────────────────────────────────────────── */
+
+/*
+ * O fundo escuro do jogo, como o fim do Reel, com um brilho verde a meio. As
+ * cores são as do tema escuro do `theme.css`; as peças não mudam de tema.
+ *
+ * Os ~83 px de cima e os ~113 de baixo ficam livres: é onde o Instagram põe o
+ * nome da conta e a barra de resposta.
+ */
+.insta[data-peca="beta-story"] {
+  box-sizing: border-box;
+  padding: 96px 0 124px;
+  background:
+    radial-gradient(75% 40% at 50% 46%, #14312b 0%, transparent 72%),
+    #0d1917;
+  color: #e3edea;
+}
+
+.insta[data-peca="beta-story"]::before {
+  background-color: rgb(255 255 255 / 0.035);
+}
+
+.insta[data-peca="beta-story"] .insta-titulo {
+  padding: 0 34px;
+  color: #e3edea;
+  font-size: 29px;
+}
+
+.insta[data-peca="beta-story"] .insta-sinal {
+  color: #8fa3a0;
+}
+
+.insta[data-peca="beta-story"] .insta-total {
+  color: #e3edea;
+}
+
+.insta[data-peca="beta-story"] .insta-total.sete {
+  color: #3ebb94;
+}
+
+.insta-pedido {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+}
+
+.insta[data-peca="beta-story"] .insta-etiqueta {
+  margin-top: 0;
+  padding: 11px 22px;
+  font-family: "Fredoka", system-ui, sans-serif;
+  font-size: 19px;
+}
+
+.insta-nota {
+  margin: 0;
+  color: #8fa3a0;
+  font-size: 13px;
+}
+
+.insta[data-peca="beta-story"] .insta-meio {
+  gap: 16px;
+  margin: 14px 0;
+}

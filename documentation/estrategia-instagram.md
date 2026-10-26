@@ -174,12 +174,13 @@ Saem para `packages/mobile/instagram/`, fora do Git:
 | `destaques/1.png` … `6.png` | As capas dos seis destaques, 1080×1080. Sem texto, servem às duas línguas |
 | `<língua>/02-como-jogar/1.png` … `5.png` | O carrossel #02, 1080×1350 |
 | `<língua>/03-beta.png` | A imagem da beta, #03, 1080×1350 |
+| `<língua>/stories/beta.png` | A Story da beta, 1080×1920: «Responde BETA a esta story» |
 
 As línguas são `en` e `pt`. O tabuleiro do «Como jogar» é um exemplo feito à
 mão, como os do ecrã «Como jogar» do jogo, e **a página verifica-o com o
 solver**: se deixar de ter solução, a página falha em vez de o mostrar.
 
-Faltam o formato das Stories (1080×1920) e o molde Número.
+Falta o molde Número.
 
 Os **Reels gravam-se no telemóvel**, com o gravador de ecrã do sistema: é a
 única maneira de ter o toque e a animação verdadeiros. Tema escuro para os
@@ -536,7 +537,8 @@ mostrada a cada vez menos gente.
 
 - [x] A vitrine do Instagram: as publicações (1080×1350), as capas (1080×1080)
       e o molde Tabuleiro.
-- [ ] O formato das Stories (1080×1920) e o molde Número.
+- [x] O formato das Stories (1080×1920), e a Story da beta.
+- [ ] O molde Número.
 - [x] As capas dos seis destaques.
 - [ ] As Stories dos destaques fixos.
 - [x] O carrossel #02 «How to play» e a imagem #03 da beta.
@@ -706,6 +708,15 @@ e as permissões são tuas; os nomes dos botões podem mudar.
 7. **Ativar** a automação (Set Live), e só depois publicar o #03.
 8. **Testar** com a conta pessoal: comentar «beta» no #03, e ver chegar a
    resposta pública e a mensagem com o botão. Depois apagar o comentário.
+9. **As Stories, num segundo gatilho:** uma **resposta a uma Story** com a
+   palavra **BETA** manda a mesma mensagem, sem resposta pública (a resposta a
+   uma Story já é privada).
+
+**Entre amigos, a Story pesa menos do que o comentário.** Comentar «BETA» à
+vista de todos é estranho para quem já te conhece, e no primeiro dia ninguém o
+fez (2026-10-26). A Story da beta (`stories/beta.png`) pede para **responder**,
+e não para comentar. Aos amigos mais próximos, manda-se a ligação diretamente,
+com um pedido pessoal de feedback: são eles os primeiros testers.
 
 Quem não segue a @dicetoseven pode receber a mensagem nos **pedidos de
 mensagem**: é lá que deve procurar quem disser que não recebeu. As respostas
