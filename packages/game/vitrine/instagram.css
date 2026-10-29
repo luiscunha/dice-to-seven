@@ -299,3 +299,164 @@ body {
   transform: scale(var(--escala));
   transform-origin: 0 0;
 }
+
+/* ─── A Story da beta ─────────────────────────────────────────────────────── */
+
+/*
+ * O fundo escuro do jogo, como o fim do Reel, com um brilho verde a meio. As
+ * cores são as do tema escuro do `theme.css`; as peças não mudam de tema.
+ *
+ * Os ~83 px de cima e os ~113 de baixo ficam livres: é onde o Instagram põe o
+ * nome da conta e a barra de resposta.
+ */
+.insta[data-peca="beta-story"] {
+  box-sizing: border-box;
+  padding: 96px 0 124px;
+  background:
+    radial-gradient(75% 40% at 50% 46%, #14312b 0%, transparent 72%),
+    #0d1917;
+  color: #e3edea;
+}
+
+.insta[data-peca="beta-story"]::before {
+  background-color: rgb(255 255 255 / 0.035);
+}
+
+.insta[data-peca="beta-story"] .insta-titulo {
+  padding: 0 34px;
+  color: #e3edea;
+  font-size: 29px;
+}
+
+.insta[data-peca="beta-story"] .insta-sinal {
+  color: #8fa3a0;
+}
+
+.insta[data-peca="beta-story"] .insta-total {
+  color: #e3edea;
+}
+
+.insta[data-peca="beta-story"] .insta-total.sete {
+  color: #3ebb94;
+}
+
+.insta-pedido {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+}
+
+.insta[data-peca="beta-story"] .insta-etiqueta {
+  margin-top: 0;
+  padding: 11px 22px;
+  font-family: "Fredoka", system-ui, sans-serif;
+  font-size: 19px;
+}
+
+.insta-nota {
+  margin: 0;
+  color: #8fa3a0;
+  font-size: 13px;
+}
+
+.insta[data-peca="beta-story"] .insta-meio {
+  gap: 16px;
+  margin: 14px 0;
+}
+
+/* ─── Os puzzles («Consegues?») ───────────────────────────────────────────── */
+
+/* O capítulo e o nível por baixo do tabuleiro: para quem o quiser ir jogar. */
+.insta-nivel {
+  margin: -6px 0 0;
+  color: var(--ink-muted);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/*
+ * O slide do número, no molde «Número» da estratégia: o fundo escuro da
+ * marca, um número enorme a verde, e uma linha a dizer o que ele é.
+ */
+.insta[data-peca="puzzle"][data-passo="2"] {
+  background:
+    radial-gradient(70% 45% at 50% 42%, #1b4a43 0%, transparent 72%),
+    #123f3a;
+  color: #e3edea;
+}
+
+.insta[data-peca="puzzle"][data-passo="2"]::before {
+  background-color: rgb(255 255 255 / 0.04);
+}
+
+.insta[data-peca="puzzle"][data-passo="2"] .insta-meio {
+  gap: 6px;
+  padding: 0 36px;
+}
+
+.insta-numero {
+  color: #3ebb94;
+  font-family: "Fredoka", system-ui, sans-serif;
+  font-size: 128px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.insta-numero-texto {
+  margin: 0;
+  color: #e3edea;
+  font-family: "Fredoka", system-ui, sans-serif;
+  font-size: 23px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+  text-wrap: balance;
+}
+
+.insta-numero-pensa {
+  margin: 12px 0 0;
+  color: #8fa3a0;
+  font-size: 15px;
+}
+
+.insta[data-peca="puzzle"][data-passo="2"] .nome {
+  color: #e3edea;
+}
+
+.insta[data-peca="puzzle"][data-passo="2"] .nome-liga {
+  color: #3ebb94;
+}
+
+.insta[data-peca="puzzle"][data-passo="2"] .nome-peca {
+  background: #3ebb94;
+}
+
+.insta[data-peca="puzzle"][data-passo="2"] .nome-peca::after {
+  background: #123f3a;
+}
+
+/* O resto da solução: cada jogada num tabuleiro pequeno, com o grupo marcado. */
+.insta-passos-mini {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px 8px;
+}
+
+/* Um cartão por jogada: sem ele, os tabuleiros pequenos colavam-se uns aos outros. */
+.insta-mini {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 8px 8px 6px;
+  border: 1px solid rgb(18 63 58 / 0.06);
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgb(18 63 58 / 0.05), 0 10px 22px -14px rgb(18 63 58 / 0.35);
+}
+
+.insta-mini-n {
+  color: var(--ink-muted);
+  font-family: "Fredoka", system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+}
