@@ -175,6 +175,7 @@ Saem para `packages/mobile/instagram/`, fora do Git:
 | `<língua>/02-como-jogar/1.png` … `5.png` | O carrossel #02, 1080×1350 |
 | `<língua>/03-beta.png` | A imagem da beta, #03, 1080×1350 |
 | `<língua>/stories/beta.png` | A Story da beta, 1080×1920: «Responde BETA a esta story» |
+| `<língua>/05-puzzle-1/1.png` … `4.png` | O carrossel #05, Puzzle #1, 1080×1350 |
 
 As línguas são `en` e `pt`. O tabuleiro do «Como jogar» é um exemplo feito à
 mão, como os do ecrã «Como jogar» do jogo, e **a página verifica-o com o
@@ -748,22 +749,43 @@ I'll be sharing how it was made, and the puzzles I like best. Glad you're here.
 
 ### #05 — Carrossel · Puzzle #1
 
-1. **Puzzle #1 — can you clear this?** — um tabuleiro de 12–16 peças.
-2. **Hint: start from the right.** (ou o que o nível pedir)
-3. **Solution** — a primeira jogada.
-4. **Solution** — o resto, numa imagem.
+O **Iniciado 21** (`inicio-1002190`), um nível verdadeiro: quem tem a beta pode
+ir jogá-lo. É o nível pequeno mais difícil do Iniciado, com 16 peças num
+quadrado de 4×4, e 44% das tentativas ao acaso ficam presas. Os slides saem da
+vitrine (`peca=puzzle&n=1`), e a página confirma que a solução guardada esvazia
+o tabuleiro.
+
+1. **Puzzle #1: can you clear this?**: o tabuleiro, e «Beginner · level 21».
+2. **44%** of random attempts at this board get stuck. *Think before you tap.*
+   Em fundo escuro, no molde Número.
+3. **Solution: the first move**: o 3 e o 4 lado a lado, 3 + 4 = 7.
+4. **And the rest, in order**: as outras seis jogadas, cada uma num cartão.
+
+A dica é a taxa de sobrevivência, e não «começa pela direita». Medido a
+2026-10-29: no Iniciado e no Médio, todas as primeiras jogadas ainda têm
+saída, e os becos só aparecem mais à frente. Uma dica sobre a primeira jogada
+seria inventada.
 
 ```text
 Puzzle #1 🎲 Can you clear this board?
 
-Tell me your first move in the comments — then swipe for the solution.
+Tell me your first move in the comments, then swipe for the solution.
 
-Every board in the game has at least one way out. Finding it is the whole game.
+It's level 21 of the Beginner chapter, and 44% of random attempts on it get stuck. Every board in the game has at least one way out. Finding it is the whole game.
 
-🇵🇹 Puzzle #1: consegues limpar este tabuleiro? Diz nos comentários a tua primeira jogada.
+Want to play it for real? Comment BETA and I'll send you the beta.
+
+🇵🇹 Puzzle #1: consegues limpar este tabuleiro? Diz nos comentários a tua primeira jogada. Queres jogá-lo a sério? Comenta BETA.
 
 #DiceToSeven #puzzlegame #brainteaser #logicpuzzle
 ```
+
+Textos alternativos:
+
+1. `A 4 by 4 DiceToSeven board: level 21 of the Beginner chapter.`
+2. `44% of random attempts at this board get stuck.`
+3. `The first move: a 3 and a 4 side by side. 3 + 4 = 7.`
+4. `The other six moves, each on a small board with its group marked.`
 
 ### #07 — Carrossel · The 14 ways to make 7
 

@@ -16,7 +16,7 @@
  * fotografa isto com `--so instagram`.
  */
 
-import type { Board, Cell, Packed } from "@dicetoseven/engine";
+import type { Board, Cell, Level, Packed } from "@dicetoseven/engine";
 import { DEFAULT_LIMITS, applyMove, isSolvable, packed } from "@dicetoseven/engine";
 
 import "../src/ui/theme.css";
@@ -71,6 +71,13 @@ const PECAS = [
   })),
   { peca: "beta", formato: "publicacao", query: "", ficheiro: "03-beta.png", comLingua: true },
   { peca: "beta-story", formato: "story", query: "", ficheiro: "stories/beta.png", comLingua: true },
+  ...[1, 2, 3, 4].map((passo) => ({
+    peca: "puzzle",
+    formato: "publicacao",
+    query: `n=1&passo=${String(passo)}`,
+    ficheiro: `05-puzzle-1/${String(passo)}.png`,
+    comLingua: true,
+  })),
 ] as const;
 
 window.__instagram = { formatos: FORMATOS, pecas: PECAS };
@@ -94,6 +101,13 @@ const TEXTOS = {
     storyTitulo: "Play the beta before anyone else",
     storyPedido: "Reply BETA to this story",
     storyNota: "I'll send you the link. Free, in your browser.",
+    puzzle: (n: number) => `Puzzle #${String(n)}: can you clear this?`,
+    puzzleNivel: (capitulo: string, nivel: number) => `${capitulo} · level ${String(nivel)}`,
+    puzzlePresas: "of random attempts at this board get stuck.",
+    puzzlePensa: "Think before you tap.",
+    puzzlePrimeira: "Solution: the first move",
+    puzzleResto: "And the rest, in order",
+    capitulos: { inicio: "Beginner" } as Readonly<Record<string, string>>,
   },
   pt: {
     passos: [
@@ -110,6 +124,13 @@ const TEXTOS = {
     storyTitulo: "Joga a beta antes de toda a gente",
     storyPedido: "Responde BETA a esta story",
     storyNota: "Envio-te a ligação. Grátis, no browser.",
+    puzzle: (n: number) => `Puzzle #${String(n)}: consegues limpar isto?`,
+    puzzleNivel: (capitulo: string, nivel: number) => `${capitulo} · nível ${String(nivel)}`,
+    puzzlePresas: "das tentativas ao acaso neste tabuleiro ficam presas.",
+    puzzlePensa: "Pensa antes de tocar.",
+    puzzlePrimeira: "Solução: a primeira jogada",
+    puzzleResto: "E o resto, por ordem",
+    capitulos: { inicio: "Iniciado" } as Readonly<Record<string, string>>,
   },
 } as const;
 
@@ -141,6 +162,28 @@ const DEPOIS = applyMove(TABULEIRO, [...GRUPO].sort((a, b) => a - b));
 
 if (isSolvable(TABULEIRO, DEFAULT_LIMITS) !== "yes" || isSolvable(DEPOIS, DEFAULT_LIMITS) !== "yes") {
   throw new Error("o tabuleiro do «Como jogar» deixou de ter solução");
+}
+
+/*
+ * ── Os puzzles da série «Consegues?» ──
+ *
+ * Níveis **verdadeiros** da campanha, e não exemplos: quem tiver a beta pode
+ * ir jogá-los. O `nivel` é a posição dentro do capítulo, a que o jogo mostra
+ * na grelha.
+ *
+ * O Puzzle #1 é o nível pequeno (16 peças) mais difícil do Iniciado: 44% das
+ * tentativas ao acaso ficam presas, e o seguinte de 16 peças fica nos 26%.
+ * Escolhido a 2026-10-29, a medir os níveis do Iniciado com até 20 peças.
+ */
+const PUZZLES = [{ numero: 1, banda: "inicio", id: "inicio-1002190", nivel: 21 }] as const;
+
+/** Um nível dos packs do jogo, tal como o jogo o carrega. */
+async function nivelDoPack(banda: string, id: string): Promise<Level> {
+  const resposta = await fetch(new URL(`../public/levels/${banda}.json`, import.meta.url));
+  const pack = (await resposta.json()) as readonly Level[];
+  const nivel = pack.find((n) => n.id === id);
+  if (nivel === undefined) throw new Error(`não há o nível ${id} na banda ${banda}`);
+  return nivel;
 }
 
 /* ─── Montar ──────────────────────────────────────────────────────────────── */
@@ -187,12 +230,22 @@ function assinatura(): HTMLElement {
 }
 
 /** Um tabuleiro do jogo, numa caixa do tamanho pedido, com as peças marcadas. */
-function tabuleiro(board: Board, caixa: { largura: number; altura: number }, marcadas: readonly Packed[] = []): HTMLElement {
+function tabuleiro(
+  board: Board,
+  caixa: { largura: number; altura: number },
+  marcadas: readonly Packed[] = [],
+  medida: Board = board,
+): HTMLElement {
   const host = el("div", "insta-palco");
   host.style.width = `${String(caixa.largura)}px`;
   host.style.height = `${String(caixa.altura)}px`;
   const vista = new BoardView(host, { aoTocar: () => undefined });
-  vista.dimensionarPara(board);
+  /*
+   * A peça mede-se pela `medida`, que por omissão é o próprio tabuleiro. Os
+   * passos de uma solução medem-se todos pelo tabuleiro inicial, como no jogo:
+   * a caixa não encolhe a meio do nível, e as peças não mudam de tamanho.
+   */
+  vista.dimensionarPara(medida);
   queueMicrotask(() => {
     vista.montar(board);
     vista.marcarSelecao(new Set(marcadas));
@@ -284,6 +337,70 @@ if (peca === "destaque") {
       setTimeout(r, 100);
     });
   }
+} else if (peca === "puzzle") {
+  /*
+   * O pilar «Consegues?»: um nível verdadeiro da campanha, a pergunta, um
+   * número em vez de uma dica, e a solução guardada no nível.
+   *
+   * A dica é a taxa de sobrevivência do próprio nível, a que o jogo mede (e não
+   * «as primeiras jogadas que funcionam»): nos níveis do Iniciado e do Médio
+   * todas as primeiras jogadas ainda têm saída, e os becos só aparecem mais à
+   * frente. O número diz a verdade sobre isso sem desvendar nada.
+   */
+  const n = Number(parametros.get("n") ?? "1");
+  const puzzle = PUZZLES.find((p) => p.numero === n);
+  if (puzzle === undefined) throw new Error(`não há Puzzle #${String(n)}`);
+  const nivel = await nivelDoPack(puzzle.banda, puzzle.id);
+
+  // A solução guardada tem de esvaziar o tabuleiro, jogada a jogada.
+  const estados: Board[] = [nivel.board];
+  for (const g of nivel.solution) estados.push(applyMove(estados[estados.length - 1] ?? [], g));
+  if ((estados[estados.length - 1] ?? [1]).length !== 0) {
+    throw new Error(`a solução de ${nivel.id} não esvazia o tabuleiro`);
+  }
+
+  const passo = Math.min(4, Math.max(1, Number(parametros.get("passo") ?? "1")));
+  tela.dataset["passo"] = String(passo);
+  const meio = el("div", "insta-meio");
+  const capitulo = textos.capitulos[puzzle.banda] ?? puzzle.banda;
+  const presas = Math.round((1 - (nivel.metrics?.survivalRate ?? 1)) * 100);
+  const valor = (b: Board, p: Packed): Cell => b[p >> 6]?.[p & 63] ?? 0;
+  let titulo: string;
+
+  if (passo === 1) {
+    titulo = textos.puzzle(n);
+    meio.append(
+      tabuleiro(nivel.board, { largura: 300, altura: 250 }),
+      el("p", "insta-nivel", textos.puzzleNivel(capitulo, puzzle.nivel)),
+    );
+  } else if (passo === 2) {
+    titulo = "";
+    meio.append(
+      el("span", "insta-numero", `${String(presas)}%`),
+      el("p", "insta-numero-texto", textos.puzzlePresas),
+      el("p", "insta-numero-pensa", textos.puzzlePensa),
+    );
+  } else if (passo === 3) {
+    titulo = textos.puzzlePrimeira;
+    const primeira = nivel.solution[0] ?? [];
+    meio.append(
+      tabuleiro(nivel.board, { largura: 300, altura: 230 }, primeira),
+      soma(primeira.map((p) => valor(nivel.board, p))),
+    );
+  } else {
+    titulo = textos.puzzleResto;
+    const grelha = el("div", "insta-passos-mini");
+    nivel.solution.slice(1).forEach((g, i) => {
+      const antes = estados[i + 1] ?? [];
+      const item = el("div", "insta-mini");
+      item.append(tabuleiro(antes, { largura: 90, altura: 90 }, g, nivel.board), el("span", "insta-mini-n", String(i + 2)));
+      grelha.appendChild(item);
+    });
+    meio.appendChild(grelha);
+  }
+
+  if (titulo !== "") tela.appendChild(el("h1", "insta-titulo", titulo));
+  tela.append(meio, assinatura());
 } else if (peca === "beta-story") {
   /*
    * A Story da beta: o pedido é **responder**, e não comentar. A resposta a uma
