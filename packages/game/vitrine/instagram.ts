@@ -5,6 +5,7 @@
  *   instagram.html?peca=como-jogar&passo=2&lang=en
  *   instagram.html?peca=beta&lang=en
  *   instagram.html?peca=beta-story&lang=pt
+ *   instagram.html?peca=maneiras&passo=3&lang=en
  *
  * Como nas capturas das lojas, **não há desenhos parecidos com o jogo**: as
  * peças são as `pecaDeAmostra` do jogo, o tabuleiro é o `BoardView`, e o
@@ -23,8 +24,11 @@ import "../src/ui/theme.css";
 import "../src/ui/app.css";
 import "./instagram.css";
 
+import type { Composicao } from "../src/session/estatisticas";
+import { COMPOSICOES } from "../src/session/estatisticas";
 import { BoardView } from "../src/ui/BoardView";
 import { pecaDeAmostra } from "../src/ui/dice";
+import { emblema } from "../src/ui/emblemas";
 
 declare global {
   interface Window {
@@ -78,6 +82,13 @@ const PECAS = [
     ficheiro: `05-puzzle-1/${String(passo)}.png`,
     comLingua: true,
   })),
+  ...[1, 2, 3, 4, 5, 6].map((passo) => ({
+    peca: "maneiras",
+    formato: "publicacao",
+    query: `passo=${String(passo)}`,
+    ficheiro: `07-14-maneiras/${String(passo)}.png`,
+    comLingua: true,
+  })),
 ] as const;
 
 window.__instagram = { formatos: FORMATOS, pecas: PECAS };
@@ -108,6 +119,14 @@ const TEXTOS = {
     puzzlePrimeira: "Solution: the first move",
     puzzleResto: "And the rest, in order",
     capitulos: { inicio: "Beginner" } as Readonly<Record<string, string>>,
+    maneirasHa: "There are exactly",
+    maneirasO: "ways to make 7 with dice.",
+    maneirasPergunta: "How many can you name?",
+    maneirasTitulos: ["With two dice", "With three", "With four", "With five or six"],
+    maneirasOrdem: "3 + 4 and 4 + 3 are the same group.",
+    maneirasFim: "The biggest: seven 1s",
+    maneirasMedalha: "Seven Ones",
+    maneirasMedalhaTexto: "There's a medal for it.",
   },
   pt: {
     passos: [
@@ -131,6 +150,14 @@ const TEXTOS = {
     puzzlePrimeira: "Solução: a primeira jogada",
     puzzleResto: "E o resto, por ordem",
     capitulos: { inicio: "Iniciado" } as Readonly<Record<string, string>>,
+    maneirasHa: "Há exatamente",
+    maneirasO: "maneiras de fazer 7 com dados.",
+    maneirasPergunta: "Quantas sabes de cor?",
+    maneirasTitulos: ["Com dois dados", "Com três", "Com quatro", "Com cinco ou seis"],
+    maneirasOrdem: "3 + 4 e 4 + 3 são o mesmo grupo.",
+    maneirasFim: "A maior: sete 1",
+    maneirasMedalha: "Sete uns",
+    maneirasMedalhaTexto: "Há uma medalha para isto.",
   },
 } as const;
 
@@ -185,6 +212,21 @@ async function nivelDoPack(banda: string, id: string): Promise<Level> {
   if (nivel === undefined) throw new Error(`não há o nível ${id} na banda ${banda}`);
   return nivel;
 }
+
+/*
+ * ── As 14 maneiras de fazer 7 ──
+ *
+ * A lista é a do jogo, a mesma das medalhas (`COMPOSICOES`), e não uma cópia:
+ * o número grande do primeiro slide é o comprimento dela. Cada slide mostra as
+ * composições com tantas peças quantas as suas; a de sete peças fica para o fim.
+ */
+const MANEIRAS_POR_SLIDE: readonly (readonly number[])[] = [[2], [3], [4], [5, 6]];
+
+/** As partes de uma composição, da maior para a menor: `"124"` é 4 + 2 + 1. */
+const partesDe = (c: Composicao): readonly Cell[] => [...c].reverse().map(Number) as Cell[];
+
+/** Sete 1 num grupo, num tabuleiro do jogo: a forma é só para caber bem. */
+const SETE_UNS_TABULEIRO: Board = [[1, 1, 1], [1, 1], [1, 1]];
 
 /* ─── Montar ──────────────────────────────────────────────────────────────── */
 
@@ -375,6 +417,7 @@ if (peca === "destaque") {
     );
   } else if (passo === 2) {
     titulo = "";
+    tela.dataset["molde"] = "numero";
     meio.append(
       el("span", "insta-numero", `${String(presas)}%`),
       el("p", "insta-numero-texto", textos.puzzlePresas),
@@ -400,6 +443,39 @@ if (peca === "destaque") {
   }
 
   if (titulo !== "") tela.appendChild(el("h1", "insta-titulo", titulo));
+  tela.append(meio, assinatura());
+} else if (peca === "maneiras") {
+  const passo = Math.min(6, Math.max(1, Number(parametros.get("passo") ?? "1")));
+  tela.dataset["passo"] = String(passo);
+  const meio = el("div", "insta-meio");
+
+  if (passo === 1) {
+    tela.dataset["molde"] = "numero";
+    meio.append(
+      el("p", "insta-numero-texto", textos.maneirasHa),
+      el("span", "insta-numero", String(COMPOSICOES.length)),
+      el("p", "insta-numero-texto", textos.maneirasO),
+      el("p", "insta-numero-pensa", textos.maneirasPergunta),
+    );
+  } else if (passo === 6) {
+    tela.appendChild(el("h1", "insta-titulo", textos.maneirasFim));
+    const todas = SETE_UNS_TABULEIRO.flatMap((coluna, c) => coluna.map((_, r) => packed(c, r)));
+    const medalha = el("div", "insta-medalha");
+    const legenda = el("div", "insta-medalha-texto");
+    legenda.append(el("strong", "", textos.maneirasMedalha), el("span", "", textos.maneirasMedalhaTexto));
+    medalha.append(emblema("sete-uns", true, false), legenda);
+    meio.append(tabuleiro(SETE_UNS_TABULEIRO, { largura: 300, altura: 176 }, todas), medalha);
+  } else {
+    tela.appendChild(el("h1", "insta-titulo", textos.maneirasTitulos[passo - 2] ?? ""));
+    const tamanhos = MANEIRAS_POR_SLIDE[passo - 2] ?? [];
+    const lista = el("div", "insta-maneiras");
+    for (const c of COMPOSICOES) {
+      if (tamanhos.includes(c.length)) lista.appendChild(soma(partesDe(c)));
+    }
+    meio.appendChild(lista);
+    if (passo === 2) meio.appendChild(el("p", "insta-nivel", textos.maneirasOrdem));
+  }
+
   tela.append(meio, assinatura());
 } else if (peca === "beta-story") {
   /*

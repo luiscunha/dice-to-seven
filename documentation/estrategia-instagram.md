@@ -176,6 +176,7 @@ Saem para `packages/mobile/instagram/`, fora do Git:
 | `<língua>/03-beta.png` | A imagem da beta, #03, 1080×1350 |
 | `<língua>/stories/beta.png` | A Story da beta, 1080×1920: «Responde BETA a esta story» |
 | `<língua>/05-puzzle-1/1.png` … `4.png` | O carrossel #05, Puzzle #1, 1080×1350 |
+| `<língua>/07-14-maneiras/1.png` … `6.png` | O carrossel #07, as 14 maneiras de fazer 7, 1080×1350 |
 
 As línguas são `en` e `pt`. O tabuleiro do «Como jogar» é um exemplo feito à
 mão, como os do ecrã «Como jogar» do jogo, e **a página verifica-o com o
@@ -789,26 +790,43 @@ Textos alternativos:
 
 ### #07 — Carrossel · The 14 ways to make 7
 
-1. **There are exactly 14 ways to make 7 with dice.** (molde Número: um `14` enorme)
-2. Com duas peças: `6+1` · `5+2` · `4+3`
+1. **There are exactly 14 ways to make 7 with dice.** (molde Número: um `14` enorme) *How many can you name?*
+2. Com dois dados: `6+1` · `5+2` · `4+3`, e a nota de que `3+4` e `4+3` são o mesmo grupo.
 3. Com três: `5+1+1` · `4+2+1` · `3+3+1` · `3+2+2`
 4. Com quatro: `4+1+1+1` · `3+2+1+1` · `2+2+2+1`
-5. Com cinco e seis: `3+1+1+1+1` · `2+2+1+1+1` · `2+1+1+1+1+1`
-6. **And the hardest one: seven 1s.** — com a medalha que se ganha por ela.
+5. Com cinco ou seis: `3+1+1+1+1` · `2+2+1+1+1` · `2+1+1+1+1+1`
+6. **The biggest: seven 1s**, num tabuleiro, com a medalha que se ganha por eles.
 
-Cada soma desenhada com as faces do jogo, nas cores da rampa.
+Cada soma desenhada com as faces do jogo, nas cores da rampa. A lista é a do
+jogo (`COMPOSICOES`), e os slides saem da vitrine (`peca=maneiras`).
+
+«A maior» e não «a mais difícil» nem «a mais rara»: nunca se mediu nenhuma das
+duas. Que é o maior grupo é o que o próprio jogo diz na medalha.
 
 ```text
-There are exactly 14 ways to make 7 with dice — and in DiceToSeven, every one of them is a move. 🎲
+There are exactly 14 ways to make 7 with dice, and in DiceToSeven, every one of them is a move. 🎲
 
-The rarest? Seven 1s in a single group. There's a medal for it.
+The biggest? Seven 1s in a single group. There's a medal for it, and another for making all 14.
 
 Which one do you think you'll use the most?
 
-🇵🇹 Há exatamente 14 maneiras de fazer 7 com dados. A mais rara são sete 1 — e há uma medalha para ela.
+Want to try it? Comment BETA and I'll send you the link. It's a web page: nothing to install, no account, nothing collected.
+
+— Luís, who made this game
+
+🇵🇹 Há exatamente 14 maneiras de fazer 7 com dados. A maior são sete 1, e há uma medalha para ela. Queres experimentar? Comenta BETA: é uma página web, não instala nada.
 
 #DiceToSeven #braingames #math #puzzlegame
 ```
+
+Textos alternativos:
+
+1. `There are exactly 14 ways to make 7 with dice. How many can you name?`
+2. `With two dice: 6 + 1, 5 + 2, 4 + 3.`
+3. `With three dice: 5 + 1 + 1, 4 + 2 + 1, 3 + 3 + 1, 3 + 2 + 2.`
+4. `With four dice: 4 + 1 + 1 + 1, 3 + 2 + 1 + 1, 2 + 2 + 2 + 1.`
+5. `With five dice: 3 + 1 + 1 + 1 + 1, 2 + 2 + 1 + 1 + 1. With six: 2 + 1 + 1 + 1 + 1 + 1.`
+6. `Seven 1s in one group on a board, and the Seven Ones medal.`
 
 ### #08 — Reel · Meet the Joker
 

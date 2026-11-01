@@ -376,20 +376,21 @@ body {
 
 /*
  * O slide do número, no molde «Número» da estratégia: o fundo escuro da
- * marca, um número enorme a verde, e uma linha a dizer o que ele é.
+ * marca, um número enorme a verde, e uma linha a dizer o que ele é. Serve ao
+ * Puzzle e às 14 maneiras.
  */
-.insta[data-peca="puzzle"][data-passo="2"] {
+.insta[data-molde="numero"] {
   background:
     radial-gradient(70% 45% at 50% 42%, #1b4a43 0%, transparent 72%),
     #123f3a;
   color: #e3edea;
 }
 
-.insta[data-peca="puzzle"][data-passo="2"]::before {
+.insta[data-molde="numero"]::before {
   background-color: rgb(255 255 255 / 0.04);
 }
 
-.insta[data-peca="puzzle"][data-passo="2"] .insta-meio {
+.insta[data-molde="numero"] .insta-meio {
   gap: 6px;
   padding: 0 36px;
 }
@@ -419,19 +420,19 @@ body {
   font-size: 15px;
 }
 
-.insta[data-peca="puzzle"][data-passo="2"] .nome {
+.insta[data-molde="numero"] .nome {
   color: #e3edea;
 }
 
-.insta[data-peca="puzzle"][data-passo="2"] .nome-liga {
+.insta[data-molde="numero"] .nome-liga {
   color: #3ebb94;
 }
 
-.insta[data-peca="puzzle"][data-passo="2"] .nome-peca {
+.insta[data-molde="numero"] .nome-peca {
   background: #3ebb94;
 }
 
-.insta[data-peca="puzzle"][data-passo="2"] .nome-peca::after {
+.insta[data-molde="numero"] .nome-peca::after {
   background: #123f3a;
 }
 
@@ -458,5 +459,96 @@ body {
   color: var(--ink-muted);
   font-family: "Fredoka", system-ui, sans-serif;
   font-size: 14px;
+  font-weight: 600;
+}
+
+/* ─── As 14 maneiras de fazer 7 ───────────────────────────────────────────── */
+
+.insta[data-peca="maneiras"] .insta-numero {
+  font-size: 176px;
+}
+
+.insta-maneiras {
+  display: grid;
+  justify-items: center;
+  gap: 16px;
+}
+
+/*
+ * As peças são tão grandes quanto a soma mais comprida do slide deixa, e cada
+ * slide tem o seu tamanho: duas peças cabem com folga, e seis mal cabem.
+ */
+.insta[data-peca="maneiras"][data-passo="2"] .insta-maneiras {
+  gap: 20px;
+}
+
+.insta[data-peca="maneiras"][data-passo="2"] .insta-conta {
+  gap: 12px;
+}
+
+.insta[data-peca="maneiras"][data-passo="2"] .peca.amostra {
+  --lado: 64px;
+}
+
+.insta[data-peca="maneiras"][data-passo="3"] .peca.amostra {
+  --lado: 52px;
+}
+
+.insta[data-peca="maneiras"][data-passo="4"] .insta-maneiras {
+  gap: 24px;
+}
+
+.insta[data-peca="maneiras"][data-passo="4"] .insta-conta {
+  gap: 5px;
+}
+
+.insta[data-peca="maneiras"][data-passo="4"] .peca.amostra {
+  --lado: 40px;
+}
+
+.insta[data-peca="maneiras"][data-passo="5"] .insta-maneiras {
+  gap: 28px;
+}
+
+.insta[data-peca="maneiras"][data-passo="5"] .insta-conta {
+  gap: 3px;
+}
+
+.insta[data-peca="maneiras"][data-passo="5"] .peca.amostra {
+  --lado: 31px;
+}
+
+.insta[data-peca="maneiras"][data-passo="5"] .insta-sinal {
+  font-size: 18px;
+}
+
+/* A medalha do jogo, ao lado do nome dela. */
+.insta-medalha {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 18px 10px 12px;
+  border: 1px solid rgb(18 63 58 / 0.06);
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgb(18 63 58 / 0.05), 0 10px 22px -14px rgb(18 63 58 / 0.35);
+}
+
+.insta-medalha svg {
+  width: 76px;
+  height: 76px;
+}
+
+.insta-medalha-texto {
+  display: grid;
+  gap: 2px;
+  color: var(--ink-muted);
+  font-size: 13px;
+}
+
+.insta-medalha-texto strong {
+  color: var(--ink);
+  font-family: "Fredoka", system-ui, sans-serif;
+  font-size: 18px;
   font-weight: 600;
 }
