@@ -219,7 +219,8 @@ describe("o joker no Survival", () => {
       setTimeout(r, 900);
     });
 
-    expect(host.querySelectorAll(".tabuleiro .peca").length).toBe(0);
+    // A jogada limpou o tabuleiro: o joker saiu, e a linha que cai a seguir não o traz.
+    expect(host.querySelector('.tabuleiro .peca[data-valor="0"]')).toBeNull();
     ecra.destruir();
   });
 });
@@ -523,7 +524,7 @@ describe("a caixa de fim de corrida", () => {
   });
 
   /* Duas peças que somam 7: um toque em cada e o tabuleiro fica vazio. */
-  it("quem limpa o tabuleiro não vê «Repetir esta»", async () => {
+  it("limpar o tabuleiro não abre o painel: diz-se, e a linha seguinte cai", async () => {
     const ecra = montar([[3], [4]]);
 
     host
@@ -532,11 +533,40 @@ describe("a caixa de fim de corrida", () => {
     host
       .querySelector('.peca[data-pos="64"]')
       ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+    expect(host.querySelector(".ganho")?.textContent).toBe("Tabuleiro limpo!");
+
     await assentar();
 
-    expect(caixa()?.textContent).toContain("Tabuleiro limpo");
-    expect(acoes()).toEqual(["Outra corrida", "Sair"]);
+    expect(caixa()).toBeNull();
+    expect(host.querySelectorAll(".tabuleiro .peca").length).toBe(DEFAULT_SURVIVAL.largura);
 
+    ecra.destruir();
+  });
+
+  it("cada limpeza conta logo, sem esperar pelo fim da corrida", async () => {
+    let limpezas = 0;
+    const ecra = new SurvivalScreen(host, {
+      seed: SEED,
+      retomar: corridaCom([[3], [4]]),
+      melhorTempo: 0,
+      aoGuardar: () => undefined,
+      aoLimpar: () => {
+        limpezas++;
+      },
+      aoTerminar: () => undefined,
+      aoSair: () => undefined,
+      aoRecomecar: () => undefined,
+    });
+
+    for (const p of [0, 64]) {
+      host
+        .querySelector(`.peca[data-pos="${String(p)}"]`)
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    }
+    await assentar();
+
+    expect(limpezas).toBe(1);
     ecra.destruir();
   });
 
@@ -554,7 +584,9 @@ describe("a caixa de fim de corrida", () => {
       setTimeout(r, 1_200);
     });
 
-    expect(caixa()?.textContent).toContain("transbordou");
+    // Só há um fim, e não soa a derrota: o título apresenta o tempo aguentado.
+    expect(caixa()?.querySelector(".popup-titulo")?.textContent).toBe("Aguentaste");
+    expect(caixa()?.textContent).not.toContain("transbordou");
     expect(acoes()).toEqual(["Outra corrida", "Repetir esta", "Sair"]);
 
     [...(caixa()?.querySelectorAll<HTMLButtonElement>(".acoes .btn") ?? [])]
@@ -565,17 +597,39 @@ describe("a caixa de fim de corrida", () => {
     ecra.destruir();
   });
 
-  it("não imprime a seed: ela vive no endereço", async () => {
-    const ecra = montar([[3], [4]]);
+  it("o fim diz quantas vezes o tabuleiro ficou limpo, se ficou", async () => {
+    const corrida = corridaCom([[2, 2, 2, 2, 3, 3, 3]]);
+    const ecra = new SurvivalScreen(host, {
+      seed: SEED,
+      retomar: { ...corrida, estado: { ...corrida.estado, limpezas: 2 } },
+      melhorTempo: 0,
+      aoGuardar: () => undefined,
+      aoTerminar: () => undefined,
+      aoSair: () => undefined,
+      aoRecomecar: () => undefined,
+    });
 
-    host
-      .querySelector('.peca[data-pos="0"]')
-      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    host
-      .querySelector('.peca[data-pos="64"]')
-      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    host.querySelector<HTMLButtonElement>(".rodape .acoes .btn")?.click();
     await assentar();
+    await new Promise((r) => {
+      setTimeout(r, 1_200);
+    });
 
+    expect(caixa()?.textContent).toContain("· 2 limpezas");
+
+    ecra.destruir();
+  });
+
+  it("não imprime a seed: ela vive no endereço", async () => {
+    const ecra = montar([[2, 2, 2, 2, 3, 3, 3]]);
+
+    host.querySelector<HTMLButtonElement>(".rodape .acoes .btn")?.click();
+    await assentar();
+    await new Promise((r) => {
+      setTimeout(r, 1_200);
+    });
+
+    expect(caixa()).not.toBeNull();
     expect(caixa()?.textContent).not.toContain("Seed");
 
     ecra.destruir();

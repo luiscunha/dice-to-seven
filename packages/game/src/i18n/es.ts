@@ -158,6 +158,8 @@ export const ES: Textos = {
     maisUmaLinha: "+1 fila",
     limpoTitulo: "¡Tablero limpio!",
     transbordouTitulo: "El tablero se desbordó",
+    aguentasteTitulo: "Aguantaste",
+    limpezas: (n) => plural(n, "limpieza", "limpiezas"),
     limpoLinhas: (n) => `Limpio, tras aguantar ${String(n)} filas`,
     linhasAguentadas: (n) => `${String(n)} filas aguantadas`,
     porLimpar:
@@ -283,7 +285,7 @@ export const ES: Textos = {
     modoTempo: (saltar) =>
       `Un único reloj, que nunca se para. Cada tablero limpio devuelve tiempo, pero cada vez menos, y los tableros van creciendo. Una ficha que se pase de 7 cuesta tiempo. Y cuidado con las bombas: quítalas antes de que se acabe la mecha. Del séptimo tablero en adelante, un tablero puede quedarse sin jugadas: entonces sáltalo, por ${String(saltar)} segundos. Y aparecen fichas heladas, que solo salen en pareja con una ficha que no esté helada.`,
     modoSurvival:
-      "De vez en cuando cae una fila nueva por arriba. Ves cuál es antes de que caiga; se acaba cuando la pila llega al techo. Si te quedas sin jugadas, la fila cae enseguida; si te pasas de 7, llega 3 segundos antes. Algunas filas traen una bomba: quítala antes de que se acabe la mecha, o cae una fila más y las fichas de alrededor suben un punto. Más adelante hay bombas que se encienden en una ficha que ya está en la pila: desentiérrala a tiempo.",
+      "De vez en cuando cae una fila nueva por arriba. Ves cuál es antes de que caiga; se acaba cuando la pila pasa el techo, y tu marca es el tiempo que aguantaste. Si limpias el tablero, la partida sigue, y la fila siguiente cae enseguida. Si te quedas sin jugadas, la fila cae enseguida; si te pasas de 7, llega 3 segundos antes. Algunas filas traen una bomba: quítala antes de que se acabe la mecha, o cae una fila más y las fichas de alrededor suben un punto. Más adelante hay bombas que se encienden en una ficha que ya está en la pila: desentiérrala a tiempo.",
     modoDesafio:
       "Todos los días, un desafío igual para todo el mundo: un Puzle, una Contrarreloj o una Supervivencia, por turnos. El camino muestra el recorrido — lo que ya has hecho y lo que viene. El Puzle y la Supervivencia quedan hechos cuando limpias el tablero, y puedes intentarlo hasta entonces; en la Contrarreloj, cuenta la primera partida. Después es entrenamiento, con los mismos tableros. Al final, comparte el resultado — y no dejes que se rompa tu racha. La racha da llaves (a los 3, 7, 14 y 30 días): una llave abre un desafío que te quedó por jugar, o salva la racha si fallas un día.",
   },

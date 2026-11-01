@@ -64,6 +64,7 @@ import {
   load,
   recordLevel,
   recordSurvival,
+  registarLimpezaDeSurvival,
   recordTimeAttack,
   save,
 } from "../src/session/progress";
@@ -1077,7 +1078,7 @@ describe("progresso", () => {
    */
   describe("guarda os melhores do Survival", () => {
     it("transbordar também grava o tempo", () => {
-      const p = recordSurvival(emptyProfile(), false, 244_000);
+      const p = recordSurvival(emptyProfile(), 244_000);
 
       // Morrer ao fim de quatro minutos é ter sobrevivido quatro minutos.
       expect(p.bestSurvivalMs).toBe(244_000);
@@ -1085,28 +1086,16 @@ describe("progresso", () => {
     });
 
     it("maior é melhor, e não menor", () => {
-      let p = recordSurvival(emptyProfile(), false, 244_000);
-      // A limpeza-relâmpago do arranque: um bom desfecho, mas não uma sobrevida.
-      p = recordSurvival(p, true, 20_000);
+      let p = recordSurvival(emptyProfile(), 244_000);
+      p = recordSurvival(p, 20_000);
 
       expect(p.bestSurvivalMs).toBe(244_000);
     });
 
-    it("o tempo e as limpezas não se estorvam", () => {
-      // A grande corrida aguentou muito, mas transbordou.
-      let p = recordSurvival(emptyProfile(), false, 300_000);
-      // A pequena limpou o tabuleiro cedo.
-      p = recordSurvival(p, true, 20_000);
-
-      // Cada uma guarda o que fez de melhor, sem anular a outra.
-      expect(p.bestSurvivalMs).toBe(300_000);
-      expect(p.survivalClears).toBe(1);
-    });
-
-    it("as limpezas somam-se", () => {
-      let p = recordSurvival(emptyProfile(), true, 90_000);
-      p = recordSurvival(p, true, 40_000);
-      p = recordSurvival(p, false, 5_000);
+    it("as limpezas somam-se, uma a uma, e não mexem no tempo", () => {
+      let p = recordSurvival(emptyProfile(), 90_000);
+      p = registarLimpezaDeSurvival(p);
+      p = registarLimpezaDeSurvival(p);
 
       expect(p.survivalClears).toBe(2);
       expect(p.bestSurvivalMs).toBe(90_000);

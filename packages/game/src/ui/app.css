@@ -3824,6 +3824,13 @@ body::before {
   font-size: 22px;
 }
 
+/* O tabuleiro do Survival ficou limpo: o maior alívio do modo, e tem de se ler. */
+.ganho.limpeza {
+  font-size: 22px;
+  white-space: nowrap;
+  animation-duration: 1400ms;
+}
+
 /* Uma regra, não uma perda: na cor da tinta, e sem pressa de sair. */
 .ganho.aviso {
   color: var(--ink);

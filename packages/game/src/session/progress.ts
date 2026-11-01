@@ -205,14 +205,19 @@ export const recordTimeAttack = (
  * O tempo conta transborde ou não: sobreviver é o que o modo pede, e morrer ao
  * fim de quatro minutos é tê-lo feito melhor do que morrer ao fim de um.
  */
-export const recordSurvival = (
-  profile: Profile,
-  limpou: boolean,
-  tempoMs: number,
-): Profile => ({
+export const recordSurvival = (profile: Profile, tempoMs: number): Profile => ({
   ...profile,
   bestSurvivalMs: Math.max(profile.bestSurvivalMs, tempoMs),
-  survivalClears: profile.survivalClears + (limpou ? 1 : 0),
+});
+
+/**
+ * Mais um tabuleiro de Survival limpo. Conta-se no momento, e não no fim da
+ * corrida: uma corrida pode limpar várias vezes, e pode nunca chegar ao fim —
+ * quem recomeça deita-a fora, mas as limpezas fez.
+ */
+export const registarLimpezaDeSurvival = (profile: Profile): Profile => ({
+  ...profile,
+  survivalClears: profile.survivalClears + 1,
 });
 
 export const save = (storage: ProfileStorage, profile: Profile): void => {

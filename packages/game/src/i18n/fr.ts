@@ -192,6 +192,8 @@ const FR_CRU: Textos = {
     maisUmaLinha: "+1 ligne",
     limpoTitulo: "Plateau vidé !",
     transbordouTitulo: "Le plateau a débordé",
+    aguentasteTitulo: "Tu as tenu",
+    limpezas: (n) => plural(n, "plateau vidé", "plateaux vidés"),
     limpoLinhas: (n) => `Vidé, après avoir tenu ${String(n)} lignes`,
     linhasAguentadas: (n) => `${String(n)} lignes tenues`,
     porLimpar:
@@ -317,7 +319,7 @@ const FR_CRU: Textos = {
     modoTempo: (saltar) =>
       `Un seul chrono, qui ne s’arrête jamais. Chaque plateau vidé rend du temps, mais de moins en moins, et les plateaux grandissent. Une pièce qui dépasse 7 coûte du temps. Et attention aux bombes : enlève-les avant que la mèche ne brûle. À partir du septième plateau, un plateau peut se retrouver sans coup possible : passe-le alors, pour ${String(saltar)} secondes. Et des pièces gelées apparaissent, qui ne partent qu’en paire avec une pièce qui n’est pas gelée.`,
     modoSurvival:
-      "De temps en temps, une nouvelle ligne tombe par le haut. Tu vois laquelle avant qu’elle tombe ; c’est fini quand la pile atteint le plafond. Si tu n’as plus de coup possible, la ligne tombe aussitôt ; si tu dépasses 7, elle arrive 3 secondes plus tôt. Certaines lignes apportent une bombe : enlève-la avant que la mèche ne brûle, ou une ligne de plus tombe et les pièces autour montent d’un point. Plus loin, il y a des bombes qui s’allument sur une pièce déjà dans la pile : déterre-la à temps.",
+      "De temps en temps, une nouvelle ligne tombe par le haut. Tu vois laquelle avant qu’elle tombe ; c’est fini quand la pile dépasse le plafond, et ton score est le temps que tu as tenu. Si tu vides le plateau, la partie continue, et la ligne suivante tombe aussitôt. Si tu n’as plus de coup possible, la ligne tombe aussitôt ; si tu dépasses 7, elle arrive 3 secondes plus tôt. Certaines lignes apportent une bombe : enlève-la avant que la mèche ne brûle, ou une ligne de plus tombe et les pièces autour montent d’un point. Plus loin, il y a des bombes qui s’allument sur une pièce déjà dans la pile : déterre-la à temps.",
     modoDesafio:
       "Chaque jour, le même défi pour tout le monde : un Puzzle, un Contre-la-montre ou une Survie, à tour de rôle. Le parcours montre le chemin — ce que tu as fait et ce qui vient. Le Puzzle et la Survie sont réussis quand tu vides le plateau, et tu peux réessayer jusque-là ; en Contre-la-montre, c’est la première partie qui compte. Ensuite, c’est de l’entraînement, avec les mêmes plateaux. À la fin, partage ton résultat — et ne laisse pas ta série se briser. La série rapporte des clés (à 3, 7, 14 et 30 jours) : une clé ouvre un défi manqué, ou sauve ta série si tu rates un jour.",
   },
