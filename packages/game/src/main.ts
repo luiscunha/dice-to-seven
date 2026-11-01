@@ -26,6 +26,7 @@ import {
   markJokerTutorialSeen,
   recordLevel,
   recordSurvival,
+  registarLimpezaDeSurvival,
   recordTimeAttack,
   save,
 } from "./session/progress";
@@ -840,10 +841,14 @@ function mostrarSurvival(seed: number | undefined): void {
     aoGuardar: guardarSurvival,
     melhorTempo: perfil.bestSurvivalMs,
     aoEliminar: contarComposicao,
-    aoTerminar: ({ limpou, tempoMs, linhas }) => {
+    aoLimpar: () => {
+      perfil = registarLimpezaDeSurvival(perfil);
+      guardarPerfil();
+    },
+    aoTerminar: ({ tempoMs, linhas }) => {
       // A corrida acabou: não há nada para retomar.
       guardarSurvival(undefined);
-      perfil = recordSurvival(perfil, limpou, tempoMs);
+      perfil = recordSurvival(perfil, tempoMs);
       guardarPerfil();
       mudarEstatisticas(registarCorridaDeSurvival(estatisticas, { linhas }));
       return avaliarMedalhas();

@@ -158,6 +158,8 @@ export const EN: Textos = {
     maisUmaLinha: "+1 row",
     limpoTitulo: "Board cleared!",
     transbordouTitulo: "The board overflowed",
+    aguentasteTitulo: "You held out",
+    limpezas: (n) => plural(n, "clear", "clears"),
     limpoLinhas: (n) => `Cleared, after surviving ${String(n)} rows`,
     linhasAguentadas: (n) => `${String(n)} rows survived`,
     porLimpar:
@@ -283,7 +285,7 @@ export const EN: Textos = {
     modoTempo: (saltar) =>
       `A single clock that never stops. Every board you clear gives time back, but less and less, and the boards keep growing. A piece that goes over 7 costs time. And watch out for bombs: take them out before the fuse runs out. From the seventh board on, a board can run out of moves: then skip it, for ${String(saltar)} seconds. And frozen pieces appear, which only leave in a pair with a piece that isn't frozen.`,
     modoSurvival:
-      "Every so often a new row falls from the top. You see which one before it falls; it's over when the stack reaches the ceiling. If you run out of moves, the row falls at once; if you go over 7, it comes 3 seconds early. Some rows bring a bomb: take it out before the fuse runs out, or an extra row falls and the pieces around it go up by one. Further on, there are bombs that light up on a piece already in the stack: dig it out in time.",
+      "Every so often a new row falls from the top. You see which one before it falls; it's over when the stack goes past the ceiling, and your score is how long you held out. If you clear the board, the run goes on, and the next row falls at once. If you run out of moves, the row falls at once; if you go over 7, it comes 3 seconds early. Some rows bring a bomb: take it out before the fuse runs out, or an extra row falls and the pieces around it go up by one. Further on, there are bombs that light up on a piece already in the stack: dig it out in time.",
     modoDesafio:
       "Every day, the same challenge for everyone: a Puzzle, a Time Attack or a Survival, in turn. The trail shows the way — what you've done and what's coming. The Puzzle and the Survival are done when you clear the board, and you can keep trying until then; in Time Attack, the first run counts. After that it's practice, with the same boards. At the end, share your result — and don't let your streak break. The streak earns keys (at 3, 7, 14 and 30 days): a key opens a challenge you missed, or saves your streak if you miss a day.",
   },

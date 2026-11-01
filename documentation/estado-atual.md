@@ -1089,6 +1089,39 @@ repõe as durações de antes.
 
 ---
 
+## O Survival deixou de acabar ao limpar
+
+Feedback do teste fechado (2026-11-01): tornar o modo infinito. O tester tinha
+razão, e por um motivo que a medição mostrou: limpar acabava a corrida e dava-se
+por vitória, mas o recorde já era o maior tempo, portanto ganhar valia menos do
+que perder.
+
+Medido com um jogador automático (400 corridas por ritmo, sem tentar limpar de
+propósito e sem puxar linhas):
+
+| Ritmo | Limpa, hoje | Tempo ao limpar | Tempo ao transbordar | Mediana sem fim |
+|---|---|---|---|---|
+| 2 s por jogada | 54% | 2:06 | 3:21 | 6:22 |
+| 4 s | 20% | 2:04 | 5:44 | 6:02 |
+| 8 s | 3% | 3:36 | 6:47 | 6:48 |
+
+Sem fim, as corridas continuam a acabar: no máximo 3% chegaram à meia hora.
+
+- **Só transbordar acaba a corrida**, e a marca é o tempo. Limpar diz-se por cima
+  do tabuleiro, a linha seguinte cai logo, e a que vem depois espera um intervalo
+  inteiro. A pontuação do modo não se mostra: o prémio de limpar é esse alívio.
+- **As limpezas contam no momento** (`aoLimpar`), e não no fim da corrida. A
+  medalha «Dez limpezas» fica mais fácil, e os recordes de antes continuam válidos.
+- **O Survival do Dia não muda** (`SURVIVAL_DO_DIA`): limpar deixa o dia feito, e
+  a corrida acaba aí. É a única diferença de regras entre os dois.
+
+Fica por vigiar: a 6–8 s por jogada, o mesmo jogador só limpa em 3% a 9% das
+tentativas, e o Survival calha um dia em cada três. Se quem joga devagar se
+queixar de perder a sequência, a alternativa é o dia contar ao aguentar um tempo
+fixo.
+
+---
+
 ## O Desafio do Dia
 
 O jogo ficou exigente, e faltava-lhe uma razão para voltar amanhã. O plano §6.4

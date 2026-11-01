@@ -78,6 +78,23 @@
  * impossível de pausar, e a pausa é a coisa que um jogo de telemóvel mais
  * precisa de acertar.
  *
+ * ### Sem fim: limpar não acaba a corrida
+ *
+ * Só transbordar acaba, e a marca é o tempo aguentado. Limpar o tabuleiro acabava
+ * a corrida, e dava-se por vitória; mas a marca já era o tempo, portanto ganhar
+ * valia menos do que perder: num jogador automático, as corridas que limpavam
+ * acabavam em dois minutos, e as que transbordavam, em três a seis. Quem ia
+ * numa boa corrida tinha de evitar limpar, e foi um tester que o apontou.
+ *
+ * Agora limpar é o alívio maior do modo: a linha seguinte cai logo, e a que vem
+ * depois espera um intervalo inteiro. **Mesmo assim, as corridas acabam.** Na
+ * simulação, a mediana ficou entre quatro e sete minutos, e só 3% chegaram à meia
+ * hora, nos ritmos mais rápidos.
+ *
+ * **O Survival do Dia é a exceção** (`SURVIVAL_DO_DIA`): lá, limpar é o que deixa
+ * o dia feito, e a corrida acaba aí. Se bastasse transbordar, quem se deixasse
+ * perder tinha o dia feito em trinta segundos — ver `desafio.ts`.
+ *
  * ### Sem joker, por enquanto
  *
  * O valor do joker está *globalmente determinado* pela soma do tabuleiro, e essa
@@ -211,6 +228,12 @@ export interface SurvivalConfig {
   readonly bonusTabuleiroLimpo: number;
 
   /**
+   * Esvaziar o tabuleiro acaba a corrida. Só no Survival do Dia: ver
+   * `SURVIVAL_DO_DIA`, e «Sem fim» no topo do ficheiro.
+   */
+  readonly limparAcaba: boolean;
+
+  /**
    * Peso de cada face, de 1 a 6.
    *
    * **É o parâmetro que decide se o modo existe.** Faces baixas combinam-se de
@@ -328,6 +351,7 @@ export const DEFAULT_SURVIVAL: SurvivalConfig = {
   bonusMaximo: 2.5,
   jogadasComBonus: 8,
   bonusTabuleiroLimpo: 500,
+  limparAcaba: false,
   pesos: [4, 3, 2, 1, 1, 1],
   comJoker: true,
   pecasPorJoker: 25,
@@ -340,6 +364,9 @@ export const DEFAULT_SURVIVAL: SurvivalConfig = {
   aqueceVizinhas: true,
   penalizacaoSomaMs: 3_000,
 };
+
+/** As mesmas linhas e o mesmo relógio; só muda o que limpar o tabuleiro faz. */
+export const SURVIVAL_DO_DIA: SurvivalConfig = { ...DEFAULT_SURVIVAL, limparAcaba: true };
 
 /**
  * A bomba do Survival: a mesma peça com pavio dos dois modos, e saber se nasceu
@@ -367,11 +394,11 @@ export interface SurvivalState {
    * quando o jogador sai do ecrã, portanto um prazo medido nele pára com ele.
    */
   readonly proximaLinhaMs: number;
-  /** Tabuleiros esvaziados por completo. É o objetivo do modo. */
+  /** Tabuleiros esvaziados por completo, nesta corrida. */
   readonly limpezas: number;
   /** Peças entradas desde o último joker. Decide quando aparece o próximo. */
   readonly pecasDesdeJoker: number;
-  /** O tabuleiro ficou vazio. A corrida acabou, e acabou bem. */
+  /** O tabuleiro ficou vazio e isso acabou a corrida — ver `limparAcaba`. */
   readonly limpo: boolean;
 
   /** Multiplicador em vigor, de puxar uma linha. `1` quando não há. */
@@ -977,6 +1004,24 @@ export function avancarRelogio(
   }
 
   /*
+   * ── O tabuleiro ficou vazio: a corrida continua, e a linha cai já ──
+   *
+   * Não há nada para jogar, e esperar pelo prazo era tempo morto, como no caso
+   * a seguir. Mas não é `forcada`: o ecrã não tem de dizer «sem jogadas» a quem
+   * acabou de limpar o tabuleiro. O prazo da seguinte recomeça a contar daqui, e
+   * é esse intervalo inteiro que limpar compra.
+   */
+  if (isEmpty(s.game.board)) {
+    return {
+      state: injectRow(s, false, config, agoraMs),
+      caiu: true,
+      rebentou: undefined,
+      aquecidas: [],
+      forcada: false,
+    };
+  }
+
+  /*
    * ── Sem jogadas, a linha cai já ──
    *
    * Um tabuleiro sem jogadas — 1, 2, 1, 2 que não chegam a 7 — deixava o
@@ -1018,7 +1063,7 @@ export interface SurvivalTap {
   /** A jogada aconteceu, e não foi só um toque a acumular seleção. */
   readonly moved: boolean;
   readonly gainedScore: number;
-  /** A jogada esvaziou o tabuleiro. */
+  /** A jogada esvaziou o tabuleiro. Pode não ter acabado a corrida: ver `limparAcaba`. */
   readonly cleared: boolean;
   /** A jogada levou a bomba consigo. */
   readonly desarmou: boolean;
@@ -1040,8 +1085,8 @@ const parado = (s: SurvivalState): SurvivalTap => ({
  *
  * **Uma jogada já não faz cair nada.** Quem faz cair é o relógio, por
  * `avancarRelogio`, e por isso jogar depressa passou a ser a forma de ganhar
- * espaço em vez de a forma de o gastar. A jogada aqui só pontua e vê se o
- * tabuleiro ficou limpo.
+ * espaço em vez de a forma de o gastar. A jogada aqui só pontua e conta as
+ * limpezas.
  */
 export function survivalTap(
   s: SurvivalState,
@@ -1104,16 +1149,16 @@ export function survivalTap(
   const desarmou = saiNaJogada(s.bomba, jogada);
 
   /*
-   * **Limpar o tabuleiro acaba a corrida**, e acaba-a bem. É o objetivo do modo:
-   * o relógio corre até lá, e o tempo é a marca. `avancarRelogio` vê o `limpo`
-   * e não injeta mais nada por cima de uma vitória.
+   * Limpar só acaba a corrida no Survival do Dia. Aí `avancarRelogio` vê o
+   * `limpo` e não injeta mais nada por cima da vitória; no modo normal, vê o
+   * tabuleiro vazio e faz cair a linha seguinte.
    */
   const seguinte: SurvivalState = {
     ...s,
     game,
     score: s.score + ganho,
     limpezas: limpou ? s.limpezas + 1 : s.limpezas,
-    limpo: limpou,
+    limpo: limpou && config.limparAcaba,
     jogadasComBonus: restantes,
     multiplicador: restantes > 0 ? s.multiplicador : 1,
     bomba: desarmou ? undefined : seguirBomba(s.bomba, antes.board, jogada),

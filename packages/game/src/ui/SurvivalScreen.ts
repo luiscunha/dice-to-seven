@@ -1,9 +1,10 @@
 /**
  * O modo Survival.
  *
- * **O objetivo é limpar o tabuleiro, e o cronómetro é a marca.** Corre para
- * cima desde o primeiro toque e pára quando a última peça sai — ou quando o
- * tabuleiro transborda, que é a outra maneira de a corrida acabar.
+ * **O objetivo é aguentar, e o cronómetro é a marca.** Corre para cima desde o
+ * primeiro toque e pára quando o tabuleiro transborda. Limpar o tabuleiro não o
+ * pára: diz-se por cima das peças, e a linha seguinte cai logo. A exceção é o
+ * Desafio do Dia, onde limpar é o que deixa o dia feito — ver `SURVIVAL_DO_DIA`.
  *
  * Três coisas no ecrã, e as três mudam a jogada seguinte:
  *
@@ -44,6 +45,7 @@ import type {
 } from "../session/SurvivalSession";
 import {
   DEFAULT_SURVIVAL,
+  SURVIVAL_DO_DIA,
   avancarRelogio,
   bombaEnterradaNaFila,
   bombaNaFila,
@@ -98,6 +100,8 @@ export interface OpcoesSurvival {
    * grupos chegam às estatísticas — ver `estatisticas.ts`.
    */
   readonly aoEliminar?: (composicao: Composicao) => void;
+  /** O tabuleiro ficou vazio e a corrida continua. No desafio nunca acontece: acaba aí. */
+  readonly aoLimpar?: () => void;
   /** Maior tempo sobrevivido, em ms, ou 0 se ainda não há. */
   readonly melhorTempo: number;
   /**
@@ -131,7 +135,7 @@ export class SurvivalScreen {
   private readonly palco: HTMLElement;
   private readonly view: BoardView;
   private readonly opcoes: OpcoesSurvival;
-  private readonly config: SurvivalConfig = DEFAULT_SURVIVAL;
+  private readonly config: SurvivalConfig;
 
   private readonly elRelogio: HTMLElement;
   private readonly elFila: HTMLElement;
@@ -173,6 +177,7 @@ export class SurvivalScreen {
 
   constructor(host: HTMLElement, opcoes: OpcoesSurvival) {
     this.opcoes = opcoes;
+    this.config = opcoes.desafio === undefined ? DEFAULT_SURVIVAL : SURVIVAL_DO_DIA;
     this.estado = opcoes.retomar?.estado ?? startSurvival(opcoes.seed, this.config);
 
     /*
@@ -535,6 +540,7 @@ topo.append(sair, this.elRelogio);
     if (r.moved && grupo !== undefined) {
       const composicao = composicaoDoGrupo(antes.game.board, grupo);
       if (composicao !== undefined) this.opcoes.aoEliminar?.(composicao);
+      if (r.cleared && !r.state.limpo) this.celebrarLimpeza();
 
       this.ocupado = true;
       if (r.desarmou) this.view.desarmarBomba();
@@ -554,6 +560,26 @@ topo.append(sair, this.elRelogio);
 
     this.pintar();
     this.verificarFim();
+  }
+
+  /**
+   * O tabuleiro ficou vazio, e a corrida continua. Sobe do meio da caixa, e não
+   * das peças nem do topo: as últimas peças estão sempre encostadas ao canto, e
+   * o topo é o laser, onde o texto não se lia.
+   */
+  private celebrarLimpeza(): void {
+    this.opcoes.aoLimpar?.();
+
+    const tabuleiro = this.palco.querySelector(".tabuleiro");
+    if (tabuleiro === null) return;
+
+    const { left, top, width, height } = tabuleiro.getBoundingClientRect();
+    anunciar(
+      this.palco,
+      [new DOMRect(left, top + height / 2, width, 0)],
+      t().survival.limpoTitulo,
+      "limpeza",
+    );
   }
 
   private async escolherJoker(valor: JokerValue): Promise<void> {
@@ -713,14 +739,12 @@ topo.append(sair, this.elRelogio);
     const recorde = tempo > 0 && tempo > this.opcoes.melhorTempo;
 
     /*
-     * O recorde marca-se **ao lado do tempo**, e não no título.
+     * O recorde marca-se **ao lado do tempo**, e não no título: é o número que
+     * ele qualifica.
      *
-     * No título, substituía-o: «Recorde!» sozinho deixava de dizer se o
-     * tabuleiro foi limpo ou transbordou, que é a primeira coisa que o jogador
-     * quer ler. E como agora transbordar também pode dar recorde, as duas
-     * informações deixaram de andar juntas — o título fica com o desfecho, que é
-     * o que não se adivinha, e o recorde fica encostado ao número que ele
-     * qualifica.
+     * O título diz o desfecho só no desafio, onde há dois. No modo normal só há
+     * um fim, e «O tabuleiro transbordou» soava a derrota a quem acabou de
+     * aguentar seis minutos: o título apresenta o tempo, que vem logo a seguir.
      */
     const marca = elemento("p", "popup-marca", relogio(tempo));
     if (recorde) marca.append(elemento("span", "selo-recorde", "recorde"));
@@ -734,7 +758,11 @@ topo.append(sair, this.elRelogio);
       elemento(
         "h2",
         "popup-titulo",
-        limpou ? t().survival.limpoTitulo : t().survival.transbordouTitulo,
+        desafio === undefined
+          ? t().survival.aguentasteTitulo
+          : limpou
+            ? t().survival.limpoTitulo
+            : t().survival.transbordouTitulo,
       ),
       marca,
       elemento(
@@ -742,7 +770,10 @@ topo.append(sair, this.elRelogio);
         "popup-texto",
         limpou
           ? t().survival.limpoLinhas(this.estado.linhasInjetadas)
-          : t().survival.linhasAguentadas(this.estado.linhasInjetadas),
+          : [
+              t().survival.linhasAguentadas(this.estado.linhasInjetadas),
+              ...(this.estado.limpezas > 0 ? [t().survival.limpezas(this.estado.limpezas)] : []),
+            ].join(" · "),
       ),
     );
 
@@ -778,21 +809,12 @@ topo.append(sair, this.elRelogio);
       }),
     );
 
-    /*
-     * Repetir a corrida só se oferece a quem perdeu.
-     *
-     * É um botão de segunda tentativa: existe para quem transbordou e acha que
-     * naquele tabuleiro fazia melhor. A quem limpou não serve de nada — refazer
-     * a partida que se acabou de ganhar é a única coisa que já se sabe fazer —
-     * e ao lado de «Outra corrida» só rouba a atenção ao passo seguinte.
-     */
-    if (!limpou) {
-      acoes.appendChild(
-        botao(t().survival.repetirEsta, undefined, () => {
-          this.opcoes.aoRecomecar(this.estado.seed);
-        }),
-      );
-    }
+    // Uma segunda tentativa: as mesmas linhas, para quem acha que fazia melhor.
+    acoes.appendChild(
+      botao(t().survival.repetirEsta, undefined, () => {
+        this.opcoes.aoRecomecar(this.estado.seed);
+      }),
+    );
 
     acoes.appendChild(
       botao(t().comum.sair, undefined, () => {

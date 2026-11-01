@@ -28,6 +28,7 @@ import type { Board, Group, Packed } from "@dicetoseven/engine";
 import { pecasJogaveis } from "../src/session/bomba";
 import {
   DEFAULT_SURVIVAL,
+  SURVIVAL_DO_DIA,
   aquecer,
   avancarRelogio,
   bombaEnterradaNaFila,
@@ -474,24 +475,53 @@ describe("o joker", () => {
   });
 });
 
-describe("limpar o tabuleiro acaba a corrida", () => {
-  it("e não deixa cair mais nenhuma linha por cima", () => {
-    // `[[3],[4]]` some 7: uma jogada limpa tudo.
-    const base = startSurvival(SEED);
-    const quase: SurvivalState = {
-      ...base,
-      game: { ...base.game, board: [[3], [4]] },
-    };
+describe("limpar o tabuleiro", () => {
+  // `[[3],[4]]` some 7: uma jogada limpa tudo.
+  const base = startSurvival(SEED);
+  const quase: SurvivalState = {
+    ...base,
+    game: { ...base.game, board: [[3], [4]] },
+  };
 
+  it("não acaba a corrida: conta, e a linha seguinte cai logo", () => {
     let s = quase;
     for (const p of [0, 64]) s = survivalTap(s, p).state;
+
+    expect(s.limpo).toBe(false);
+    expect(s.morto).toBe(false);
+    expect(s.limpezas).toBe(1);
+    expect(s.game.board).toEqual([]);
+
+    // Bem antes do prazo: um tabuleiro vazio não espera por ele.
+    const r = avancarRelogio(s, 1_000);
+    expect(r.caiu).toBe(true);
+    // Não é «sem jogadas»: o ecrã diria isso a quem acabou de limpar.
+    expect(r.forcada).toBe(false);
+    expect(r.state.game.board.map((c) => c.length)).toEqual(
+      Array.from({ length: DEFAULT_SURVIVAL.largura }, () => 1),
+    );
+    expect(r.state.linhasInjetadas).toBe(quase.linhasInjetadas + 1);
+    // É o que limpar compra: um intervalo inteiro até à linha a seguir.
+    expect(r.state.proximaLinhaMs - 1_000).toBe(cadencia(r.state));
+  });
+
+  it("no Survival do Dia acaba, e não deixa cair mais nenhuma linha por cima", () => {
+    let s = quase;
+    for (const p of [0, 64]) s = survivalTap(s, p, SURVIVAL_DO_DIA).state;
 
     expect(s.limpo).toBe(true);
     expect(s.game.board).toEqual([]);
     // Sem isto, a vitória era imediatamente soterrada pela linha automática.
     expect(s.linhasInjetadas).toBe(quase.linhasInjetadas);
     // E depois de limpo nada mais conta.
-    expect(injectRow(s, true)).toBe(s);
+    expect(injectRow(s, true, SURVIVAL_DO_DIA)).toBe(s);
+    expect(avancarRelogio(s, 10 * 60 * 1000, SURVIVAL_DO_DIA).caiu).toBe(false);
+  });
+
+  it("o Survival do Dia só muda isso: as linhas são as mesmas", () => {
+    for (let i = 0; i < 40; i++) {
+      expect(linhaDe(SEED, i, SURVIVAL_DO_DIA)).toEqual(linhaDe(SEED, i, DEFAULT_SURVIVAL));
+    }
   });
 });
 

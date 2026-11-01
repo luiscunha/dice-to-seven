@@ -181,6 +181,8 @@ export const PT = {
     maisUmaLinha: "+1 linha",
     limpoTitulo: "Tabuleiro limpo!",
     transbordouTitulo: "O tabuleiro transbordou",
+    aguentasteTitulo: "Aguentaste",
+    limpezas: (n: number): string => plural(n, "limpeza", "limpezas"),
     limpoLinhas: (n: number): string => `Limpo, com ${String(n)} linhas aguentadas`,
     linhasAguentadas: (n: number): string => `${String(n)} linhas aguentadas`,
     porLimpar:
@@ -314,7 +316,7 @@ export const PT = {
     modoTempo: (saltar: number): string =>
       `Um relógio só, que nunca pára. Cada tabuleiro limpo dá tempo de volta, mas cada vez menos, e os tabuleiros vão crescendo. Uma peça que passe de 7 custa tempo. E cuidado com as bombas: tira-as antes de o pavio acabar. Do sétimo tabuleiro em diante, um tabuleiro pode ficar sem jogadas: aí salta-o, por ${String(saltar)} segundos. E aparecem peças geladas, que só saem a par com uma peça que não esteja gelada.`,
     modoSurvival:
-      "De vez em quando cai uma linha nova por cima. Vês qual é antes de ela cair; acaba quando a pilha chega ao teto. Se ficares sem jogadas, a linha cai logo; se passares de 7, chega 3 segundos mais cedo. Algumas linhas trazem uma bomba: tira-a antes de o pavio acabar, ou cai mais uma linha e as peças à volta dela sobem um ponto. Mais à frente, há bombas que se acendem numa peça já na pilha: desenterra-a a tempo.",
+      "De vez em quando cai uma linha nova por cima. Vês qual é antes de ela cair; acaba quando a pilha passa o teto, e a tua marca é o tempo que aguentaste. Se limpares o tabuleiro, a corrida continua, e a linha seguinte cai logo. Se ficares sem jogadas, a linha cai logo; se passares de 7, chega 3 segundos mais cedo. Algumas linhas trazem uma bomba: tira-a antes de o pavio acabar, ou cai mais uma linha e as peças à volta dela sobem um ponto. Mais à frente, há bombas que se acendem numa peça já na pilha: desenterra-a a tempo.",
     modoDesafio:
       "Todos os dias, um desafio igual para toda a gente: um Puzzle, um Contra-Relógio ou um Survival, à vez. O trilho mostra o caminho — o que já fizeste e o que vem. O Puzzle e o Survival ficam feitos quando limpas o tabuleiro, e podes tentar até lá; no Contra-Relógio, conta a primeira corrida. Depois é treino, com os mesmos tabuleiros. No fim, partilha o resultado — e não deixes partir a sequência de dias. A sequência dá chaves (aos 3, 7, 14 e 30 dias): uma chave abre um desafio que ficou por jogar, ou salva a sequência se falhares um dia.",
   },
