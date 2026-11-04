@@ -79,9 +79,25 @@ Para tudo isso, é a conta paga e o resto deste guia.
 
 ## 1. Uma vez: a conta
 
-O TestFlight exige o **Apple Developer Program** (99 USD por ano), em
-<https://developer.apple.com/programs/enroll/>. A aprovação pode levar um ou dois
-dias. Sem ela, só o modo Compilar funciona.
+O TestFlight exige o **Apple Developer Program**: 99 USD por ano, que em
+Portugal são 99 €. Sem ele, só o modo Compilar funciona.
+
+Há dois caminhos para a inscrição:
+- **A aplicação Apple Developer, num iPhone.** É o mais rápido: fotografa-se o
+  documento de identificação, e a quota fica como uma subscrição anual do Apple
+  ID.
+- **A web**, em <https://developer.apple.com/programs/enroll/>. Aí paga-se com
+  um cartão **em nome próprio**. Com o cartão de outra pessoa, a Apple pede o
+  documento de identificação e a aprovação atrasa.
+
+Nos dois, o nome e o apelido do Apple ID têm de ser os **legais**, os do
+documento, e são esse nome que a loja mostra como vendedor. A conta deste jogo
+foi aprovada no próprio dia, a 2026-11-03.
+
+Depois da aprovação, no App Store Connect → **Business**, declara-se o
+estatuto da UE (*Digital Services Act*). Um jogo grátis, sem compras nem
+anúncios, é de **não comerciante**. Sem essa declaração, a Apple não aceita o
+jogo nas lojas da UE.
 
 Tudo o que se segue usa o **Git Bash**, que já traz o `openssl`. Trabalha numa
 pasta **fora do repositório** — há aqui uma chave privada, e um segredo commitado
@@ -123,10 +139,29 @@ junta-o à chave num `.p12`:
 
 ```bash
 openssl x509 -inform DER -in distribution.cer -out distribuicao.pem
-read -rsp "Senha do .p12: " P12_SENHA && echo && export P12_SENHA
 openssl pkcs12 -export -inkey distribuicao.key -in distribuicao.pem \
-  -out distribuicao.p12 -name "Apple Distribution" -passout env:P12_SENHA
+  -out distribuicao.p12 -name "Apple Distribution" \
+  -keypbe PBE-SHA1-3DES -certpbe PBE-SHA1-3DES -macalg sha1
 ```
+
+O `openssl` pede a senha duas vezes, e não a mostra. Se as duas não forem
+iguais, diz *Verify failure* e não escreve nada; quando corre bem, não diz
+nada.
+
+**As três opções do fim não são opcionais.** Por omissão, o OpenSSL 3 cifra o
+`.p12` com AES e SHA-256, e o `security import` do macOS costuma recusá-lo com
+*MAC verification failed*. O SHA1 com 3DES é o formato que o Keychain sempre
+leu, e não precisa do `-legacy`.
+
+Para confirmar que a senha abre o ficheiro, e que lá dentro estão o certificado
+e a chave:
+
+```bash
+openssl pkcs12 -in distribuicao.p12 -info -noout -nokeys
+```
+
+Pede a senha uma vez. A resposta tem de mostrar um `Certificate bag` e um
+`Shrouded Keybag`; se a senha estiver errada, diz *Mac verify error*.
 
 A senha que escreveste é o segredo `IOS_CERTIFICATE_PASSWORD`. Guarda-a, e
 guarda o `distribuicao.key`: sem ele o certificado não serve para nada.
@@ -191,8 +226,20 @@ de transferência, pronto a colar:
 O botão só aparece depois de o `ios.yml` estar na `main`.
 
 O workflow corre o `pnpm check` e reverifica os níveis, compila, assina e envia.
-O **número de build é o número da execução**, que só sobe. No fim, a Apple
-processa o build durante 5 a 30 minutos, e manda um e-mail quando acabar.
+O **número de build é o número da execução**, que só sobe. Se o passo *Enviar
+para o TestFlight* acabar bem, a Apple aceitou o ficheiro. Ainda o processa
+durante 5 a 30 minutos.
+
+**Não contes com o e-mail de «processado».** No primeiro envio, a 2026-11-03,
+não chegou. Provavelmente é porque o build foi enviado pela chave de API, e não
+por um utilizador. O estado vê-se no App Store Connect → a aplicação → **TestFlight** → **iOS**:
+
+| Estado | O que quer dizer |
+|---|---|
+| *Processing* | A Apple ainda o está a processar |
+| *Ready to Submit* | Está pronto. «Submit» é para os testers externos e para a App Store; os internos já o podem instalar |
+| *Missing Compliance* | Não devia aparecer: o `Info.plist` já declara que não há cifra |
+| *Invalid Binary* | Foi recusado. Chega um e-mail com os erros `ITMS-…` |
 
 Para o instalar: App Store Connect → a aplicação → **TestFlight** → *Internal
 Testing* → cria um grupo e adiciona-te a ele. No iPhone, instala a aplicação
@@ -206,7 +253,7 @@ TestFlight e entra com a mesma conta Apple.
 |---|---|
 | `Falta o segredo …` | O segredo não existe, ou o nome tem uma gralha |
 | `0 valid identities found` | O `.p12` não tem a chave privada, ou é de outro certificado |
-| `MAC verification failed during PKCS12 import` | O macOS não leu o `.p12`. Refazer o passo 3 com `-legacy` a seguir a `pkcs12 -export` |
+| `MAC verification failed during PKCS12 import` | O macOS não leu o `.p12`. Ou a senha do segredo não é a do `.p12`, ou o `.p12` foi feito sem as três opções do passo 3 |
 | `doesn't include signing certificate` | O perfil foi gerado com outro certificado. Gerar o perfil outra vez (passo 4) |
 | `does not support provisioning profiles` | O perfil foi passado na linha de comando como `PROVISIONING_PROFILE_SPECIFIER`. Ver o comentário do passo *Arquivar* |
 | `No suitable application records were found` | Falta o passo 5 |
@@ -224,6 +271,12 @@ TestFlight e entra com a mesma conta Apple.
 
 ## A versão
 
-O `MARKETING_VERSION` (a versão que a loja mostra, hoje `1.0`) está no
-`project.pbxproj`, em duas configurações. O TestFlight aceita quantos builds se
-quiser na mesma versão; sobe-se quando se fecha uma versão para a App Store.
+A versão que a loja mostra vem da `version` do `packages/mobile/package.json`.
+O `pnpm versao` escreve-a no `MARKETING_VERSION` do `project.pbxproj`, nas duas
+configurações. A primeira a ir para a App Store foi a `1.0.1`. O TestFlight
+aceita quantos builds se quiser na mesma versão; sobe-se quando se fecha uma
+versão para a App Store.
+
+**A versão do App Store Connect tem de ser igual à do build.** A primeira
+página de versão nasce como `1.0`; troca-se para a do build antes de o
+escolher, senão ele não aparece na lista.
