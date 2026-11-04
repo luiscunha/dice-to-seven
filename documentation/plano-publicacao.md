@@ -45,16 +45,16 @@ contagem pode não fechar. Convém ter 15.
 
 ### Apple (App Store)
 
-- [ ] **Apple Developer Program**, como indivíduo — 99 USD por ano, em
-      <https://developer.apple.com/programs/enroll/>. Pede um Apple ID com
-      autenticação de dois fatores. O nome que aparece na loja como vendedor é
-      o teu nome.
-- [ ] Na aprovação, o acordo das apps grátis fica aceite. **Não** é preciso o
+- [x] **Apple Developer Program**, como indivíduo — 99 USD por ano (99 € em
+      Portugal), em <https://developer.apple.com/programs/enroll/>. Pede um
+      Apple ID com autenticação de dois fatores. O nome que aparece na loja
+      como vendedor é o teu nome. Aprovada a 2026-11-03, no próprio dia.
+- [x] Na aprovação, o acordo das apps grátis fica aceite. **Não** é preciso o
       acordo das apps pagas, nem impostos, nem banco.
-- [ ] **Estatuto de comerciante na UE** (Digital Services Act), em App Store
+- [x] **Estatuto de comerciante na UE** (Digital Services Act), em App Store
       Connect → Business. Sem compras nem anúncios, declaras **não
       comerciante**; como comerciante, a morada e o telefone ficavam públicos.
-- [ ] Seguir o `guia-ios-sem-mac.md`, passos 2 a 7: o identificador
+- [x] Seguir o `guia-ios-sem-mac.md`, passos 2 a 7: o identificador
       `com.luiscunha.dicetoseven`, o certificado, o perfil, a aplicação no App
       Store Connect e os seis segredos do GitHub. **Criar a aplicação no App
       Store Connect reserva o nome** — fazê-lo cedo, para saber se
@@ -117,9 +117,9 @@ configurações.
       `@capacitor/preferences` (razão `CA92.1`), «nenhum dado recolhido» e
       «sem rastreio». Um teste guarda o que as fichas vão dizer: falha se o
       manifesto mudar, se entrar um plugin novo ou uma permissão Android nova.
-- [ ] Confirmar que o projeto compila no macOS: o `ios.yml` corre sozinho no
+- [x] Confirmar que o projeto compila no macOS: o `ios.yml` corre sozinho no
       PR, porque o PR mexe em `packages/mobile`.
-- [ ] O SDK do iOS 26 e o Xcode 26 já estão fixados no `ios.yml`. A
+- [x] O SDK do iOS 26 e o Xcode 26 já estão fixados no `ios.yml`. A
       conformidade de exportação (`ITSAppUsesNonExemptEncryption`) também já
       está no `Info.plist`.
 
@@ -204,15 +204,21 @@ jogo.
 |---|---|---|
 | Ícone | 512×512 PNG (já há a marca) | sai do projeto |
 | Destaque | **1024×500** (gráfico de destaque) | — |
-| Telemóvel | 4 a 8 capturas, ≥ 1080 px | 3 a 10, **6,9"** (1320×2868) |
+| Telemóvel | 4 a 8 capturas, ≥ 1080 px | 3 a 10, **iPhone de ecrã médio** (1206×2622) |
 | Tablet | opcional | **13" iPad** (2064×2752) — o iPad mantém-se |
 
-- [ ] **As capturas geram-se aqui**, e não à mão: os ecrãs montam-se no
+Até outubro de 2026, a Apple exigia o iPhone de 6,9" (1320×2868). Agora o
+obrigatório é o de ecrã médio, e o de 6,9" nem aparece no App Store Connect. Há
+também um «Header», uma capa larga de 5244×2950, que é opcional: sem ela, a loja
+usa as capturas. E o iPhone Duo passa a pedir capturas a partir de abril de
+2027, para as apps compiladas com o SDK do iOS 27.1.
+
+- [x] **As capturas geram-se aqui**, e não à mão: os ecrãs montam-se no
       browser ao tamanho exato de cada loja, com dados de exemplo e em cada
       idioma. Proposta de seis: a Home, um nível a meio com um grupo
       selecionado, o Contra-Relógio com o combo, o Survival, o caminho do
       Desafio do Dia, e as medalhas.
-- [ ] O gráfico de destaque da Play, a partir da marca.
+- [x] O gráfico de destaque da Play, a partir da marca.
 
 ### Os questionários
 
@@ -221,7 +227,9 @@ jogo.
 - [ ] **Classificação etária**: Apple (questionário novo, com os escalões 4+,
       9+, 13+, 16+, 18+) e Google (IARC). Sem violência, compras, anúncios nem
       interação entre jogadores — deve sair **4+ / PEGI 3**. (A espada do
-      Survival é um ícone, não um conteúdo.)
+      Survival é um ícone, não um conteúdo.) Na Apple deu 4+, a 2026-11-04.
+      A 16 de novembro, a Apple acrescenta duas perguntas: localização
+      partilhada e encontros. A resposta às duas é «não».
 - [ ] **Público-alvo** da Google: proponho **13 anos ou mais**. Incluir menores
       de 13 põe a app na política de Famílias, com mais declarações e mais
       revisão, por nada que o jogo ganhe com isso. A classificação continua
@@ -239,21 +247,25 @@ jogo.
 - [ ] **Teste fechado** com os 12 testers, 14 dias. No pedido de acesso à
       produção a Google pergunta como correu o teste e o que mudou com ele:
       vale a pena recolher o que os testers disserem.
-- [ ] **TestFlight** num iPhone e, se houver, num iPad — os testes internos não
-      precisam de revisão da Apple.
+- [x] **TestFlight** num iPhone e, se houver, num iPad — os testes internos não
+      precisam de revisão da Apple. Feito a 2026-11-04 com a 1.0.1 (build 11).
 - [ ] **Atualização por cima**: instalar a versão N, jogar, instalar a N+1, e o
       progresso continua lá. É o que nenhum teste automático cobre e o que
       mais custa se falhar.
 
 ## 6. Publicar
 
-- [ ] **App Store**: submeter para revisão com **lançamento manual**, para sair
+- [x] **App Store**: submeter para revisão com **lançamento manual**, para sair
       no mesmo dia que a Play. Nas notas para a revisão: não há início de
-      sessão, nada a configurar, e o jogo funciona sem rede.
+      sessão, nada a configurar, e o jogo funciona sem rede. Submetida a
+      2026-11-04, com a 1.0.1 (build 11). Depois de aprovada, fica em *Pending
+      Developer Release* até alguém carregar em **Release This Version**.
 - [ ] **Play**: pedir o acesso à produção ao fim dos 14 dias, e depois
       promover o build do teste fechado para a produção. Vale a pena um
       lançamento faseado (20% → 100%), para um defeito apanhar menos gente.
-- [ ] Países: todos, por omissão.
+- [ ] Países: todos, por omissão. Na App Store, todos **menos a China
+      continental**, onde um jogo precisa de uma licença do governo (o número
+      de aprovação, GRN).
 
 ### O risco de revisão a ter em conta
 
