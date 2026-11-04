@@ -223,11 +223,26 @@ Saem para `packages/mobile/loja/`, fora do Git:
 | `play-destaque-1024x500.png` | Play → ficha → gráfico de destaque; o mesmo nas quatro línguas |
 | `play-1080x1920/<língua>/` | Play → ficha de cada língua → capturas do telemóvel |
 | `ipad-2064x2752/<língua>/` | App Store → iPad de 13"; e Play → capturas de tablet (opcional) |
-| `iphone-1320x2868/<língua>/` | App Store → iPhone de 6,9" |
+| `iphone-1206x2622/<língua>/` | App Store → iPhone de ecrã médio («iPhone with Dynamic Island (medium display)») |
 
-As pastas das línguas são `en`, `pt`, `es` e `fr` — na Play, a ficha
-predefinida (inglês) e as traduções em português (Portugal), espanhol (Espanha)
-e francês (França).
+As pastas das línguas são `en`, `pt`, `es` e `fr`.
+- Na Play, são a ficha predefinida, em inglês, e as traduções em português
+  (Portugal), espanhol (Espanha) e francês (França).
+- Na App Store, são o inglês (EUA), que é a língua principal, e as mesmas três
+  traduções.
+
+**Na App Store, as capturas estão na página da versão**, no separador *App
+Previews and Screenshots*.
+- O separador ao lado, *Header and Search Results*, é uma capa larga de
+  5244×2950 ou 3840×1646. É opcional, e fica vazio: sem ela, a loja usa as
+  capturas.
+- Também ficam vazios os separadores do iPhone Duo e do Apple Watch. O iPhone
+  Duo passa a ser obrigatório em abril de 2027, para as apps compiladas com o
+  SDK do iOS 27.1.
+
+**Até outubro de 2026, o iPhone era o de 6,9"** (1320×2868, 440×956 em píxeis
+CSS). A Apple passou a exigir o de ecrã médio, e o de 6,9" ficou opcional.
+Recusa a captura que não tiver o tamanho exato.
 
 **O iPad mostra o ecrã de um iPad de 11"** dentro da moldura de 13". A peça do
 tabuleiro tem um teto de 72px (`LADO_MAX`, no `BoardView`), e num ecrã de 13" o

@@ -43,7 +43,7 @@ const CHROME =
 /** Os mesmos formatos da `vitrine.ts`: o tamanho em píxeis CSS e a escala. */
 const FORMATOS = {
   play: { largura: 360, altura: 640, escala: 3 },
-  iphone: { largura: 440, altura: 956, escala: 3 },
+  iphone: { largura: 402, altura: 874, escala: 3 },
   ipad: { largura: 1032, altura: 1376, escala: 2 },
   destaque: { largura: 512, altura: 250, escala: 2 },
 };

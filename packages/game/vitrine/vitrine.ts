@@ -25,8 +25,11 @@ declare global {
 export const FORMATOS = {
   /** Google Play, telemóvel: 1080×1920. */
   play: { largura: 360, altura: 640, escala: 3, aparelho: "telemovel" },
-  /** App Store, iPhone de 6,9": 1320×2868. */
-  iphone: { largura: 440, altura: 956, escala: 3, aparelho: "telemovel" },
+  /**
+   * App Store, iPhone de ecrã médio: 1206×2622. Desde o fim de 2026 é o tamanho
+   * que a Apple exige; o de 6,9" (1320×2868) passou a opcional.
+   */
+  iphone: { largura: 402, altura: 874, escala: 3, aparelho: "telemovel" },
   /** App Store, iPad de 13" (e a Play, tablet): 2064×2752. */
   ipad: { largura: 1032, altura: 1376, escala: 2, aparelho: "tablet" },
   /** Google Play, gráfico de destaque: 1024×500. */
